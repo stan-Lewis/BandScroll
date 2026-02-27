@@ -1,2 +1,24 @@
-<!-- This file was renamed from bandscroll-v9.html to bandscroll-v7.html -->
-<!-- Include your updated HTML content here -->
+<html>
+<head>
+    <title>Band Scroll</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .scroll-banner {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: scroll 10s linear infinite;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-banner">
+        <h1>Welcome to the BandScroll! Enjoy the Music!</h1>
+    </div>
+</body>
+</html>
