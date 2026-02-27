@@ -1539,10 +1539,21 @@ function onBC(msg) {
       // Track member joining
       _lobbyMembers[msg.clientId || msg.name] = msg.name;
       renderLobby();
-      // Send current song state to new joiner
+      // Re-send full current song to new joiner so they get all lyrics + annotations
       if (APP.currentId) {
         const song = getSong(APP.currentId);
-        if (song) emit({ type: 'load', song: serializeSong(song) });
+        if (song) {
+          // Small delay so their channel subscription is ready
+          setTimeout(() => {
+            emit({ type: 'load', song: serializeSong(song) });
+            // If currently playing, also send a seek so they land at the right position
+            if (APP.isPlaying) {
+              const t = Math.max(0, (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj);
+              const wallStart = serverNow() - t * 1000;
+              emit({ type: 'seek', wallStart, songTime: t, conductorOffset: APP.offsetAdj });
+            }
+          }, 800);
+        }
       }
     }
     if (APP.role === 'viewer') {
@@ -2478,6 +2489,11 @@ function _updateOffsetDisplay() {
 const V = { song:null, raf:null, playing:false, startPN:null, offsetAdj:0, conductorOffset:0 };
 
 function vLoad(song) {
+  // If the received song has annotations, re-merge them into lines
+  // to guarantee nothing is lost in transit
+  if (song.annotations && song.annotations.length) {
+    song.lines = mergeAnnotations(song);
+  }
   V.song = song;
   document.getElementById('v-song-hdr').textContent =
     `${song.title}${song.artist?' — '+song.artist:''}`;
@@ -2906,7 +2922,19 @@ function copyShareUrl(){
   navigator.clipboard.writeText(url).then(()=>toast('Link copied!'));
 }
 function serializeSong(s){
-  return {title:s.title,artist:s.artist,duration:s.duration,syncType:s.syncType,lines:s.lines};
+  // Always merge annotations into lines before sending so ALL devices
+  // see sections, chords and notes regardless of when they joined or
+  // what songs are added in future. Also send raw data for completeness.
+  const mergedLines = mergeAnnotations(s);
+  return {
+    title: s.title,
+    artist: s.artist,
+    duration: s.duration,
+    syncType: s.syncType,
+    lines: mergedLines,
+    rawLyrics: s.rawLyrics || '',
+    annotations: s.annotations || []
+  };
 }
 
 // ══════════════════════════════════════════════════════════
