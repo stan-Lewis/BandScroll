@@ -3297,7 +3297,7 @@ function setSpeed(val, role) {
 // Working store for tabs being edited in modal
 let _editingTabs = {};
 
-async async function loadTabPdf(event, instrument) {
+async function loadTabPdf(event, instrument) {
   const file = event.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('tab-status-' + instrument);
