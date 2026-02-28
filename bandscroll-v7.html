@@ -2416,7 +2416,8 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 //  Returns song.lines with annotation objects interspersed
 // ══════════════════════════════════════════════════════════
 function mergeAnnotations(song) {
-  const base = song.lines || [];
+  // Strip annotation lines already in lines[] — idempotent for band members
+  const base = (song.lines || []).filter(l => l.type !== 'annotation');
   const anns = (song.annotations || []).filter(a => a.text && a.text.trim());
   if (!anns.length) return base;
 
@@ -2749,10 +2750,8 @@ function vLoad(song) {
   if (durEl) durEl.textContent = fmtTime(song.duration);
   // Update tab visibility for viewer's chosen instrument
   updateViewToggleVisibility(song, 'v');
-  // If viewer is in tab mode, render tabs
-  if (_currentView.v !== 'lyrics' && _userInstrument !== 'lyrics') {
-    renderTabView(song, _userInstrument, 'v');
-  }
+  // Pre-render tabs for all instruments so viewer sees them whenever they switch
+  ['bass','rhythm','lead'].forEach(inst => renderTabView(song, inst, 'v'));
   // Reset section pin
   _sectionPinState.v = { current: '', pending: '' };
   const vp = document.getElementById('v-section-pin');
@@ -3685,38 +3684,28 @@ function bumpEl(el){
   let _refSpeed = 1.0;
 
   window.tapTempo = function() {
-    const now = Date.now();
-    // Reset if > 3 seconds since last tap
-    if (_tapTimes.length > 0 && now - _tapTimes[_tapTimes.length - 1] > 3000) {
-      _tapTimes = [];
-    }
-    _tapTimes.push(now);
-    if (_tapTimes.length > 8) _tapTimes.shift();
-
-    const tapBtn = document.getElementById('tap-btn');
-    if (tapBtn) { tapBtn.classList.add('tap-active'); setTimeout(() => tapBtn.classList.remove('tap-active'), 100); }
-
-    if (_tapTimes.length < 2) {
-      document.getElementById('bpm-display').textContent = '... ';
-      return;
-    }
-    // Average interval
-    let totalInterval = 0;
-    for (let i = 1; i < _tapTimes.length; i++) totalInterval += _tapTimes[i] - _tapTimes[i-1];
-    const avgInterval = totalInterval / (_tapTimes.length - 1);
-    const bpm = Math.round(60000 / avgInterval);
-    document.getElementById('bpm-display').textContent = bpm + ' ';
-
-    // If locked, adjust scroll speed proportionally
-    if (_bpmLocked && _lockedBpm) {
-      const ratio = bpm / _lockedBpm;
-      const newSpeed = Math.max(0.2, Math.min(5.0, _refSpeed * ratio));
-      const slider = document.getElementById('c-speed-slider');
-      if (slider) {
-        slider.value = newSpeed;
-        slider.dispatchEvent(new Event('input'));
-      }
-    }
+  const now = Date.now();
+  if (_tapTimes.length > 0 && now - _tapTimes[_tapTimes.length - 1] > 3000) {
+    _tapTimes = [];
+  }
+  _tapTimes.push(now);
+  if (_tapTimes.length > 12) _tapTimes.shift();
+  const tapBtn = document.getElementById('tap-btn');
+  if (tapBtn) { tapBtn.classList.add('tap-active'); setTimeout(() => tapBtn.classList.remove('tap-active'), 120); }
+  if (_tapTimes.length < 2) { const d = document.getElementById('bpm-display'); if (d) d.textContent = '... '; return; }
+  const intervals = [];
+  for (let i = 1; i < _tapTimes.length; i++) intervals.push(_tapTimes[i] - _tapTimes[i-1]);
+  let weightedSum = 0, totalWeight = 0;
+  for (let i = 0; i < intervals.length; i++) { const w = i + 1; weightedSum += intervals[i] * w; totalWeight += w; }
+  const bpm = Math.round(Math.max(40, Math.min(300, 60000 / (weightedSum / totalWeight))));
+  const dispEl = document.getElementById('bpm-display');
+  if (dispEl) dispEl.textContent = bpm + ' ';
+  if (_bpmLocked && _lockedBpm) {
+    const ratio = bpm / _lockedBpm;
+    const newSpeed = Math.max(0.2, Math.min(5.0, _refSpeed * ratio));
+    const slider = document.getElementById('c-speed-slider');
+    if (slider) { slider.value = newSpeed; slider.dispatchEvent(new Event('input')); }
+  }
   };
 
   window.toggleBpmLock = function() {
