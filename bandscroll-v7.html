@@ -3863,9 +3863,9 @@ function parseAsciiTabV10(raw) {
 
   const isTabLine = l => {
     const t = l.trim();
-    return /^[eEADGBb]|[-0-9hpbr\/\\~x* ]+/.test(t) ||
-           /^|?[-0-9hpbr\/\\~x*]+([-|][-0-9hpbr\/\\~x*]+){2,}/.test(t) ||
-           /^[eEADGBb][-:]s*[-0-9]/.test(t);
+    return /^[eEADGBb]\|[-0-9hpbr\/\\~x* ]+/.test(t) ||
+           /^\|?[-0-9hpbr\/\\~x*]+([\-|][-0-9hpbr\/\\~x*]+){2,}/.test(t) ||
+           /^[eEADGBb][-:]\s*[-0-9]/.test(t);
   };
 
   const flush = () => {
