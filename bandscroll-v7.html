@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>BandScroll v9</title>
+<title>BandScroll v10</title>
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -1090,6 +1090,42 @@ textarea{resize:vertical;}
   .v-song-hdr{font-size:clamp(1.1rem,7vw,2rem);padding:0.5rem 0.8rem 0;}
 }
 
+
+  /* ===== BPM TAP TEMPO ===== */
+  .bpm-group { display:flex; align-items:center; gap:6px; padding:0 10px; border-left:1px solid rgba(255,255,255,0.2); }
+  .bpm-display { font-size:13px; color:#f0e68c; font-weight:700; min-width:52px; text-align:center; }
+  .bpm-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:#fff;
+    padding:4px 10px; border-radius:5px; cursor:pointer; font-size:12px; transition:background .15s; }
+  .bpm-btn:hover { background:rgba(255,255,255,0.25); }
+  .bpm-btn.locked { background:rgba(240,180,0,0.4); border-color:#f0b400; color:#f0e68c; }
+  .bpm-btn.tap-active { background:rgba(0,255,120,0.3); }
+
+  /* ===== AI TAB PANEL ===== */
+  .ai-key-btn { background:linear-gradient(135deg,#6e3fa3,#3a86ff); border:none; color:#fff;
+    padding:8px 18px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;
+    margin:8px; transition:opacity .2s; }
+  .ai-key-btn:hover { opacity:.85; }
+  .ai-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9000;
+    display:flex; align-items:center; justify-content:center; }
+  .ai-modal { background:#1e1e2e; border:1px solid #6e3fa3; border-radius:14px;
+    padding:28px 32px; min-width:340px; max-width:90vw; color:#e0e0ff; }
+  .ai-modal h3 { margin:0 0 16px; font-size:18px; color:#bf9fff; }
+  .ai-modal input, .ai-modal select { width:100%; padding:9px 12px; border-radius:7px;
+    border:1px solid #555; background:#111; color:#fff; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+  .ai-modal .btn-row { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+  .ai-modal button { padding:8px 20px; border-radius:7px; border:none; cursor:pointer; font-size:14px; font-weight:600; }
+  .ai-save-btn { background:#6e3fa3; color:#fff; }
+  .ai-cancel-btn { background:#333; color:#ccc; }
+
+  /* ===== TAB PREVIEW IN SONG CARDS ===== */
+  .tab-preview { background:#111; border:1px solid #333; border-radius:6px;
+    padding:8px 10px; margin-top:8px; font-family:monospace; font-size:11px;
+    color:#8fff8f; max-height:120px; overflow:hidden; white-space:pre; line-height:1.4; }
+  .ai-enhance-btn { background:linear-gradient(135deg,#6e3fa3,#3a86ff); border:none; color:#fff;
+    padding:5px 12px; border-radius:5px; cursor:pointer; font-size:12px; margin-top:6px;
+    font-weight:600; transition:opacity .2s; }
+  .ai-enhance-btn:hover { opacity:.8; }
+  .ai-enhance-btn:disabled { opacity:.4; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -1097,7 +1133,7 @@ textarea{resize:vertical;}
 <!-- ══════════ LANDING ══════════ -->
 <div id="s-land" class="screen active">
   <div class="brand">Band<span>Scroll</span></div>
-  <div class="brand-sub">v9 · Live Lyrics · Tabs · Real-Time Sync · Full Band</div>
+  <div class="brand-sub">v10 · Live Lyrics · Tabs · BPM Sync · AI Tabs · Real-Time Sync · Full Band</div>
   <div class="role-row">
     <div class="r-card" onclick="startConductor()">
       <div class="r-icon">🎤</div>
@@ -1113,6 +1149,9 @@ textarea{resize:vertical;}
   <div style="margin-top:1.8rem;text-align:center;">
     <button class="btn btn-ghost btn-sm" onclick="openModal('apikey-modal')" style="font-family:'JetBrains Mono';font-size:0.6rem;letter-spacing:0.1em;">
       ⚙ ABLY API KEY
+    </button>
+    <button class="ai-key-btn" onclick="showAiKeyModal()" title="Set OpenAI API Key for AI tab processing">
+      🤖 AI KEY
     </button>
     <div id="apikey-status" style="font-family:'JetBrains Mono';font-size:0.58rem;color:var(--text-dim);margin-top:0.5rem;letter-spacing:0.06em;"></div>
   </div>
@@ -1255,6 +1294,14 @@ textarea{resize:vertical;}
             style="width:60px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
           <span class="ctrl-val" id="c-speed-val">1.0×</span>
           <button class="nudge-btn nudge-reset" onclick="setSpeed(1,'c');document.getElementById('c-speed-slider').value=1" title="Reset speed">↺</button>
+        </div>
+        <!-- BPM TAP TEMPO -->
+        <div class="bpm-group" id="bpm-group">
+          <span class="ctrl-label">BPM</span>
+          <span class="bpm-display" id="bpm-display">--- </span>
+          <button class="bpm-btn" id="tap-btn" onclick="tapTempo()" title="Tap T">TAP</button>
+          <button class="bpm-btn" id="lock-btn" onclick="toggleBpmLock()" title="Lock scroll speed to BPM">LOCK</button>
+          <button class="bpm-btn" onclick="resetBpm()" title="Reset BPM">✕</button>
         </div>
         <!-- VIEW TOGGLE (conductor) -->
         <div class="view-toggle" id="c-view-toggle">
@@ -2943,7 +2990,13 @@ function _buildTabUploadCards(song) {
     var clearBtn = hasTab
       ? '<button class="btn btn-xs" style="background:var(--red);color:#fff;" onclick="clearTab(' + JSON.stringify(inst) + ')">&#x2715;</button>'
       : '';
+    var aiEnhanceBtn = '<button class="ai-enhance-btn" id="ai-enhance-btn-' + inst + '" onclick="aiProcessTabForInstrument(' + JSON.stringify(inst) + ')" ' + (hasTab ? '' : 'disabled') + '>✨ AI Enhance</button>';
     var uploadLabel = hasTab ? 'Replace' : 'Upload PDF';
+    var previewLines = '';
+    if (hasTab && song.tabs[inst].raw) {
+      previewLines = song.tabs[inst].raw.split('\n').filter(function(l){return l.trim();}).slice(0,8).join('\n');
+    }
+    var previewDiv = '<div class="tab-preview" id="tab-preview-' + inst + '" style="' + (hasTab ? '' : 'display:none') + '">' + (previewLines ? previewLines.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '') + '</div>';
     return '<div class="tab-upload-card ' + (hasTab ? 'has-tab' : '') + '" id="tab-card-' + inst + '">'
       + '<div class="tab-upload-inst">' + instCap + '</div>'
       + '<div class="tab-upload-status" id="tab-status-' + inst + '">' + (hasTab ? '&#x2713; Tab loaded' : 'No tab') + '</div>'
@@ -2953,7 +3006,10 @@ function _buildTabUploadCards(song) {
       + '<input type="file" accept=".pdf" style="display:none;" onchange="loadTabPdf(event,' + JSON.stringify(inst) + ')">'
       + '</label>'
       + clearBtn
-      + '</div></div>';
+      + '</div>'
+      + aiEnhanceBtn
+      + previewDiv
+      + '</div>';
   }).join('');
 }
 
@@ -3241,46 +3297,67 @@ function setSpeed(val, role) {
 // Working store for tabs being edited in modal
 let _editingTabs = {};
 
-async function loadTabPdf(event, instrument) {
+async async function loadTabPdf(event, instrument) {
   const file = event.target.files[0];
   if (!file) return;
-  const statusEl = document.getElementById(`tab-status-${instrument}`);
-  const cardEl = document.getElementById(`tab-card-${instrument}`);
+  const statusEl = document.getElementById('tab-status-' + instrument);
+  const cardEl   = document.getElementById('tab-card-' + instrument);
+  const prevEl   = document.getElementById('tab-preview-' + instrument);
   if (statusEl) statusEl.textContent = '⏳ Reading PDF…';
 
   try {
-    // Set PDF.js worker
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
+    if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page    = await pdf.getPage(pageNum);
       const content = await page.getTextContent();
-      // Preserve spacing — sort items by vertical then horizontal position
-      const items = content.items.sort((a, b) => {
-        const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5]);
-        if (Math.abs(yDiff) > 3) return yDiff;
-        return a.transform[4] - b.transform[4];
-      });
+
+      // --- Position-aware extraction: group by Y, sort by X within each row ---
+      const rowMap = {};
+      for (const item of content.items) {
+        const y = Math.round(item.transform[5] * 2) / 2; // round to 0.5px buckets
+        const x = item.transform[4];
+        if (!rowMap[y]) rowMap[y] = [];
+        rowMap[y].push({ x, str: item.str, w: item.width || 0 });
+      }
+
+      // Sort rows top-to-bottom (PDF coords are bottom-up so sort descending)
+      const sortedYs = Object.keys(rowMap).map(Number).sort((a,b) => b - a);
       let lastY = null;
-      for (const item of items) {
-        const y = Math.round(item.transform[5]);
-        if (lastY !== null && Math.abs(y - lastY) > 3) fullText += '\n';
-        fullText += item.str;
+      for (const y of sortedYs) {
+        if (lastY !== null) {
+          const gap = lastY - y;
+          // If vertical gap > 10px treat as new line; > 20px add blank separator
+          if (gap > 20) fullText += '\n';
+          fullText += '\n';
+        }
+        const items = rowMap[y].sort((a,b) => a.x - b.x);
+        let lineStr = '';
+        let prevRight = null;
+        for (const item of items) {
+          if (prevRight !== null) {
+            const gap = item.x - prevRight;
+            // Approximate spaces: each char ~6px wide
+            const spaces = Math.max(0, Math.round(gap / 6));
+            lineStr += ' '.repeat(spaces);
+          }
+          lineStr += item.str;
+          prevRight = item.x + (item.w > 0 ? item.w : item.str.length * 6);
+        }
+        fullText += lineStr;
         lastY = y;
       }
-      if (i < pdf.numPages) fullText += '\n\n';
+      if (pageNum < pdf.numPages) fullText += '\n\n';
     }
 
-    // Parse the extracted ASCII tab text into blocks
-    const blocks = parseAsciiTab(fullText);
+    const blocks = parseAsciiTabV10(fullText);
 
-    // Store in editing tabs and on the song if editing
     _editingTabs[instrument] = { raw: fullText, blocks };
     if (APP.editingId) {
       const song = getSong(APP.editingId);
@@ -3291,13 +3368,20 @@ async function loadTabPdf(event, instrument) {
       }
     }
 
-    if (statusEl) statusEl.textContent = `✓ ${blocks.length} section${blocks.length!==1?'s':''} found`;
-    if (cardEl) cardEl.classList.add('has-tab');
-    toast(`${instrument.charAt(0).toUpperCase()+instrument.slice(1)} tab loaded — ${blocks.length} sections`);
+    if (statusEl) statusEl.textContent = '✓ ' + blocks.length + ' section' + (blocks.length !== 1 ? 's' : '') + ' found';
+    if (cardEl)   cardEl.classList.add('has-tab');
+    // Show preview of first few lines
+    if (prevEl) {
+      const preview = fullText.split('\n').filter(l => l.trim()).slice(0, 8).join('\n');
+      prevEl.textContent = preview;
+      prevEl.style.display = 'block';
+    }
+    toast(instrument.charAt(0).toUpperCase() + instrument.slice(1) + ' tab loaded — ' + blocks.length + ' sections');
 
   } catch(e) {
     if (statusEl) statusEl.textContent = '❌ Failed: ' + e.message;
     toast('Tab PDF error: ' + e.message);
+    console.error('loadTabPdf error', e);
   }
 }
 
@@ -3330,7 +3414,7 @@ function parseAsciiTab(raw) {
   let inTabGroup = false;
 
   const isTabLine = l => /^[eEADGBb]\|/.test(l.trim()) || /^\|?[-0-9hpbr/\\~x*]+\|/.test(l.trim());
-  const isSectionMarker = l => /^\[.{1,40}\]/.test(l.trim());
+  const isSectionMarker = l => { const t=l.trim(); return /^\[.{1,40}\]/.test(t) || /^(Intro|Verse|Chorus|Bridge|Pre-Chorus|Outro|Solo|Break|Refrain|Main Riff|Riff|Hook|Interlude|Coda)([\s:\u2013\u2014]|$)/i.test(t); };
   const isChordLine = l => /^([A-G][#b]?(m|maj|min|dim|aug|sus|add|\d)?\s+){2,}/.test(l.trim());
 
   for (let i = 0; i < lines.length; i++) {
@@ -3590,12 +3674,252 @@ function bumpEl(el){
 // ══════════════════════════════════════════════════════════
 //  KEYBOARD
 // ══════════════════════════════════════════════════════════
+
+// =====================================================================
+// BPM TAP TEMPO SYSTEM
+// =====================================================================
+(function() {
+  let _tapTimes = [];
+  let _bpmLocked = false;
+  let _lockedBpm = null;
+  let _refSpeed = 1.0;
+
+  window.tapTempo = function() {
+    const now = Date.now();
+    // Reset if > 3 seconds since last tap
+    if (_tapTimes.length > 0 && now - _tapTimes[_tapTimes.length - 1] > 3000) {
+      _tapTimes = [];
+    }
+    _tapTimes.push(now);
+    if (_tapTimes.length > 8) _tapTimes.shift();
+
+    const tapBtn = document.getElementById('tap-btn');
+    if (tapBtn) { tapBtn.classList.add('tap-active'); setTimeout(() => tapBtn.classList.remove('tap-active'), 100); }
+
+    if (_tapTimes.length < 2) {
+      document.getElementById('bpm-display').textContent = '... ';
+      return;
+    }
+    // Average interval
+    let totalInterval = 0;
+    for (let i = 1; i < _tapTimes.length; i++) totalInterval += _tapTimes[i] - _tapTimes[i-1];
+    const avgInterval = totalInterval / (_tapTimes.length - 1);
+    const bpm = Math.round(60000 / avgInterval);
+    document.getElementById('bpm-display').textContent = bpm + ' ';
+
+    // If locked, adjust scroll speed proportionally
+    if (_bpmLocked && _lockedBpm) {
+      const ratio = bpm / _lockedBpm;
+      const newSpeed = Math.max(0.2, Math.min(5.0, _refSpeed * ratio));
+      const slider = document.getElementById('c-speed-slider');
+      if (slider) {
+        slider.value = newSpeed;
+        slider.dispatchEvent(new Event('input'));
+      }
+    }
+  };
+
+  window.toggleBpmLock = function() {
+    _bpmLocked = !_bpmLocked;
+    const btn = document.getElementById('lock-btn');
+    if (!btn) return;
+    if (_bpmLocked) {
+      const dispText = document.getElementById('bpm-display').textContent.trim();
+      _lockedBpm = parseFloat(dispText) || null;
+      // Capture current speed as reference
+      const slider = document.getElementById('c-speed-slider');
+      _refSpeed = slider ? parseFloat(slider.value) || 1.0 : 1.0;
+      btn.classList.add('locked');
+      btn.textContent = '🔒 ' + (_lockedBpm || '---');
+    } else {
+      _lockedBpm = null;
+      btn.classList.remove('locked');
+      btn.textContent = 'LOCK';
+    }
+  };
+
+  window.resetBpm = function() {
+    _tapTimes = [];
+    _bpmLocked = false;
+    _lockedBpm = null;
+    const disp = document.getElementById('bpm-display');
+    if (disp) disp.textContent = '--- ';
+    const btn = document.getElementById('lock-btn');
+    if (btn) { btn.classList.remove('locked'); btn.textContent = 'LOCK'; }
+  };
+})();
+
+// =====================================================================
+// AI KEY MANAGEMENT
+// =====================================================================
+function loadAiKey() {
+  const key = localStorage.getItem('bs_ai_key') || '';
+  const model = localStorage.getItem('bs_ai_model') || 'gpt-4o-mini';
+  const inp = document.getElementById('ai-key-input');
+  const sel = document.getElementById('ai-model-select');
+  if (inp) inp.value = key;
+  if (sel) sel.value = model;
+}
+
+function saveAiKey() {
+  const key   = (document.getElementById('ai-key-input') || {}).value || '';
+  const model = (document.getElementById('ai-model-select') || {}).value || 'gpt-4o-mini';
+  localStorage.setItem('bs_ai_key', key.trim());
+  localStorage.setItem('bs_ai_model', model);
+  closeAiModal();
+  toast('AI key saved ✓');
+}
+
+function showAiKeyModal() {
+  loadAiKey();
+  const overlay = document.getElementById('ai-modal-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeAiModal() {
+  const overlay = document.getElementById('ai-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+// =====================================================================
+// AI TAB PROCESSING (OpenAI API call)
+// =====================================================================
+async function aiProcessTab(rawText, instrument) {
+  const apiKey = localStorage.getItem('bs_ai_key');
+  const model  = localStorage.getItem('bs_ai_model') || 'gpt-4o-mini';
+  if (!apiKey) { toast('Set your AI key first (🤖 AI KEY button)'); return null; }
+
+  const prompt = `You are a music tab formatter. The following is raw text extracted from a PDF bass/guitar tab.
+Clean it up, fix alignment, identify song sections (Intro, Verse, Chorus, Bridge, Outro, etc.)
+and format each section clearly. Preserve all tab notation exactly (strings, frets, techniques like h,p,b,/).
+Return ONLY the cleaned tab text, no explanation.
+Instrument: ${instrument}
+
+RAW TAB:
+${rawText.slice(0, 6000)}`;
+
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 })
+  });
+  if (!resp.ok) { const err = await resp.text(); throw new Error('OpenAI error: ' + err); }
+  const data = await resp.json();
+  return data.choices[0].message.content;
+}
+
+async function aiProcessTabForInstrument(instrument) {
+  const btn = document.getElementById('ai-enhance-btn-' + instrument);
+  const statusEl = document.getElementById('tab-status-' + instrument);
+  const prevEl   = document.getElementById('tab-preview-' + instrument);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Processing…'; }
+
+  try {
+    const tabData = _editingTabs[instrument];
+    if (!tabData || !tabData.raw) { toast('Upload a tab PDF first'); return; }
+    const enhanced = await aiProcessTab(tabData.raw, instrument);
+    if (!enhanced) return;
+
+    const blocks = parseAsciiTabV10(enhanced);
+    _editingTabs[instrument] = { raw: enhanced, blocks, aiEnhanced: true };
+    if (APP.editingId) {
+      const song = getSong(APP.editingId);
+      if (song) {
+        if (!song.tabs) song.tabs = {};
+        song.tabs[instrument] = { raw: enhanced, blocks, aiEnhanced: true };
+        persist();
+      }
+    }
+    if (statusEl) statusEl.textContent = '✨ AI enhanced — ' + blocks.length + ' sections';
+    if (prevEl) {
+      prevEl.textContent = enhanced.split('\n').filter(l => l.trim()).slice(0, 8).join('\n');
+      prevEl.style.display = 'block';
+    }
+    toast('AI tab enhancement complete ✨');
+  } catch(e) {
+    toast('AI error: ' + e.message);
+    if (statusEl) statusEl.textContent = '❌ AI failed: ' + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ AI Enhance'; }
+  }
+}
+
+// =====================================================================
+// V10 TAB PARSER (improved)
+// =====================================================================
+function parseAsciiTabV10(raw) {
+  if (!raw || !raw.trim()) return [];
+  const lines = raw.split('\n');
+  const blocks = [];
+  let currentLabel = '';
+  let currentLines = [];
+
+  const isSectionMarker = l => {
+    const t = l.trim();
+    return /^\[.{1,40}\]/.test(t) ||
+      /^(Intro|Verse|Chorus|Bridge|Pre-Chorus|Outro|Solo|Break|Refrain)([\s:\u2013\u2014]|$)/i.test(t) ||
+      /^(Main Riff|Riff|Hook|Fill|Interlude|Coda|Tag)([\s:\u2013\u2014]|$)/i.test(t);
+  };
+
+  const isTabLine = l => {
+    const t = l.trim();
+    return /^[eEADGBb]|[-0-9hpbr\/\\~x* ]+/.test(t) ||
+           /^|?[-0-9hpbr\/\\~x*]+([-|][-0-9hpbr\/\\~x*]+){2,}/.test(t) ||
+           /^[eEADGBb][-:]s*[-0-9]/.test(t);
+  };
+
+  const flush = () => {
+    const meaningful = currentLines.filter(l => l.trim());
+    if (meaningful.length > 0) {
+      blocks.push({ label: currentLabel || ('Section ' + (blocks.length + 1)), lines: currentLines.slice(), t: null });
+    }
+    currentLines = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentLines.length > 0) currentLines.push('');
+      continue;
+    }
+    if (isSectionMarker(trimmed)) {
+      flush();
+      currentLabel = trimmed.replace(/^\[|\]$/g, '');
+      continue;
+    }
+    currentLines.push(line);
+  }
+  flush();
+
+  // If no sections detected, put everything in one block
+  if (blocks.length === 0 && raw.trim()) {
+    blocks.push({ label: 'Tab', lines: lines, t: null });
+  }
+  return blocks;
+}
+
+function parseAsciiTabSimple(raw) {
+  // Fallback: split into chunks of 20 lines each
+  if (!raw) return [];
+  const lines = raw.split('\n');
+  const blocks = [];
+  const chunkSize = 20;
+  for (let i = 0; i < lines.length; i += chunkSize) {
+    const chunk = lines.slice(i, i + chunkSize);
+    if (chunk.some(l => l.trim())) {
+      blocks.push({ label: 'Part ' + (blocks.length + 1), lines: chunk, t: null });
+    }
+  }
+  return blocks.length ? blocks : [{ label: 'Tab', lines, t: null }];
+}
+
 document.addEventListener('keydown', e=>{
   if(APP.role!=='conductor') return;
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(e.code==='Space'){e.preventDefault();togglePlay();}
   if(e.code==='ArrowRight') nextSong();
   if(e.code==='ArrowLeft') prevSong();
+  if(e.key==='t'||e.key==='T') tapTempo();
 });
 
 // ══════════════════════════════════════════════════════════
@@ -3603,9 +3927,30 @@ document.addEventListener('keydown', e=>{
 // ══════════════════════════════════════════════════════════
 (function(){
   loadAblyKey();
+  loadAiKey();
   const p=new URLSearchParams(location.search);
   if(p.get('room')) showVJoin();
 })();
 </script>
+
+<!-- AI KEY MODAL -->
+<div class="ai-modal-overlay" id="ai-modal-overlay" style="display:none" onclick="if(event.target===this)closeAiModal()">
+  <div class="ai-modal">
+    <h3>🤖 AI Tab Processing</h3>
+    <p style="font-size:13px;color:#aaa;margin:0 0 14px">Enter your OpenAI API key to enable AI-powered PDF tab parsing. Key stored locally in your browser only.</p>
+    <label style="font-size:12px;color:#bf9fff;display:block;margin-bottom:4px">OpenAI API Key</label>
+    <input type="password" id="ai-key-input" placeholder="sk-..." autocomplete="off"/>
+    <label style="font-size:12px;color:#bf9fff;display:block;margin-bottom:4px">Model</label>
+    <select id="ai-model-select">
+      <option value="gpt-4o-mini">gpt-4o-mini (fast, cheap)</option>
+      <option value="gpt-4o">gpt-4o (best quality)</option>
+      <option value="gpt-3.5-turbo">gpt-3.5-turbo (legacy)</option>
+    </select>
+    <div class="btn-row">
+      <button class="ai-cancel-btn" onclick="closeAiModal()">Cancel</button>
+      <button class="ai-save-btn" onclick="saveAiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
