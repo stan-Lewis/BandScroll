@@ -2473,6 +2473,7 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       else if (lines[i].t!=null && lines[i].t > songTime) break;
     }
     ai = Math.max(0,ai);
+    let ni = ai + 1;
 
     belt.style.paddingTop = cursorY + 'px';
     belt.style.paddingBottom = (wrapH-cursorY) + 'px';
