@@ -3339,11 +3339,12 @@ async function loadTabPdf(event, instrument) {
     song.tabs[instrument].raw = '';
     song.tabs[instrument].blocks = [];
     localStorage.setItem('bs4_bank', JSON.stringify(bank));
+    if (typeof hydrate === 'function') hydrate();
     const sizeStr = file.size > 1048576 ? (file.size / 1048576).toFixed(1) + 'MB' : Math.round(file.size / 1024) + 'KB';
     if (statusEl) statusEl.textContent = '&#10003; PDF: ' + file.name;
     if (cardEl) cardEl.classList.add('has-tab');
     if (prevEl) prevEl.innerHTML = '<div class="tab-pdf-preview-info"><span>&#128196;</span><span>' + esc(file.name) + ' (' + sizeStr + ')</span></div>';
-    if (APP.song && APP.song.id === id) APP.song.tabs = song.tabs;
+    // App bank refreshed via hydrate() above
     toast(instrument.charAt(0).toUpperCase() + instrument.slice(1) + ' PDF saved!');
   } catch (err) {
     console.error('loadTabPdf error', err);
@@ -3536,7 +3537,7 @@ function renderTabView(song, instrument, prefix) {
   if (lyricEl2) lyricEl2.textContent = '\u2014';
 }
 function openPdfViewer(instrument, prefix) {
-  const song = APP.song;
+  const song = getSong(APP.currentId);
   if (!song) return;
   const tabData = song.tabs && song.tabs[instrument];
   if (!tabData || !tabData.pdfData) { toast('No PDF tab for this song'); return; }
