@@ -1645,8 +1645,11 @@ let _idb = null;
 function openIDB() {
   if (_idb) return Promise.resolve(_idb);
   return new Promise((res, rej) => {
-    const req = indexedDB.open('bs_tabs', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('tabs');
+    const req = indexedDB.open('bs_tabs', 2);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('tabs')) db.createObjectStore('tabs');
+    };
     req.onsuccess = e => { _idb = e.target.result; res(_idb); };
     req.onerror = () => rej(req.error);
   });
