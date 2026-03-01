@@ -2986,10 +2986,11 @@ function _buildTabUploadCards(song) {
   return ['bass','rhythm','lead'].map(function(inst) {
     var hasTab = !!(song && song.tabs && song.tabs[inst] && song.tabs[inst].blocks);
     var instCap = inst.charAt(0).toUpperCase() + inst.slice(1);
+    var q = "'";
     var clearBtn = hasTab
-      ? '<button class="btn btn-xs" style="background:var(--red);color:#fff;" onclick="clearTab(' + inst + ')">&#x2715;</button>'
+      ? '<button class="btn btn-xs" style="background:var(--red);color:#fff;" onclick="clearTab(' + q + inst + q + ')">&#x2715;</button>'
       : '';
-    var aiEnhanceBtn = '<button class="ai-enhance-btn" id="ai-enhance-btn-' + inst + '" onclick="aiProcessTabForInstrument(' + inst + ')" ' + (hasTab ? '' : 'disabled') + '>✨ AI Enhance</button>';
+    var aiEnhanceBtn = '<button class="ai-enhance-btn" id="ai-enhance-btn-' + inst + '" onclick="aiProcessTabForInstrument(' + q + inst + q + ')" ' + (hasTab ? '' : 'disabled') + '>✨ AI Enhance</button>';
     var uploadLabel = hasTab ? 'Replace' : 'Upload PDF';
     var previewLines = '';
     if (hasTab && song.tabs[inst].raw) {
@@ -3002,7 +3003,7 @@ function _buildTabUploadCards(song) {
       + '<div class="tab-upload-btns">'
       + '<label class="btn btn-ghost btn-xs" style="cursor:pointer;">'
       + uploadLabel
-      + '<input type="file" accept=".pdf" style="display:none;" onchange="loadTabPdf(event,' + inst + ')">'
+      + '<input type="file" accept=".pdf" style="display:none;" onchange="loadTabPdf(event,' + q + inst + q + ')">'
       + '</label>'
       + clearBtn
       + '</div>'
@@ -3011,7 +3012,6 @@ function _buildTabUploadCards(song) {
       + '</div>';
   }).join('');
 }
-
 
 function buildEditForm(s) {
   const e = s||{};
