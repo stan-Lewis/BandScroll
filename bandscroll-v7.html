@@ -1126,6 +1126,27 @@ textarea{resize:vertical;}
     font-weight:600; transition:opacity .2s; }
   .ai-enhance-btn:hover { opacity:.8; }
   .ai-enhance-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+/* ++ PDF Viewer Overlay ++ */
+.pdf-viewer-overlay{display:none;position:fixed;inset:0;z-index:9999;background:#111;flex-direction:column}
+.pdf-viewer-overlay.open{display:flex}
+.pdf-viewer-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1a1a1a;border-bottom:1px solid #333;flex-shrink:0;flex-wrap:wrap}
+.pdf-viewer-title{flex:1;font-size:13px;color:#ccc;font-weight:600;letter-spacing:.05em;text-transform:uppercase;min-width:100px}
+.pdf-viewer-close{background:#333;color:#fff;border:none;border-radius:4px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:700}
+.pdf-viewer-close:hover{background:#555}
+.pdf-viewer-zoom-btns{display:flex;gap:4px}
+.pdf-viewer-zoom-btns button{background:#2a2a2a;color:#cbff01;border:1px solid #444;border-radius:4px;padding:5px 12px;font-size:16px;cursor:pointer;font-weight:700;line-height:1}
+.pdf-viewer-zoom-btns button:hover{background:#3a3a3a}
+.pdf-viewer-frame-wrap{flex:1;overflow:auto;position:relative;-webkit-overflow-scrolling:touch}
+#pdf-viewer-iframe{width:100%;height:100%;border:none;background:#fff;display:block}
+.tab-pdf-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#cbff01;color:#111;border:none;border-radius:10px;padding:18px 36px;font-size:18px;font-weight:800;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;margin:0 auto;box-shadow:0 4px 20px rgba(203,255,1,.3);transition:all .15s}
+.tab-pdf-btn:hover{background:#d8ff33;transform:translateY(-1px);box-shadow:0 6px 28px rgba(203,255,1,.45)}
+.tab-pdf-btn:active{transform:translateY(0)}
+.tab-pdf-btn .pdf-icon{font-size:24px}
+.tab-pdf-empty{display:flex;flex-direction:column;align-items:center;gap:14px;color:#555;padding:40px 20px}
+.tab-pdf-empty .pdf-icon-lg{font-size:52px;opacity:.35}
+.tab-pdf-empty p{margin:0;font-size:13px;color:#444;text-align:center}
+.tab-pdf-preview-info{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#1c2a00;border:1px solid #3a5500;border-radius:6px;font-size:11px;color:#cbff01;margin-top:6px;font-weight:600}
 </style>
 </head>
 <body>
@@ -2984,35 +3005,26 @@ function openEdit(id) {
 
 function _buildTabUploadCards(song) {
   return ['bass','rhythm','lead'].map(function(inst) {
-    var hasTab = !!(song && song.tabs && song.tabs[inst] && song.tabs[inst].blocks);
-    var instCap = inst.charAt(0).toUpperCase() + inst.slice(1);
-    var q = "'";
-    var clearBtn = hasTab
-      ? '<button class="btn btn-xs" style="background:var(--red);color:#fff;" onclick="clearTab(' + q + inst + q + ')">&#x2715;</button>'
-      : '';
-    var aiEnhanceBtn = '<button class="ai-enhance-btn" id="ai-enhance-btn-' + inst + '" onclick="aiProcessTabForInstrument(' + q + inst + q + ')" ' + (hasTab ? '' : 'disabled') + '>✨ AI Enhance</button>';
-    var uploadLabel = hasTab ? 'Replace' : 'Upload PDF';
-    var previewLines = '';
-    if (hasTab && song.tabs[inst].raw) {
-      previewLines = song.tabs[inst].raw.split('\n').filter(function(l){return l.trim();}).slice(0,8).join('\n');
-    }
-    var previewDiv = '<div class="tab-preview" id="tab-preview-' + inst + '" style="' + (hasTab ? '' : 'display:none') + '">' + (previewLines ? previewLines.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '') + '</div>';
-    return '<div class="tab-upload-card ' + (hasTab ? 'has-tab' : '') + '" id="tab-card-' + inst + '">'
-      + '<div class="tab-upload-inst">' + instCap + '</div>'
-      + '<div class="tab-upload-status" id="tab-status-' + inst + '">' + (hasTab ? '&#x2713; Tab loaded' : 'No tab') + '</div>'
-      + '<div class="tab-upload-btns">'
-      + '<label class="btn btn-ghost btn-xs" style="cursor:pointer;">'
-      + uploadLabel
-      + '<input type="file" accept=".pdf" style="display:none;" onchange="loadTabPdf(event,' + q + inst + q + ')">'
-      + '</label>'
-      + clearBtn
-      + '</div>'
-      + aiEnhanceBtn
-      + previewDiv
-      + '</div>';
+    const tabObj = song && song.tabs && song.tabs[inst];
+    const hasPdf   = !!(tabObj && tabObj.pdfData);
+    const hasBlocks = !!(tabObj && tabObj.blocks && tabObj.blocks.length);
+    const hasTab = hasPdf || hasBlocks;
+    const instCap = inst.charAt(0).toUpperCase() + inst.slice(1);
+    const clearBtn = hasTab ? `<button class="btn btn-xs" onclick="clearTab('${inst}')" title="Remove tab">&#10005;</button>` : '';
+    const statusText = hasPdf ? ('&#10003; PDF: ' + esc(tabObj.pdfName || 'loaded')) : (hasBlocks ? '&#10003; Tab loaded' : 'No tab');
+    const previewHtml = hasPdf && tabObj.pdfName ? `<div class="tab-pdf-preview-info"><span>&#128196;</span><span>${esc(tabObj.pdfName)}</span></div>` : '';
+    const uploadLabel = hasTab ? 'Replace PDF' : 'Upload PDF';
+    return `<div class="tab-upload-card ${hasTab ? 'has-tab' : ''}" id="tab-card-${inst}">
+      <div class="tab-upload-inst">${instCap}</div>
+      <div class="tab-upload-status" id="tab-status-${inst}">${statusText}</div>
+      <div class="tab-upload-btns">
+        <label class="btn btn-ghost btn-xs">${uploadLabel}<input type="file" accept=".pdf,application/pdf,image/*" style="display:none" onchange="loadTabPdf(event,'${inst}')"></label>
+        ${clearBtn}
+      </div>
+      <div class="tab-preview" id="tab-preview-${inst}">${previewHtml}</div>
+    </div>`;
   }).join('');
 }
-
 function buildEditForm(s) {
   const e = s||{};
   return `
@@ -3063,11 +3075,11 @@ function buildEditForm(s) {
       </div>
     </div>
     <div class="tab-upload-section">
-      <div style="font-family:'JetBrains Mono';font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem;">🎸 Tab PDFs (ASCII tabs — one per instrument)</div>
+      <div style="font-family:'JetBrains Mono';font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem;">🎸 Tab PDFs — upload per instrument</div>
       <div class="tab-upload-grid">
         ${_buildTabUploadCards(e)}
       </div>
-      <div class="hint" style="margin-top:0.5rem;">Upload ASCII tab PDFs (from Ultimate Guitar etc). Tabs sync to section markers automatically.</div>
+      <div class="hint" style="margin-top:0.5rem;">Upload a PDF tab for each instrument. Press the instrument button while playing to open it full-screen with zoom & scroll.</div>
     </div>
   `;
 
@@ -3296,94 +3308,49 @@ function setSpeed(val, role) {
 // Working store for tabs being edited in modal
 let _editingTabs = {};
 
-async function loadTabPdf(event, instrument) {
+async async function loadTabPdf(event, instrument) {
   const file = event.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('tab-status-' + instrument);
   const cardEl   = document.getElementById('tab-card-' + instrument);
   const prevEl   = document.getElementById('tab-preview-' + instrument);
-  if (statusEl) statusEl.textContent = '⏳ Reading PDF…';
-
+  if (statusEl) statusEl.textContent = 'Loading...';
+  const id = APP.editingId;
+  if (!id) { if (statusEl) statusEl.textContent = 'Error: no song'; return; }
   try {
-    if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page    = await pdf.getPage(pageNum);
-      const content = await page.getTextContent();
-
-      // --- Position-aware extraction: group by Y, sort by X within each row ---
-      const rowMap = {};
-      for (const item of content.items) {
-        const y = Math.round(item.transform[5] * 2) / 2; // round to 0.5px buckets
-        const x = item.transform[4];
-        if (!rowMap[y]) rowMap[y] = [];
-        rowMap[y].push({ x, str: item.str, w: item.width || 0 });
-      }
-
-      // Sort rows top-to-bottom (PDF coords are bottom-up so sort descending)
-      const sortedYs = Object.keys(rowMap).map(Number).sort((a,b) => b - a);
-      let lastY = null;
-      for (const y of sortedYs) {
-        if (lastY !== null) {
-          const gap = lastY - y;
-          // If vertical gap > 10px treat as new line; > 20px add blank separator
-          if (gap > 20) fullText += '\n';
-          fullText += '\n';
-        }
-        const items = rowMap[y].sort((a,b) => a.x - b.x);
-        let lineStr = '';
-        let prevRight = null;
-        for (const item of items) {
-          if (prevRight !== null) {
-            const gap = item.x - prevRight;
-            // Approximate spaces: each char ~6px wide
-            const spaces = Math.max(0, Math.round(gap / 6));
-            lineStr += ' '.repeat(spaces);
-          }
-          lineStr += item.str;
-          prevRight = item.x + (item.w > 0 ? item.w : item.str.length * 6);
-        }
-        fullText += lineStr;
-        lastY = y;
-      }
-      if (pageNum < pdf.numPages) fullText += '\n\n';
+    const arrayBuf = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuf);
+    let binary = '';
+    const CHUNK = 8192;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
     }
-
-    const blocks = parseAsciiTabV10(fullText);
-
-    _editingTabs[instrument] = { raw: fullText, blocks };
-    if (APP.editingId) {
-      const song = getSong(APP.editingId);
-      if (song) {
-        if (!song.tabs) song.tabs = {};
-        song.tabs[instrument] = { raw: fullText, blocks };
-        persist();
-      }
-    }
-
-    if (statusEl) statusEl.textContent = '✓ ' + blocks.length + ' section' + (blocks.length !== 1 ? 's' : '') + ' found';
-    if (cardEl)   cardEl.classList.add('has-tab');
-    // Show preview of first few lines
-    if (prevEl) {
-      const preview = fullText.split('\n').filter(l => l.trim()).slice(0, 8).join('\n');
-      prevEl.textContent = preview;
-      prevEl.style.display = 'block';
-    }
-    toast(instrument.charAt(0).toUpperCase() + instrument.slice(1) + ' tab loaded — ' + blocks.length + ' sections');
-
-  } catch(e) {
-    if (statusEl) statusEl.textContent = '❌ Failed: ' + e.message;
-    toast('Tab PDF error: ' + e.message);
-    console.error('loadTabPdf error', e);
+    const b64 = btoa(binary);
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const mimeType = isPdf ? 'application/pdf' : (file.type || 'application/octet-stream');
+    const dataUrl = 'data:' + mimeType + ';base64,' + b64;
+    const bank = JSON.parse(localStorage.getItem('bs4_bank') || '[]');
+    const song = bank.find(s => s.id === id);
+    if (!song) { if (statusEl) statusEl.textContent = 'Error: song not found'; return; }
+    if (!song.tabs) song.tabs = {};
+    if (!song.tabs[instrument]) song.tabs[instrument] = {};
+    song.tabs[instrument].pdfData = dataUrl;
+    song.tabs[instrument].pdfName = file.name;
+    song.tabs[instrument].raw = '';
+    song.tabs[instrument].blocks = [];
+    localStorage.setItem('bs4_bank', JSON.stringify(bank));
+    const sizeStr = file.size > 1048576 ? (file.size / 1048576).toFixed(1) + 'MB' : Math.round(file.size / 1024) + 'KB';
+    if (statusEl) statusEl.textContent = '&#10003; PDF: ' + file.name;
+    if (cardEl) cardEl.classList.add('has-tab');
+    if (prevEl) prevEl.innerHTML = '<div class="tab-pdf-preview-info"><span>&#128196;</span><span>' + esc(file.name) + ' (' + sizeStr + ')</span></div>';
+    if (APP.song && APP.song.id === id) APP.song.tabs = song.tabs;
+    toast(instrument.charAt(0).toUpperCase() + instrument.slice(1) + ' PDF saved!');
+  } catch (err) {
+    console.error('loadTabPdf error', err);
+    if (statusEl) statusEl.textContent = 'Error: ' + err.message;
   }
+  event.target.value = '';
 }
-
 function clearTab(instrument) {
   _editingTabs[instrument] = null;
   if (APP.editingId) {
@@ -3530,46 +3497,95 @@ function syncTabToSections(tabData, songLines, duration) {
 let _tabBlocks = { c: [], v: [] }; // processed blocks per role
 
 function renderTabView(song, instrument, prefix) {
-  const beltEl = document.getElementById(`${prefix}-tab-belt`);
+  const beltEl = document.getElementById(prefix + '-tab-belt');
   if (!beltEl) return;
-
   const tabData = song.tabs && song.tabs[instrument];
-  if (!tabData || !tabData.blocks || !tabData.blocks.length) {
+  if (tabData && tabData.pdfData) {
+    const instCap = instrument.charAt(0).toUpperCase() + instrument.slice(1);
     beltEl.innerHTML = '';
-    beltEl.parentElement.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:0.75rem;padding:2rem;">
-        <div style="font-size:2rem;opacity:0.15;">🎸</div>
-        <div style="font-family:'Bebas Neue';font-size:1.2rem;letter-spacing:0.1em;color:var(--text-dim);">No ${instrument} tab for this song</div>
-        <div style="font-size:0.75rem;color:var(--text-dim);opacity:0.6;">Chord annotations will still show above the lyrics</div>
-      </div>`;
-    _tabBlocks[prefix] = [];
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:200px;gap:18px;padding:24px;';
+    const btn = document.createElement('button');
+    btn.className = 'tab-pdf-btn';
+    btn.innerHTML = '<span class="pdf-icon">&#128196;</span> Open ' + instCap + ' Tab PDF';
+    btn.onclick = function() { openPdfViewer(instrument, prefix); };
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:11px;color:#555;text-align:center;';
+    info.textContent = tabData.pdfName || 'PDF Tab';
+    wrap.appendChild(btn);
+    wrap.appendChild(info);
+    beltEl.appendChild(wrap);
+    const lyricEl = document.getElementById(prefix + '-tab-lyric');
+    if (lyricEl) lyricEl.textContent = '';
     return;
   }
-
-  // Sync to sections
-  const lines = song.lines || [];
-  const synced = syncTabToSections(tabData, lines, song.duration || 180);
-  _tabBlocks[prefix] = synced.blocks;
-
-  beltEl.innerHTML = '';
-  synced.blocks.forEach((block, i) => {
-    const div = document.createElement('div');
-    div.className = 'tab-block';
-    div.dataset.i = i;
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'tab-block-label';
-    labelDiv.textContent = block.label + (block.t != null ? ` — ${fmtTime(block.t)}` : '');
-    div.appendChild(labelDiv);
-    const pre = document.createElement('pre');
-    pre.style.margin = '0';
-    pre.style.fontFamily = 'inherit';
-    pre.style.fontSize = 'inherit';
-    pre.style.lineHeight = 'inherit';
-    pre.textContent = block.lines.join('\n');
-    div.appendChild(pre);
-    beltEl.appendChild(div);
-  });
+  if (tabData && tabData.blocks && tabData.blocks.length) {
+    beltEl.innerHTML = '';
+    tabData.blocks.forEach(function(block, idx) {
+      const div = document.createElement('div');
+      div.className = 'tab-block';
+      div.dataset.blockIdx = idx;
+      div.innerHTML = '<pre>' + esc(block.lines.join('\n')) + '</pre>';
+      beltEl.appendChild(div);
+    });
+    return;
+  }
+  const instCap = instrument.charAt(0).toUpperCase() + instrument.slice(1);
+  beltEl.innerHTML = '<div class="tab-pdf-empty"><div class="pdf-icon-lg">&#127928;</div><p>No ' + instCap.toLowerCase() + ' tab for this song</p><p style="font-size:11px;">Upload a PDF in the song editor to enable this view</p></div>';
+  const lyricEl2 = document.getElementById(prefix + '-tab-lyric');
+  if (lyricEl2) lyricEl2.textContent = '\u2014';
 }
+function openPdfViewer(instrument, prefix) {
+  const song = APP.song;
+  if (!song) return;
+  const tabData = song.tabs && song.tabs[instrument];
+  if (!tabData || !tabData.pdfData) { toast('No PDF tab for this song'); return; }
+  const overlay = document.getElementById('pdf-viewer-overlay');
+  const iframe  = document.getElementById('pdf-viewer-iframe');
+  const titleEl = document.getElementById('pdf-viewer-title');
+  if (!overlay || !iframe) return;
+  const instCap = instrument.charAt(0).toUpperCase() + instrument.slice(1);
+  if (titleEl) titleEl.textContent = (song.title || '') + ' \u2014 ' + instCap + ' Tab';
+  iframe.src = tabData.pdfData;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  window._pdfZoom = 1;
+  const lbl = document.getElementById('pdf-zoom-label');
+  if (lbl) lbl.textContent = '100%';
+}
+function closePdfViewer() {
+  const overlay = document.getElementById('pdf-viewer-overlay');
+  const iframe  = document.getElementById('pdf-viewer-iframe');
+  if (overlay) overlay.classList.remove('open');
+  if (iframe) iframe.src = '';
+  document.body.style.overflow = '';
+  window._pdfZoom = 1;
+}
+function pdfViewerZoom(delta) {
+  const iframe = document.getElementById('pdf-viewer-iframe');
+  const lbl    = document.getElementById('pdf-zoom-label');
+  if (!iframe) return;
+  if (delta === 0) {
+    window._pdfZoom = 1;
+    iframe.style.transform = '';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+  } else {
+    window._pdfZoom = Math.max(0.5, Math.min(4, (window._pdfZoom || 1) + delta));
+    const z = window._pdfZoom;
+    iframe.style.transformOrigin = 'top left';
+    iframe.style.transform = 'scale(' + z + ')';
+    iframe.style.width = Math.round(100 / z) + '%';
+    iframe.style.height = Math.round(100 / z) + '%';
+  }
+  if (lbl) lbl.textContent = Math.round((window._pdfZoom || 1) * 100) + '%';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('pdf-viewer-overlay');
+    if (ov && ov.classList.contains('open')) closePdfViewer();
+  }
+});
 
 function updateTabView(prefix, songTime) {
   const blocks = _tabBlocks[prefix];
@@ -4061,5 +4077,21 @@ document.addEventListener('keydown', e=>{
     </div>
   </div>
 </div>
+
+  <!-- PDF Tab Viewer Overlay -->
+  <div class="pdf-viewer-overlay" id="pdf-viewer-overlay">
+    <div class="pdf-viewer-bar">
+      <span class="pdf-viewer-title" id="pdf-viewer-title">Tab</span>
+      <div class="pdf-viewer-zoom-btns">
+        <button onclick="pdfViewerZoom(-0.25)" title="Zoom out">&#8722;</button>
+        <button id="pdf-zoom-label" onclick="pdfViewerZoom(0)" title="Reset zoom" style="min-width:48px;font-size:12px;">100%</button>
+        <button onclick="pdfViewerZoom(0.25)" title="Zoom in">&#65291;</button>
+      </div>
+      <button class="pdf-viewer-close" onclick="closePdfViewer()">&#10005; Close</button>
+    </div>
+    <div class="pdf-viewer-frame-wrap" id="pdf-viewer-frame-wrap">
+      <iframe id="pdf-viewer-iframe" src="" title="Tab PDF"></iframe>
+    </div>
+  </div>
 </body>
 </html>
