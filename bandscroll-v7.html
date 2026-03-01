@@ -754,6 +754,8 @@ textarea{resize:vertical;}
    Same min-height as lyric lines. Different font + colour per type.
 ═══════════════════════════════════════ */
 
+.ll.ann-section,.ll.ann-chord,.ll.ann-note{line-height:1.3;padding:0.12rem 0;transition:color 0.22s,opacity 0.22s;user-select:none;}
+.ll.ann-section.past,.ll.ann-chord.past,.ll.ann-note.past{opacity:0.12;}
 /* SECTION annotations — Verse / Chorus / Solo (amber, bold italic) */
 .ll.ann-section{
   font-family:'Instrument Sans',sans-serif;
@@ -761,13 +763,10 @@ textarea{resize:vertical;}
   font-size:calc(clamp(1.3rem,3.5vw,2rem) * var(--lyric-scale));
   color:#f59e0b;opacity:0.9;
   letter-spacing:0.02em;line-height:1.3;padding:0.12rem 0;
-  transition:color 0.22s,opacity 0.22s;
-  user-select:none;
 }
 .ll.ann-section::before{
   content:'§';font-size:0.6em;margin-right:0.4em;opacity:0.6;vertical-align:0.1em;
 }
-.ll.ann-section.past{opacity:0.12;}
 .ll.ann-section.active-ann{opacity:1;text-shadow:0 0 22px rgba(245,158,11,0.35);}
 
 /* CHORD annotations — Am G F / Key change (blue, mono) */
@@ -777,13 +776,10 @@ textarea{resize:vertical;}
   font-size:calc(clamp(1.2rem,3vw,1.8rem) * var(--lyric-scale));
   color:#60a5fa;opacity:0.9;
   letter-spacing:0.08em;line-height:1.3;padding:0.12rem 0;
-  transition:color 0.22s,opacity 0.22s;
-  user-select:none;
 }
 .ll.ann-chord::before{
   content:'♩';font-size:0.65em;margin-right:0.4em;opacity:0.55;vertical-align:0.05em;
 }
-.ll.ann-chord.past{opacity:0.12;}
 .ll.ann-chord.active-ann{opacity:1;text-shadow:0 0 20px rgba(96,165,250,0.35);}
 
 /* NOTE annotations — performance cues (green, light italic) */
@@ -793,13 +789,10 @@ textarea{resize:vertical;}
   font-size:calc(clamp(1.1rem,2.8vw,1.7rem) * var(--lyric-scale));
   color:#34d399;opacity:0.85;
   letter-spacing:0.01em;line-height:1.3;padding:0.12rem 0;
-  transition:color 0.22s,opacity 0.22s;
-  user-select:none;
 }
 .ll.ann-note::before{
   content:'↳';font-size:0.65em;margin-right:0.4em;opacity:0.5;font-style:normal;vertical-align:0.05em;
 }
-.ll.ann-note.past{opacity:0.12;}
 .ll.ann-note.active-ann{opacity:1;text-shadow:0 0 18px rgba(52,211,153,0.3);}
 
 /* ═══════════════════════════════════════
@@ -1605,9 +1598,7 @@ textarea{resize:vertical;}
 <script>
 'use strict';
 
-// ══════════════════════════════════════════════════════════
-//  DATA MODEL
-// ══════════════════════════════════════════════════════════
+// ── DATA MODEL ──
 /*
   Song { id, title, artist, album, duration, syncType,
          lines:[{t,text,type,bv}], rawLyrics, notes }
@@ -1862,9 +1853,7 @@ function randomNextRoomCode() {
   try { localStorage.setItem('bs_next_room', _nextRoomCode); } catch(e) {}
 }
 
-// ══════════════════════════════════════════════════════════
-//  SCREENS
-// ══════════════════════════════════════════════════════════
+// ── SCREENS ──
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -1917,9 +1906,7 @@ function doJoin() {
   toast('Joined ' + code);
 }
 
-// ══════════════════════════════════════════════════════════
-//  LRCLIB + CORS PROXY
-// ══════════════════════════════════════════════════════════
+// ── LRCLIB + CORS PROXY ──
 const PROXY = 'https://corsproxy.io/?url=';
 async function lrcFetch(url) {
   try {
@@ -1984,9 +1971,7 @@ async function pickResult(i) {
   }
 }
 
-// ══════════════════════════════════════════════════════════
-//  SONG BUILDER
-// ══════════════════════════════════════════════════════════
+// ── SONG BUILDER ──
 function buildSong(data) {
   const id = 'song_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
   const duration = data.duration || 180;
@@ -2065,9 +2050,7 @@ function buildPlainLines(plain, duration) {
   return parsed;
 }
 
-// ══════════════════════════════════════════════════════════
-//  BANK / SETLIST MANAGEMENT
-// ══════════════════════════════════════════════════════════
+// ── BANK / SETLIST MANAGEMENT ──
 function addToBank(song, autoAddToSet) {
   const exists = APP.bank.find(s =>
     s.title.toLowerCase()===song.title.toLowerCase() &&
@@ -2154,9 +2137,7 @@ function deleteSetlist(id) {
   persist(); renderAll();
 }
 
-// ══════════════════════════════════════════════════════════
-//  RENDER ALL
-// ══════════════════════════════════════════════════════════
+// ── RENDER ALL ──
 function renderAll() {
   renderSetlist(); renderBank(); renderSets(); renderSetsModal(); updateSetlistName();
 }
@@ -2256,9 +2237,7 @@ function renderOverview() {
   }).join('');
 }
 
-// ══════════════════════════════════════════════════════════
-//  DRAG TO REORDER
-// ══════════════════════════════════════════════════════════
+// ── DRAG TO REORDER ──
 let _dragId = null;
 function dragStart(e, id) { _dragId = id; e.dataTransfer.effectAllowed='move'; }
 function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
@@ -2277,9 +2256,7 @@ function dragDrop(e, targetId) {
   persist(); renderSetlist();
 }
 
-// ══════════════════════════════════════════════════════════
-//  LOAD SONG
-// ══════════════════════════════════════════════════════════
+// ── LOAD SONG ──
 function loadSong(id) {
   stopPlay();
   APP.currentId = id;
@@ -2345,9 +2322,7 @@ function clearStage() {
   document.getElementById('notes-banner').classList.remove('visible');
 }
 
-// ══════════════════════════════════════════════════════════
-//  BELT RENDERER
-// ══════════════════════════════════════════════════════════
+// ── BELT RENDERER ──
 const LINE_H = 64;
 
 function buildBelt(beltEl, lines) {
@@ -2394,20 +2369,7 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     belt.style.transform = `translateY(${cursorY - ai*LINE_H}px)`;
   }
 
-  // Apply state classes to all lines
-  // Find active lyric index (again for state, same logic)
-  let ai = -1;
-  for (let i=0; i<lines.length; i++) {
-    if (lines[i].type!=='lyric') continue;
-    if (lines[i].t!=null && lines[i].t <= songTime) ai=i;
-    else if (lines[i].t!=null && lines[i].t > songTime) break;
-  }
-  ai = Math.max(0,ai);
-  let ni = -1;
-  for (let i=ai+1; i<lines.length; i++) {
-    if (lines[i].type==='lyric') { ni=i; break; }
-  }
-
+  // Apply state classes (ai/ni from above)
   const els = belt.querySelectorAll('.ll');
   els.forEach((el,i) => {
     const line = lines[i];
@@ -2455,9 +2417,7 @@ function mergeAnnotations(song) {
   return combined;
 }
 
-// ══════════════════════════════════════════════════════════
-//  MANUAL SCROLL DETACH / REJOIN
-// ══════════════════════════════════════════════════════════
+// ── MANUAL SCROLL DETACH / REJOIN ──
 function _setDetached(val) {
   APP.detached = val;
   const wrap = document.getElementById('c-belt-wrap');
@@ -2527,9 +2487,7 @@ function rejoinAutoScroll() {
   });
 })();
 
-// ══════════════════════════════════════════════════════════
-//  SCRUB BAR
-// ══════════════════════════════════════════════════════════
+// ── SCRUB BAR ──
 function _updateScrub(t, dur) {
   const pct = dur > 0 ? Math.min(100, (t / dur) * 100) : 0;
   const prog = document.getElementById('c-scrub-prog');
@@ -2610,9 +2568,7 @@ function _seekTo(t) {
   document.getElementById('prog-fill').style.width = (t / song.duration * 100) + '%';
 }
 
-// ══════════════════════════════════════════════════════════
-//  PLAYBACK
-// ══════════════════════════════════════════════════════════
+// ── PLAYBACK ──
 function togglePlay() {
   if (APP.isPlaying) stopPlay();
   else startCountdown();
@@ -2656,39 +2612,7 @@ function beginPlay(song, wallStart) {
       updateTabView('c', cl * _speedMult.c);
       updateTabLyricOverlay('c', lines, cl);
     }
-    if (!APP.detached) {
-      positionBelt('c-belt','c-belt-wrap','c-cursor',lines,cl);
-    } else {
-      // Still update line state colours even when detached
-      const belt = document.getElementById('c-belt');
-      if (belt) {
-        const els = belt.querySelectorAll('.ll');
-        let ai=-1;
-        for(let i=0;i<lines.length;i++){
-          if(lines[i].type!=='lyric')continue;
-          if(lines[i].t!=null&&lines[i].t<=cl)ai=i;
-          else if(lines[i].t!=null&&lines[i].t>cl)break;
-        }
-        ai=Math.max(0,ai);
-        let ni=-1;
-        for(let i=ai+1;i<lines.length;i++){if(lines[i].type==='lyric'){ni=i;break;}}
-        els.forEach((el,i)=>{
-          const line=lines[i];if(!line)return;
-          if(line.type==='lyric'){
-            el.classList.remove('active-lead','active-bv','lookahead-lead','lookahead-bv','past','upcoming');
-            if(i<ai)el.classList.add('past');
-            else if(i===ai)el.classList.add(line.bv?'active-bv':'active-lead');
-            else if(i===ni)el.classList.add(line.bv?'lookahead-bv':'lookahead-lead');
-            else el.classList.add('upcoming');
-          } else if(line.type==='annotation'){
-            el.classList.remove('past','active-ann');
-            if(line.t!=null&&cl>=line.t&&cl<line.t+6)el.classList.add('active-ann');
-            else if(line.t!=null&&cl>=line.t+6)el.classList.add('past');
-          }
-        });
-      }
-    }
-    if(t>dur+1){ stopPlay(); autoAdvance(); return; }
+          positionBelt('c-belt','c-belt-wrap','c-cursor', lines, cl);    if(t>dur+1){ stopPlay(); autoAdvance(); return; }
     APP.raf = requestAnimationFrame(tick);
   };
   APP.raf = requestAnimationFrame(tick);
@@ -2727,9 +2651,7 @@ function nextSong() {
   if(i>=0&&i<ids.length-1) loadSong(ids[i+1]);
 }
 
-// ══════════════════════════════════════════════════════════
-//  NUDGE TIMING
-// ══════════════════════════════════════════════════════════
+// ── NUDGE TIMING ──
 function nudgeOffset(delta) {
   APP.offsetAdj = Math.round((APP.offsetAdj + delta) * 10) / 10;
   APP.offsetAdj = Math.max(-15, Math.min(15, APP.offsetAdj));
@@ -2744,9 +2666,7 @@ function _updateOffsetDisplay() {
   if (d) d.textContent = (APP.offsetAdj >= 0 ? '+' : '') + APP.offsetAdj.toFixed(1) + 's';
 }
 
-// ══════════════════════════════════════════════════════════
-//  VIEWER
-// ══════════════════════════════════════════════════════════
+// ── VIEWER ──
 const V = { song:null, raf:null, playing:false, startPN:null, offsetAdj:0, conductorOffset:0 };
 
 function vLoad(song) {
@@ -2802,35 +2722,13 @@ function vStartCD(wallStart, song, conductorOffset) {
 function vSeek(wallStart, songTime, conductorOffset) {
   if (!V.song) return;
   if (conductorOffset !== undefined) V.conductorOffset = conductorOffset;
-  // Recalculate startPN so that song time at serverNow() equals songTime
   V.startPN = performance.now() - (serverNow() - wallStart) / 1000 * 1000;
   const t = Math.max(0, (serverNow() - wallStart) / 1000);
   positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, t);
   _vUpdateScrub(t, V.song.duration);
   updateSectionPin('v', V.song.lines, t);
-  if (!V.playing) {
-    // Start playing from seek point
-    V.playing = true;
-    document.getElementById('v-live-pill').style.display = '';
-    const dur = V.song.duration;
-    const tick = (now) => {
-      if (!V.playing) return;
-      const st = (now - V.startPN) / 1000 + V.conductorOffset;
-      const cl = Math.max(0, Math.min(st, dur));
-      positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, cl);
-      _vUpdateScrub(cl, dur);
-      updateSectionPin('v', V.song.lines, cl);
-      if (_currentView.v !== 'lyrics') {
-        updateTabView('v', cl * _speedMult.v);
-        updateTabLyricOverlay('v', V.song.lines, cl);
-      }
-      if (st > dur + 1) { vStop(); return; }
-      V.raf = requestAnimationFrame(tick);
-    };
-    V.raf = requestAnimationFrame(tick);
-  }
+  if (!V.playing) vBegin(wallStart);
 }
-
 function vBegin(wallStart) {
   if (!V.song) return;
   V.playing = true;
@@ -2879,9 +2777,7 @@ function setBrightness(val) {
   document.getElementById('v-bright-val').textContent = Math.round(val * 100) + '%';
 }
 
-// ══════════════════════════════════════════════════════════
-//  SECTION PIN BAR
-// ══════════════════════════════════════════════════════════
+// ── SECTION PIN BAR ──
 const _sectionPinState = { c: { current: '', pending: '' }, v: { current: '', pending: '' } };
 
 function updateSectionPin(role, lines, t) {
@@ -3130,9 +3026,7 @@ function saveEdit() {
   renderAll();
 }
 
-// ══════════════════════════════════════════════════════════
-//  TIMESTAMP EDITOR
-// ══════════════════════════════════════════════════════════
+// ── TIMESTAMP EDITOR ──
 function openTSEditor(id) {
   APP.tsEditingId = id;
   const s = getSong(id); if (!s) return;
@@ -3166,9 +3060,7 @@ function saveTimestamps() {
   toast('Timestamps saved');
 }
 
-// ══════════════════════════════════════════════════════════
-//  EXPORT / IMPORT
-// ══════════════════════════════════════════════════════════
+// ── EXPORT / IMPORT ──
 function exportBank() {
   const data = JSON.stringify({bank:APP.bank, setlists:APP.setlists, activeSetlistId:APP.activeSetlistId},null,2);
   const a = Object.assign(document.createElement('a'),{
@@ -3202,9 +3094,7 @@ function importBank(inp) {
   reader.readAsText(file);
 }
 
-// ══════════════════════════════════════════════════════════
-//  TABS / MODALS / SHARE
-// ══════════════════════════════════════════════════════════
+// ── TABS / MODALS / SHARE ──
 function switchTab(name) {
   const order=['search','setlist','bank','sets'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('on',order[i]===name));
@@ -3244,9 +3134,7 @@ function serializeSong(s){
   };
 }
 
-// ══════════════════════════════════════════════════════════
-//  INSTRUMENT & VIEW STATE
-// ══════════════════════════════════════════════════════════
+// ── INSTRUMENT & VIEW STATE ──
 let _userInstrument = 'lyrics'; // 'lyrics'|'bass'|'rhythm'|'lead'
 let _currentView = { c: 'lyrics', v: 'lyrics' }; // current view per role
 let _speedMult = { c: 1.0, v: 1.0 };
@@ -3302,9 +3190,7 @@ function setSpeed(val, role) {
   }
 }
 
-// ══════════════════════════════════════════════════════════
-//  PDF TAB PARSER
-// ══════════════════════════════════════════════════════════
+// ── PDF TAB PARSER ──
 // Working store for tabs being edited in modal
 let _editingTabs = {};
 
@@ -3353,7 +3239,6 @@ async function loadTabPdf(event, instrument) {
   event.target.value = '';
 }
 function clearTab(instrument) {
-  _editingTabs[instrument] = null;
   if (APP.editingId) {
     const song = getSong(APP.editingId);
     if (song && song.tabs) { song.tabs[instrument] = null; persist(); }
@@ -3368,133 +3253,8 @@ function clearTab(instrument) {
   _renderAnnList();
 }
 
-// ── ASCII Tab Parser ──
-// Splits raw tab text into labelled blocks by detecting:
-// 1. Explicit [Section] markers
-// 2. Tab string patterns (e|---, A|---, etc.)
-// 3. Blank line grouping
-function parseAsciiTab(raw) {
-  const lines = raw.split('\n');
-  const blocks = [];
-  let currentLabel = '';
-  let currentLines = [];
-  let inTabGroup = false;
 
-  const isTabLine = l => /^[eEADGBb]\|/.test(l.trim()) || /^\|?[-0-9hpbr/\\~x*]+\|/.test(l.trim());
-  const isSectionMarker = l => { const t=l.trim(); return /^\[.{1,40}\]/.test(t) || /^(Intro|Verse|Chorus|Bridge|Pre-Chorus|Outro|Solo|Break|Refrain|Main Riff|Riff|Hook|Interlude|Coda)([\s:\u2013\u2014]|$)/i.test(t); };
-  const isChordLine = l => /^([A-G][#b]?(m|maj|min|dim|aug|sus|add|\d)?\s+){2,}/.test(l.trim());
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (isSectionMarker(trimmed)) {
-      // Save previous block
-      if (currentLines.some(l => l.trim())) {
-        blocks.push({ label: currentLabel || `Section ${blocks.length+1}`, lines: currentLines, t: null });
-      }
-      currentLabel = trimmed.replace(/^\[|\]$/g, '');
-      currentLines = [];
-      inTabGroup = false;
-      continue;
-    }
-
-    if (isTabLine(trimmed)) {
-      inTabGroup = true;
-      currentLines.push(line);
-    } else if (isChordLine(trimmed)) {
-      currentLines.push(line);
-    } else if (trimmed === '' && inTabGroup) {
-      // Blank line after tab group — might be end of section
-      currentLines.push('');
-      inTabGroup = false;
-    } else if (trimmed !== '' || currentLines.length > 0) {
-      currentLines.push(line);
-    }
-  }
-
-  // Final block
-  if (currentLines.some(l => l.trim())) {
-    blocks.push({ label: currentLabel || `Section ${blocks.length+1}`, lines: currentLines, t: null });
-  }
-
-  // If no sections found (single continuous tab), wrap it all
-  if (!blocks.length && raw.trim()) {
-    blocks.push({ label: 'Tab', lines: raw.split('\n'), t: null });
-  }
-
-  return blocks;
-}
-
-// ── Sync tab blocks to song sections ──
-// Maps parsed tab blocks to song section annotations with intelligent assignment
-function syncTabToSections(tabData, songLines, duration) {
-  if (!tabData || !tabData.blocks || !tabData.blocks.length) return tabData;
-
-  const blocks = tabData.blocks.map(b => ({...b}));
-
-  // Get all section annotations from the song, sorted by time
-  const sections = songLines
-    .filter(l => (l.type === 'section' || (l.type === 'annotation' && l.annType === 'section')) && l.t != null)
-    .sort((a, b) => a.t - b.t);
-
-  if (!sections.length) {
-    // No sections in song — space blocks evenly through the song
-    const spacing = duration / (blocks.length + 1);
-    blocks.forEach((b, i) => { b.t = spacing * (i + 1); });
-    return { ...tabData, blocks };
-  }
-
-  const normalize = s => s.toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '').trim();
-
-  // First pass: fuzzy name matching
-  const matched = new Set();
-  blocks.forEach(block => {
-    if (block.t !== null) return;
-    const bn = normalize(block.label);
-    for (const sec of sections) {
-      if (matched.has(sec)) continue;
-      const sn = normalize(sec.text);
-      if (sn === bn || sn.includes(bn) || bn.includes(sn)) {
-        block.t = sec.t;
-        matched.add(sec);
-        break;
-      }
-    }
-  });
-
-  // Second pass: assign unmatched blocks to unmatched sections in order
-  const unmatchedSections = sections.filter(s => !matched.has(s));
-  const unmatchedBlocks = blocks.filter(b => b.t === null);
-
-  if (unmatchedBlocks.length > 0 && unmatchedSections.length > 0) {
-    unmatchedBlocks.forEach((block, i) => {
-      if (i < unmatchedSections.length) {
-        block.t = unmatchedSections[i].t;
-        // If block has a generic label (Part N), rename it to the song section name
-        if (/^(Part|Section)\s*\d+$/i.test(block.label)) {
-          block.label = unmatchedSections[i].text;
-        }
-      } else {
-        // More blocks than sections — spread remaining after last section
-        const lastT = unmatchedSections[unmatchedSections.length - 1].t;
-        const extra = i - unmatchedSections.length + 1;
-        const remaining = unmatchedBlocks.length - unmatchedSections.length;
-        block.t = lastT + extra * (duration - lastT) / (remaining + 1);
-      }
-    });
-  } else if (unmatchedBlocks.length > 0) {
-    const spacing = duration / (unmatchedBlocks.length + 1);
-    unmatchedBlocks.forEach((b, i) => { if (b.t === null) b.t = spacing * (i + 1); });
-  }
-
-  blocks.sort((a, b) => (a.t || 0) - (b.t || 0));
-  return { ...tabData, blocks };
-}
-
-// ══════════════════════════════════════════════════════════
-//  TAB RENDERER
-// ══════════════════════════════════════════════════════════
+// ── TAB RENDERER ──
 let _tabBlocks = { c: [], v: [] }; // processed blocks per role
 
 function renderTabView(song, instrument, prefix) {
@@ -3633,9 +3393,7 @@ function updateTabLyricOverlay(prefix, lines, songTime) {
   el.textContent = activeLyric;
 }
 
-// ══════════════════════════════════════════════════════════
-//  LYRIC TOUCH CORRECTION
-// ══════════════════════════════════════════════════════════
+// ── LYRIC TOUCH CORRECTION ──
 function enableTouchCorrection(beltId) {
   const belt = document.getElementById(beltId);
   if (!belt) return;
@@ -3656,35 +3414,23 @@ function enableTouchCorrection(beltId) {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-//  VIEW TOGGLE VISIBILITY based on available tabs
-// ══════════════════════════════════════════════════════════
+// ── VIEW TOGGLE VISIBILITY based on available tabs ──
 function updateViewToggleVisibility(song, role) {
+  const hasTab = i => !!(song.tabs && song.tabs[i] && (song.tabs[i].pdfData || (song.tabs[i].blocks && song.tabs[i].blocks.length)));
   if (role === 'c') {
-    const hasBass   = !!(song.tabs && song.tabs.bass && song.tabs.bass.blocks);
-    const hasRhythm = !!(song.tabs && song.tabs.rhythm && song.tabs.rhythm.blocks);
-    const hasLead   = !!(song.tabs && song.tabs.lead && song.tabs.lead.blocks);
-    document.getElementById('c-vt-bass')?.classList.toggle('on', false);
-    ['c-vt-bass','c-vt-rhythm','c-vt-lead'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = [hasBass,hasRhythm,hasLead][i] ? '' : 'none';
+    ['bass','rhythm','lead'].forEach(i => {
+      const el = document.getElementById('c-vt-' + i);
+      if (el) el.style.display = hasTab(i) ? '' : 'none';
     });
   } else {
-    // Viewer: show toggle only if their instrument has a tab
     const inst = _userInstrument;
-    const hasTab = inst !== 'lyrics' && !!(song.tabs && song.tabs[inst] && song.tabs[inst].blocks);
+    const ok = inst !== 'lyrics' && hasTab(inst);
     const toggle = document.getElementById('v-view-toggle');
-    if (toggle) toggle.style.display = hasTab ? '' : 'none';
-    if (!hasTab && inst !== 'lyrics') {
-      // Show brief message then stay on lyrics
-      toast(`No ${inst} tab for this song — showing lyrics`);
-      setView('lyrics', 'v');
-    }
+    if (toggle) toggle.style.display = ok ? '' : 'none';
+    if (!ok && inst !== 'lyrics') { toast('No ' + inst + ' tab for this song — showing lyrics'); setView('lyrics', 'v'); }
   }
 }
 
-
-// ══════════════════════════════════════════════════════════
 function fmtTime(s){
   if(s==null||isNaN(s)) return '—';
   s=Math.round(s);
@@ -3719,9 +3465,7 @@ function bumpEl(el){
   el.style.animation='none'; void el.offsetWidth; el.style.animation='cpop 0.6s ease-out';
 }
 
-// ══════════════════════════════════════════════════════════
-//  KEYBOARD
-// ══════════════════════════════════════════════════════════
+// ── KEYBOARD ──
 
 // =====================================================================
 // BPM TAP TEMPO SYSTEM
@@ -3858,7 +3602,7 @@ async function aiProcessTabForInstrument(instrument) {
     const enhanced = await aiProcessTab(tabData.raw, instrument);
     if (!enhanced) return;
 
-    const blocks = parseAsciiTabV10(enhanced);
+    const blocks = parseAsciiTabV11(enhanced);
     _editingTabs[instrument] = { raw: enhanced, blocks, aiEnhanced: true };
     if (APP.editingId) {
       const song = getSong(APP.editingId);
@@ -3885,7 +3629,7 @@ async function aiProcessTabForInstrument(instrument) {
 // =====================================================================
 // TAB PARSER v11 — handles all common ASCII tab formats from PDF exports
 // =====================================================================
-function parseAsciiTabV10(raw) {
+function parseAsciiTabV11(raw) {
   // Alias to new v11 parser
   return parseAsciiTabV11(raw);
 }
@@ -4024,20 +3768,6 @@ function smartSplitByTabGroups(raw, fallbackLabel) {
   return blocks;
 }
 
-function parseAsciiTabSimple(raw) {
-  // Fallback: split into 20-line chunks
-  if (!raw) return [];
-  const lines = raw.split('\n');
-  const blocks = [];
-  const chunkSize = 20;
-  for (let i = 0; i < lines.length; i += chunkSize) {
-    const chunk = lines.slice(i, i + chunkSize);
-    if (chunk.some(l => l.trim())) {
-      blocks.push({ label: 'Part ' + (blocks.length + 1), lines: chunk, t: null });
-    }
-  }
-  return blocks.length ? blocks : [{ label: 'Tab', lines, t: null }];
-}
 
 document.addEventListener('keydown', e=>{
   if(APP.role!=='conductor') return;
@@ -4048,9 +3778,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='t'||e.key==='T') tapTempo();
 });
 
-// ══════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════
+// ── INIT ──
 (function(){
   loadAblyKey();
   loadAiKey();
