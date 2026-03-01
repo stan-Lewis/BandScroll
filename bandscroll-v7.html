@@ -1640,13 +1640,91 @@ function getSetlistSongIds() {
 }
 function getSong(id) { return APP.bank.find(s => s.id === id) || null; }
 
+// ── IndexedDB for PDF storage (prevents localStorage overflow) ──
+let _idb = null;
+function openIDB() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('bs_tabs', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('tabs');
+    req.onsuccess = e => { _idb = e.target.result; res(_idb); };
+    req.onerror = () => rej(req.error);
+  });
+}
+function idbPut(key, val) {
+  return openIDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('tabs', 'readwrite');
+    tx.objectStore('tabs').put(val, key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  }));
+}
+function idbGet(key) {
+  return openIDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('tabs', 'readonly');
+    const req = tx.objectStore('tabs').get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  }));
+}
+function idbDel(key) {
+  return openIDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('tabs', 'readwrite');
+    tx.objectStore('tabs').delete(key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  }));
+}
+// Save PDF data for a song instrument to IDB; returns a placeholder key
+async function savePdfToIDB(songId, instrument, pdfDataUrl) {
+  const key = songId + '_' + instrument;
+  await idbPut(key, pdfDataUrl);
+  return '__idb:' + key;
+}
+// Restore PDF data from IDB into APP.bank song tabs
+async function hydrateIDBTabs() {
+  const promises = APP.bank.map(async song => {
+    if (!song.tabs) return;
+    for (const inst of ['bass','rhythm','lead']) {
+      const t = song.tabs[inst];
+      if (t && t.pdfData && t.pdfData.startsWith('__idb:')) {
+        const key = t.pdfData.slice(6);
+        try { t.pdfData = await idbGet(key) || null; } catch(e) { t.pdfData = null; }
+      }
+    }
+  });
+  await Promise.all(promises);
+}
+
 // ── Persist ──
 function persist() {
+  // Strip PDF data (stored in IDB) before writing to localStorage
+  const bankForStorage = APP.bank.map(song => {
+    if (!song.tabs) return song;
+    const tabs = {};
+    for (const inst of ['bass','rhythm','lead']) {
+      const t = song.tabs[inst];
+      if (!t) continue;
+      if (t.pdfData && !t.pdfData.startsWith('__idb:')) {
+        // Save PDF to IDB and use placeholder
+        const key = song.id + '_' + inst;
+        idbPut(key, t.pdfData).catch(()=>{});
+        tabs[inst] = Object.assign({}, t, { pdfData: '__idb:' + key });
+      } else {
+        tabs[inst] = t;
+      }
+    }
+    return Object.assign({}, song, { tabs });
+  });
   try {
-    localStorage.setItem('bs4_bank', JSON.stringify(APP.bank));
+    localStorage.setItem('bs4_bank', JSON.stringify(bankForStorage));
     localStorage.setItem('bs4_setlists', JSON.stringify(APP.setlists));
     localStorage.setItem('bs4_activeSet', APP.activeSetlistId || '');
-  } catch(e) {}
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      toast('⚠️ Storage full — export your bank to free space');
+    } else {
+      toast('⚠️ Save failed: ' + e.message);
+    }
+  }
 }
 function hydrate() {
   try {
@@ -1871,7 +1949,8 @@ function startConductor() {
   document.getElementById('sm-code').textContent = APP.roomCode;
   updateShareUrl();
   initAbly(APP.roomCode);
-  renderAll();
+  // Hydrate PDF data from IDB then render (async, non-blocking)
+  hydrateIDBTabs().then(() => renderAll()).catch(() => renderAll());
   show('s-conductor');
 }
 function showVJoin() {
@@ -1946,8 +2025,11 @@ function renderSearchResults(items) {
   el.innerHTML = items.map((r,i) => {
     const sy = !!r.syncedLyrics;
     const dur = r.duration ? fmtTime(Math.round(r.duration)) : '—';
+    const alreadySaved = APP.bank.some(s => s.title && s.artist &&
+      s.title.toLowerCase()===r.trackName.toLowerCase() &&
+      s.artist.toLowerCase()===r.artistName.toLowerCase());
     return `<div class="sr-item" onclick="pickResult(${i})">
-      <div class="sr-title">${esc(r.trackName)}<span class="sr-badge ${sy?'sy':'pl'}">${sy?'SYNCED':'PLAIN'}</span></div>
+      <div class="sr-title">${esc(r.trackName)}<span class="sr-badge ${sy?'sy':'pl'}">${sy?'SYNCED':'PLAIN'}</span>${alreadySaved?'<span class="sr-badge" style="background:var(--lime-dim);color:#fff;margin-left:4px;">SAVED</span>':''}</div>
       <div class="sr-meta">${esc(r.artistName)} · ${esc(r.albumName||'—')} · ${dur}</div>
     </div>`;
   }).join('');
@@ -2086,12 +2168,37 @@ function removeFromSetlist(id) {
   persist(); renderAll();
 }
 
+let _deletedSong = null, _deletedSetIds = null, _undoTimer = null;
 function deleteFromBank(id) {
   if (!confirm('Delete this song from your bank?')) return;
+  // Stash for undo (keep in-memory copy; IDB data stays until next save)
+  _deletedSong = APP.bank.find(s=>s.id===id) || null;
+  _deletedSetIds = APP.setlists.map(sl=>sl.id).filter(slId => {
+    const sl = APP.setlists.find(s=>s.id===slId);
+    return sl && sl.songIds.includes(id);
+  });
   APP.bank = APP.bank.filter(s=>s.id!==id);
   APP.setlists.forEach(sl=>{ sl.songIds=sl.songIds.filter(x=>x!==id); });
   if (APP.currentId===id) { APP.currentId=null; stopPlay(); clearStage(); }
   persist(); renderAll();
+  // Show undo toast for 6 s
+  if (_undoTimer) clearTimeout(_undoTimer);
+  toast('🗑 Deleted "' + (_deletedSong?_deletedSong.title:'song') + '"  <a href="#" onclick="undoDelete();return false;" style="color:#facc15;margin-left:8px;">Undo</a>', 6000);
+  _undoTimer = setTimeout(() => { _deletedSong = null; _deletedSetIds = null; }, 6500);
+}
+function undoDelete() {
+  if (!_deletedSong) return;
+  APP.bank.push(_deletedSong);
+  if (_deletedSetIds) {
+    _deletedSetIds.forEach(slId => {
+      const sl = APP.setlists.find(s=>s.id===slId);
+      if (sl && !sl.songIds.includes(_deletedSong.id)) sl.songIds.push(_deletedSong.id);
+    });
+  }
+  _deletedSong = null; _deletedSetIds = null;
+  if (_undoTimer) { clearTimeout(_undoTimer); _undoTimer = null; }
+  persist(); renderAll();
+  toast('↩ Restored!');
 }
 
 function moveSong(id, dir) {
@@ -2516,6 +2623,7 @@ function scrubDown(e, role) {
 
   function move(ev) {
     if (!APP.scrubbing) return;
+    if (ev.touches) ev.preventDefault(); // prevent page scroll while scrubbing
     const song = getSong(APP.currentId);
     if (!song) return;
     const t = getT(ev);
@@ -2542,7 +2650,7 @@ function scrubDown(e, role) {
 
   document.addEventListener('mousemove', move);
   document.addEventListener('mouseup', up);
-  document.addEventListener('touchmove', move, { passive: true });
+  document.addEventListener('touchmove', move, { passive: false });
   document.addEventListener('touchend', up);
 
   // Immediate feedback
@@ -2598,6 +2706,11 @@ function beginPlay(song, wallStart) {
   APP.playStartPN = performance.now() - (serverNow() - wallStart);
   document.getElementById('play-btn').textContent='⏹ Stop';
   document.getElementById('play-btn').className='btn btn-red';
+  // Auto-hide notes banner after 4 s so it doesn't obscure lyrics
+  const _nb = document.getElementById('notes-banner');
+  if (_nb && _nb.classList.contains('visible')) {
+    setTimeout(() => { if (APP.isPlaying) _nb.classList.remove('visible'); }, 4000);
+  }
   const dur = song.duration;
   const lines = mergeAnnotations(song);
   const tick=(now)=>{
@@ -2656,10 +2769,18 @@ function nudgeOffset(delta) {
   APP.offsetAdj = Math.round((APP.offsetAdj + delta) * 10) / 10;
   APP.offsetAdj = Math.max(-15, Math.min(15, APP.offsetAdj));
   _updateOffsetDisplay();
+  _broadcastOffsetIfPlaying();
 }
 function resetOffset() {
   APP.offsetAdj = 0;
   _updateOffsetDisplay();
+  _broadcastOffsetIfPlaying();
+}
+function _broadcastOffsetIfPlaying() {
+  if (!APP.isPlaying) return;
+  const t = Math.max(0, (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj);
+  const wallStart = serverNow() - t * 1000;
+  emit({ type: 'seek', wallStart, songTime: t, conductorOffset: APP.offsetAdj });
 }
 function _updateOffsetDisplay() {
   const d = document.getElementById('offset-display');
@@ -2670,6 +2791,8 @@ function _updateOffsetDisplay() {
 const V = { song:null, raf:null, playing:false, startPN:null, offsetAdj:0, conductorOffset:0 };
 
 function vLoad(song) {
+  // Stop any ongoing playback before loading new song
+  vStop();
   // If the received song has annotations, re-merge them into lines
   // to guarantee nothing is lost in transit
   if (song.annotations && song.annotations.length) {
@@ -3062,6 +3185,12 @@ function saveTimestamps() {
 
 // ── EXPORT / IMPORT ──
 function exportBank() {
+  // Warn if PDFs are included (file could be very large)
+  const hasPdfs = APP.bank.some(s => s.tabs && ['bass','rhythm','lead'].some(i => s.tabs[i] && s.tabs[i].pdfData));
+  if (hasPdfs) {
+    const sizeMB = (new TextEncoder().encode(JSON.stringify(APP.bank)).length / 1048576).toFixed(1);
+    if (!confirm(`Export includes PDF tab data (~${sizeMB} MB). This may create a large file. Continue?`)) return;
+  }
   const data = JSON.stringify({bank:APP.bank, setlists:APP.setlists, activeSetlistId:APP.activeSetlistId},null,2);
   const a = Object.assign(document.createElement('a'),{
     href: URL.createObjectURL(new Blob([data],{type:'application/json'})),
@@ -3122,6 +3251,15 @@ function copyShareUrl(){
 }
 function serializeSong(s){
   const mergedLines = mergeAnnotations(s);
+  // Strip pdfData from tabs (too large for Ably); keep blocks (ASCII tab) and hasPdf flag
+  const tabs = {};
+  if (s.tabs) {
+    for (const inst of ['bass','rhythm','lead']) {
+      const t = s.tabs[inst];
+      if (!t) continue;
+      tabs[inst] = { blocks: t.blocks || [], hasPdf: !!(t.pdfData) };
+    }
+  }
   return {
     title: s.title,
     artist: s.artist,
@@ -3130,7 +3268,7 @@ function serializeSong(s){
     lines: mergedLines,
     rawLyrics: s.rawLyrics || '',
     annotations: s.annotations || [],
-    tabs: s.tabs || {}
+    tabs
   };
 }
 
@@ -3215,8 +3353,7 @@ async function loadTabPdf(event, instrument) {
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     const mimeType = isPdf ? 'application/pdf' : (file.type || 'application/octet-stream');
     const dataUrl = 'data:' + mimeType + ';base64,' + b64;
-    const bank = JSON.parse(localStorage.getItem('bs4_bank') || '[]');
-    const song = bank.find(s => s.id === id);
+    const song = APP.bank.find(s => s.id === id);
     if (!song) { if (statusEl) statusEl.textContent = 'Error: song not found'; return; }
     if (!song.tabs) song.tabs = {};
     if (!song.tabs[instrument]) song.tabs[instrument] = {};
@@ -3224,8 +3361,9 @@ async function loadTabPdf(event, instrument) {
     song.tabs[instrument].pdfName = file.name;
     song.tabs[instrument].raw = '';
     song.tabs[instrument].blocks = [];
-    localStorage.setItem('bs4_bank', JSON.stringify(bank));
-    if (typeof hydrate === 'function') hydrate();
+    // Also store in _editingTabs so AI enhance works immediately
+    _editingTabs[instrument] = { pdfData: dataUrl, pdfName: file.name, raw: '', blocks: [] };
+    persist();
     const sizeStr = file.size > 1048576 ? (file.size / 1048576).toFixed(1) + 'MB' : Math.round(file.size / 1024) + 'KB';
     if (statusEl) statusEl.textContent = '&#10003; PDF: ' + file.name;
     if (cardEl) cardEl.classList.add('has-tab');
@@ -3341,6 +3479,47 @@ function pdfViewerZoom(delta) {
   }
   if (lbl) lbl.textContent = Math.round((window._pdfZoom || 1) * 100) + '%';
 }
+
+// Pinch-to-zoom for PDF viewer (mobile)
+(function initPdfPinch() {
+  let _pinchStartDist = 0, _pinchStartZoom = 1;
+  function pinchDist(e) {
+    const t = e.touches;
+    const dx = t[1].clientX - t[0].clientX, dy = t[1].clientY - t[0].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+  document.addEventListener('touchstart', function(e) {
+    const ov = document.getElementById('pdf-viewer-overlay');
+    if (!ov || !ov.classList.contains('open')) return;
+    if (e.touches.length === 2) {
+      _pinchStartDist = pinchDist(e);
+      _pinchStartZoom = window._pdfZoom || 1;
+      e.preventDefault();
+    }
+  }, { passive: false });
+  document.addEventListener('touchmove', function(e) {
+    const ov = document.getElementById('pdf-viewer-overlay');
+    if (!ov || !ov.classList.contains('open')) return;
+    if (e.touches.length === 2 && _pinchStartDist > 0) {
+      const newDist = pinchDist(e);
+      const scale = newDist / _pinchStartDist;
+      const newZoom = Math.max(0.5, Math.min(4, _pinchStartZoom * scale));
+      window._pdfZoom = newZoom;
+      const iframe = document.getElementById('pdf-viewer-iframe');
+      const lbl = document.getElementById('pdf-zoom-label');
+      if (iframe) {
+        iframe.style.transformOrigin = 'top left';
+        iframe.style.transform = 'scale(' + newZoom + ')';
+        iframe.style.width = Math.round(100 / newZoom) + '%';
+        iframe.style.height = Math.round(100 / newZoom) + '%';
+      }
+      if (lbl) lbl.textContent = Math.round(newZoom * 100) + '%';
+      e.preventDefault();
+    }
+  }, { passive: false });
+  document.addEventListener('touchend', function() { _pinchStartDist = 0; });
+})();
+
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     const ov = document.getElementById('pdf-viewer-overlay');
@@ -3416,7 +3595,7 @@ function enableTouchCorrection(beltId) {
 
 // ── VIEW TOGGLE VISIBILITY based on available tabs ──
 function updateViewToggleVisibility(song, role) {
-  const hasTab = i => !!(song.tabs && song.tabs[i] && (song.tabs[i].pdfData || (song.tabs[i].blocks && song.tabs[i].blocks.length)));
+  const hasTab = i => !!(song.tabs && song.tabs[i] && (song.tabs[i].pdfData || song.tabs[i].hasPdf || (song.tabs[i].blocks && song.tabs[i].blocks.length)));
   if (role === 'c') {
     ['bass','rhythm','lead'].forEach(i => {
       const el = document.getElementById('c-vt-' + i);
@@ -3456,10 +3635,11 @@ function esc(str){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function toast(msg){
+function toast(msg, dur){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600);
+  if (msg.includes('<')) t.innerHTML=msg; else t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), dur||2600);
 }
 function bumpEl(el){
   el.style.animation='none'; void el.offsetWidth; el.style.animation='cpop 0.6s ease-out';
@@ -3776,6 +3956,10 @@ document.addEventListener('keydown', e=>{
   if(e.code==='ArrowRight') nextSong();
   if(e.code==='ArrowLeft') prevSong();
   if(e.key==='t'||e.key==='T') tapTempo();
+  if(e.key==='+') nudgeOffset(0.1);
+  if(e.key==='-') nudgeOffset(-0.1);
+  if(e.code==='Tab'&&!e.shiftKey){e.preventDefault();
+    const cv=_currentView.c; setView(cv==='lyrics'?'tab':'lyrics','c');}
 });
 
 // ── INIT ──
@@ -3785,6 +3969,34 @@ document.addEventListener('keydown', e=>{
   const p=new URLSearchParams(location.search);
   if(p.get('room')) showVJoin();
 })();
+
+// ── Service Worker (PWA offline cache) ──
+if ('serviceWorker' in navigator) {
+  // Inline SW as a blob so no separate file is needed
+  const swCode = `
+const CACHE = 'bs-v1';
+const URLS = [self.location.pathname];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS)));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  if (e.request.mode === 'navigate') {
+    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  }
+});
+`;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+
 </script>
 
 <!-- AI KEY MODAL -->
