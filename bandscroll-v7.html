@@ -1868,7 +1868,7 @@ function onBC(msg) {
             emit({ type: 'load', song: serializeSong(song) });
             // If currently playing, also send a seek so they land at the right position
             if (APP.isPlaying) {
-              const t = Math.max(0, (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj);
+              const t = Math.max(0, (performance.now() - APP.playStartPN) / 1000);
               const wallStart = serverNow() - t * 1000;
               emit({ type: 'seek', wallStart, songTime: t, conductorOffset: APP.offsetAdj });
             }
@@ -2696,7 +2696,7 @@ function startCountdown() {
   veil.classList.add('open');
   let count=5; numEl.textContent=count; bumpEl(numEl);
   // Use server-synced time so all devices count from the same reference
-  const wallStart = serverNow() + 5500;
+  const wallStart = serverNow() + 5000;
   emit({ type:'play', wallStart, song: serializeSong(song), conductorOffset: APP.offsetAdj });
   const iv = setInterval(()=>{
     count--;
@@ -2783,7 +2783,7 @@ function resetOffset() {
 }
 function _broadcastOffsetIfPlaying() {
   if (!APP.isPlaying) return;
-  const t = Math.max(0, (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj);
+  const t = Math.max(0, (performance.now() - APP.playStartPN) / 1000);
   const wallStart = serverNow() - t * 1000;
   emit({ type: 'seek', wallStart, songTime: t, conductorOffset: APP.offsetAdj });
 }
