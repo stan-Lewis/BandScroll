@@ -2477,7 +2477,7 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     belt.style.paddingTop = cursorY + 'px';
     belt.style.paddingBottom = (wrapH-cursorY) + 'px';
     belt.style.transform = `translateY(${cursorY - ai*LINE_H}px)`;
-  }
+  
 
   // Apply state classes (ai/ni from above)
   const els = belt.querySelectorAll('.ll');
@@ -2502,6 +2502,7 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       }
     }
   });
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2795,13 +2796,20 @@ const V = { song:null, raf:null, playing:false, startPN:null, offsetAdj:0, condu
 
 function vLoad(song) {
   // Stop any ongoing playback before loading new song
-  vStop();
+  if (V.playing) vStop();
   // If the received song has annotations, re-merge them into lines
   // to guarantee nothing is lost in transit
   if (song.annotations && song.annotations.length) {
     song.lines = mergeAnnotations(song);
   }
   V.song = song;
+  // Merge tabs from local bank if member doesn't have PDF data in received song
+  if (!song.tabs || !Object.values(song.tabs).some(t => t && t.pdfData)) {
+    const localSong = (APP.bank || []).find(s => s.title === song.title && s.artist === song.artist);
+    if (localSong && localSong.tabs) {
+      V.song.tabs = Object.assign({}, localSong.tabs, song.tabs || {});
+    }
+  }
   document.getElementById('v-song-hdr').textContent =
     `${song.title}${song.artist?' — '+song.artist:''}`;
   document.getElementById('v-song-hdr').classList.add('show');
@@ -3973,32 +3981,6 @@ document.addEventListener('keydown', e=>{
   if(p.get('room')) showVJoin();
 })();
 
-// ── Service Worker (PWA offline cache) ──
-if ('serviceWorker' in navigator) {
-  // Inline SW as a blob so no separate file is needed
-  const swCode = `
-const CACHE = 'bs-v1';
-const URLS = [self.location.pathname];
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS)));
-  self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-  if (e.request.mode === 'navigate') {
-    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-  }
-});
-`;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl).catch(() => {});
-}
 
 </script>
 
