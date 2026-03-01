@@ -3459,35 +3459,67 @@ function parseAsciiTab(raw) {
 }
 
 // ── Sync tab blocks to song sections ──
-// Matches block labels against song annotation sections by name
+// Maps parsed tab blocks to song section annotations with intelligent assignment
 function syncTabToSections(tabData, songLines, duration) {
-  if (!tabData || !tabData.blocks) return tabData;
+  if (!tabData || !tabData.blocks || !tabData.blocks.length) return tabData;
+
   const blocks = tabData.blocks.map(b => ({...b}));
 
-  // Get all section timestamps from the song
-  const sections = songLines.filter(l =>
-    (l.type === 'section' || (l.type === 'annotation' && l.annType === 'section')) && l.t != null
-  );
+  // Get all section annotations from the song, sorted by time
+  const sections = songLines
+    .filter(l => (l.type === 'section' || (l.type === 'annotation' && l.annType === 'section')) && l.t != null)
+    .sort((a, b) => a.t - b.t);
 
-  // Try to match by name (case insensitive, partial match)
-  blocks.forEach(block => {
-    const label = block.label.toLowerCase();
-    const match = sections.find(s => {
-      const st = s.text.toLowerCase();
-      return st.includes(label) || label.includes(st);
-    });
-    if (match) block.t = match.t;
-  });
-
-  // For unmatched blocks, space them evenly through the song
-  const unmatched = blocks.filter(b => b.t === null);
-  if (unmatched.length) {
+  if (!sections.length) {
+    // No sections in song — space blocks evenly through the song
     const spacing = duration / (blocks.length + 1);
-    let ui = 0;
-    unmatched.forEach(b => { b.t = spacing * (++ui); });
+    blocks.forEach((b, i) => { b.t = spacing * (i + 1); });
+    return { ...tabData, blocks };
   }
 
-  // Sort by time
+  const normalize = s => s.toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '').trim();
+
+  // First pass: fuzzy name matching
+  const matched = new Set();
+  blocks.forEach(block => {
+    if (block.t !== null) return;
+    const bn = normalize(block.label);
+    for (const sec of sections) {
+      if (matched.has(sec)) continue;
+      const sn = normalize(sec.text);
+      if (sn === bn || sn.includes(bn) || bn.includes(sn)) {
+        block.t = sec.t;
+        matched.add(sec);
+        break;
+      }
+    }
+  });
+
+  // Second pass: assign unmatched blocks to unmatched sections in order
+  const unmatchedSections = sections.filter(s => !matched.has(s));
+  const unmatchedBlocks = blocks.filter(b => b.t === null);
+
+  if (unmatchedBlocks.length > 0 && unmatchedSections.length > 0) {
+    unmatchedBlocks.forEach((block, i) => {
+      if (i < unmatchedSections.length) {
+        block.t = unmatchedSections[i].t;
+        // If block has a generic label (Part N), rename it to the song section name
+        if (/^(Part|Section)\s*\d+$/i.test(block.label)) {
+          block.label = unmatchedSections[i].text;
+        }
+      } else {
+        // More blocks than sections — spread remaining after last section
+        const lastT = unmatchedSections[unmatchedSections.length - 1].t;
+        const extra = i - unmatchedSections.length + 1;
+        const remaining = unmatchedBlocks.length - unmatchedSections.length;
+        block.t = lastT + extra * (duration - lastT) / (remaining + 1);
+      }
+    });
+  } else if (unmatchedBlocks.length > 0) {
+    const spacing = duration / (unmatchedBlocks.length + 1);
+    unmatchedBlocks.forEach((b, i) => { if (b.t === null) b.t = spacing * (i + 1); });
+  }
+
   blocks.sort((a, b) => (a.t || 0) - (b.t || 0));
   return { ...tabData, blocks };
 }
@@ -3834,61 +3866,149 @@ async function aiProcessTabForInstrument(instrument) {
 }
 
 // =====================================================================
-// V10 TAB PARSER (improved)
+// TAB PARSER v11 — handles all common ASCII tab formats from PDF exports
 // =====================================================================
 function parseAsciiTabV10(raw) {
+  // Alias to new v11 parser
+  return parseAsciiTabV11(raw);
+}
+
+function parseAsciiTabV11(raw) {
   if (!raw || !raw.trim()) return [];
+
   const lines = raw.split('\n');
   const blocks = [];
-  let currentLabel = '';
+  let currentLabel = null;
   let currentLines = [];
 
   const isSectionMarker = l => {
     const t = l.trim();
-    return /^\[.{1,40}\]/.test(t) ||
-      /^(Intro|Verse|Chorus|Bridge|Pre-Chorus|Outro|Solo|Break|Refrain)([\s:\u2013\u2014]|$)/i.test(t) ||
-      /^(Main Riff|Riff|Hook|Fill|Interlude|Coda|Tag)([\s:\u2013\u2014]|$)/i.test(t);
-  };
-
-  const isTabLine = l => {
-    const t = l.trim();
-    return /^[eEADGBb]\|[-0-9hpbr\/\\~x* ]+/.test(t) ||
-           /^\|?[-0-9hpbr\/\\~x*]+([\-|][-0-9hpbr\/\\~x*]+){2,}/.test(t) ||
-           /^[eEADGBb][-:]\s*[-0-9]/.test(t);
+    if (!t || t.length > 80) return false;
+    return (
+      /^\[.{1,50}\]/.test(t) ||
+      /^(Intro|Verse|Chorus|Bridge|Pre[-\s]?Chorus|Outro|Solo|Break|Refrain|Fill|Riff|Hook|Interlude|Coda|Tag|Instrumental|Guitar\s*Solo|Bass\s*Solo|Middle\s*8|Breakdown)([ :\-\u2013\u2014x(]|$)/i.test(t) ||
+      /^(Main\s*Riff|Riff\s*[A-Z]?|Part\s*\d|Section\s*\d)([ :\-]|$)/i.test(t)
+    );
   };
 
   const flush = () => {
     const meaningful = currentLines.filter(l => l.trim());
     if (meaningful.length > 0) {
-      blocks.push({ label: currentLabel || ('Section ' + (blocks.length + 1)), lines: currentLines.slice(), t: null });
+      blocks.push({
+        label: currentLabel || ('Part ' + (blocks.length + 1)),
+        lines: currentLines.slice(),
+        t: null
+      });
     }
     currentLines = [];
+    currentLabel = null;
   };
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const trimmed = line.trim();
     if (!trimmed) {
-      if (currentLines.length > 0) currentLines.push('');
+      if (currentLines.length > 0) {
+        let nextNonEmpty = i + 1;
+        while (nextNonEmpty < lines.length && !lines[nextNonEmpty].trim()) nextNonEmpty++;
+        const nextLine = nextNonEmpty < lines.length ? lines[nextNonEmpty].trim() : '';
+        if (isSectionMarker(nextLine)) flush();
+        else currentLines.push('');
+      }
       continue;
     }
     if (isSectionMarker(trimmed)) {
       flush();
-      currentLabel = trimmed.replace(/^\[|\]$/g, '');
+      currentLabel = trimmed.replace(/^\[|\]$/g, '').replace(/\s*[-=]{3,}.*$/, '').trim();
       continue;
     }
     currentLines.push(line);
   }
   flush();
 
-  // If no sections detected, put everything in one block
-  if (blocks.length === 0 && raw.trim()) {
-    blocks.push({ label: 'Tab', lines: lines, t: null });
+  // If no distinct sections were found, split by detecting clusters of tab lines
+  if (blocks.length <= 1) {
+    return smartSplitByTabGroups(raw, blocks.length === 1 ? blocks[0].label : null);
+  }
+  return blocks;
+}
+
+// Detects consecutive tab-line clusters and groups them into separate blocks
+function smartSplitByTabGroups(raw, fallbackLabel) {
+  if (!raw || !raw.trim()) return [];
+
+  const lines = raw.split('\n');
+  const blocks = [];
+  let groupLines = [];
+  let groupLabel = null;
+  let consecutiveTabLines = 0;
+  let inGroup = false;
+
+  const isTabLine = l => {
+    const t = l.trim();
+    if (!t) return false;
+    // Standard: E|--0-- or E:--0-- or E --0-- (with optional space before separator)
+    if (/^[eEADGBb]\s*[\|:\-][-0-9hpbr\/\\~x* .]+/.test(t)) return true;
+    // Bare: --0-2-3-- (contains digits and dashes, min length 5)
+    if (/^[-0-9hpbr\/\\~x*]{5,}$/.test(t) && /\d/.test(t)) return true;
+    // Starts with pipe: |--0-2--|
+    if (/^\|[-0-9hpbr\/\\~x* ]+/.test(t)) return true;
+    return false;
+  };
+
+  const flushGroup = () => {
+    if (groupLines.some(l => l.trim())) {
+      blocks.push({
+        label: groupLabel || ('Part ' + (blocks.length + 1)),
+        lines: groupLines.slice(),
+        t: null
+      });
+    }
+    groupLines = [];
+    groupLabel = null;
+    inGroup = false;
+    consecutiveTabLines = 0;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (isTabLine(trimmed)) {
+      consecutiveTabLines++;
+      inGroup = true;
+      groupLines.push(line);
+    } else if (!trimmed) {
+      if (inGroup) {
+        if (consecutiveTabLines >= 2) {
+          flushGroup();
+        } else {
+          groupLines.push(line);
+          consecutiveTabLines = 0;
+        }
+      }
+    } else {
+      if (inGroup && consecutiveTabLines >= 2) flushGroup();
+      // Check if looks like a section label (short text, no long dash sequences)
+      const looksLikeLabel = /^[A-Za-z][A-Za-z\s0-9\[\]\(\)\-]{1,40}$/.test(trimmed)
+        && !/[-]{3,}/.test(trimmed);
+      if (looksLikeLabel && !inGroup) {
+        groupLabel = trimmed.replace(/[-=]{3,}.*$/, '').trim();
+      } else if (inGroup) {
+        groupLines.push(line);
+      }
+    }
+  }
+  if (inGroup) flushGroup();
+
+  if (!blocks.length && raw.trim()) {
+    return [{ label: fallbackLabel || 'Tab', lines: raw.split('\n'), t: null }];
   }
   return blocks;
 }
 
 function parseAsciiTabSimple(raw) {
-  // Fallback: split into chunks of 20 lines each
+  // Fallback: split into 20-line chunks
   if (!raw) return [];
   const lines = raw.split('\n');
   const blocks = [];
