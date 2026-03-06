@@ -106,7 +106,7 @@ body{
   letter-spacing:0.08em;color:var(--lime);margin-bottom:0.25rem;
 }
 .r-desc{font-size:0.8rem;color:var(--text-mid);line-height:1.55;}
-.land-room-row{display:flex;align-items:center;gap:0.75rem;padding:0 0.25rem;margin:-0.25rem 0 0.5rem 0;justify-content:flex-start;}
+.land-room-row{display:flex;align-items:center;gap:0.75rem;padding:0 0.25rem;margin:0.75rem 0 0 0;justify-content:flex-start;}
 .land-room-label{color:var(--text-mid);font-size:0.75rem;letter-spacing:0.05em;white-space:nowrap;}
 .land-room-inp{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:1rem;font-family:monospace;letter-spacing:0.15em;padding:0.35rem 0.6rem;width:7ch;text-transform:uppercase;text-align:center;outline:none;}
 .land-room-inp:focus{border-color:var(--lime);box-shadow:0 0 0 2px rgba(184,240,37,0.15);}
@@ -1160,11 +1160,12 @@ textarea{resize:vertical;}
       <div class="r-icon">🎤</div>
       <div class="r-title">Conductor</div>
       <div class="r-desc">Search songs, manage setlists, control playback for the whole band.</div>
-    </div>
-    <div class="land-room-row">
-      <label class="land-room-label">Room code (optional)</label>
+    
+    <div class="land-room-row" onclick="event.stopPropagation()">
+      <label class="land-room-label" onclick="event.stopPropagation()">Room code (optional)</label>
       <input id="land-room-code" class="land-room-inp" type="text" maxlength="6" placeholder="auto" autocomplete="off" spellcheck="false" onclick="event.stopPropagation()" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
     </div>
+  </div>
     <div class="r-card" onclick="showVJoin()">
       <div class="r-icon">🎸</div>
       <div class="r-title">Band Member</div>
