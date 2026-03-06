@@ -2511,13 +2511,13 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 
     belt.style.paddingTop = cursorY + 'px';
     belt.style.paddingBottom = (wrapH-cursorY) + 'px';
+  const els = belt.querySelectorAll('.ll');
+  const lineH = (els.length > 0 && els[0].offsetHeight > 0) ? els[0].offsetHeight : LINE_H;
     belt.style.transform = `translateY(${cursorY - ai*lineH}px)`;
   
 
   // Apply state classes (ai/ni from above)
-  const els = belt.querySelectorAll('.ll');
-  const lineH = (els.length > 0 && els[0].offsetHeight > 0) ? els[0].offsetHeight : LINE_H;
-  els.forEach((el,i) => {
+    els.forEach((el,i) => {
     const line = lines[i];
     if (!line) return;
 
