@@ -2959,8 +2959,8 @@ function updateSectionPin(role, lines, t) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     if (l.t == null || l.t > t) continue;
-    if (l.type === 'section') activeSection = l.text; activeSectionT = l.t;
-    else if (l.type === 'annotation' && l.annType === 'section') activeSection = l.text; activeSectionT = l.t;
+    if (l.type === 'section') { activeSection = l.text; activeSectionT = l.t; }
+    else if (l.type === 'annotation' && l.annType === 'section') { activeSection = l.text; activeSectionT = l.t; }
   }
   // Find next section after current time
   for (let j = 0; j < lines.length; j++) {
