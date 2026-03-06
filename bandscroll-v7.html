@@ -748,6 +748,8 @@ textarea{resize:vertical;}
   box-shadow:0 0 20px rgba(184,240,37,0.4);
   display:none;user-select:none;-webkit-appearance:none;
 }
+@media(max-width:768px){.rejoin-btn{display:block!important;}}
+
 .rejoin-btn.visible{display:block;animation:rejoin-pulse 1.8s ease-in-out infinite;}
 @keyframes rejoin-pulse{
   0%,100%{box-shadow:0 0 20px rgba(184,240,37,0.3);}
@@ -868,6 +870,11 @@ textarea{resize:vertical;}
 /* ═══════════════════════════════════════
    SECTION PIN BAR (conductor + viewer)
 ═══════════════════════════════════════ */
+.c-section-label,.v-section-label{display:none;color:#f59e0b;font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:0.1em;margin-left:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;flex-shrink:0;}
+.c-section-label.visible,.v-section-label.visible{display:inline-block;}
+.v-song-hdr{display:flex;align-items:center;overflow:hidden;flex-shrink:0;}
+.v-song-title{font-size:inherit;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
+.section-pin{display:none!important;}
 .section-pin{
   background:linear-gradient(135deg,rgba(245,158,11,0.13) 0%,rgba(245,158,11,0.04) 100%);
   border-bottom:1px solid rgba(245,158,11,0.22);
@@ -1304,7 +1311,7 @@ textarea{resize:vertical;}
     <div class="main-area">
       <div class="transport">
         <div class="t-info">
-          <div class="t-title" id="t-title">No song loaded</div>
+          <div class="t-title" id="t-title">No song loaded</div><span class="c-section-label" id="c-section-label"></span>
           <div class="t-next" id="t-next"></div>
         </div>
         <div class="t-ctrl">
@@ -1421,7 +1428,7 @@ textarea{resize:vertical;}
       <div class="section-pin-prog-track"><div class="section-pin-prog-fill" id="v-section-prog"></div></div>
     </div>
   </div>
-  <div class="v-song-hdr" id="v-song-hdr"></div>
+  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span></div>
   <!-- READ-ONLY SCRUB BAR -->
   <div class="v-scrub-bar" id="v-scrub-bar" style="display:none;">
     <span class="v-scrub-time" id="v-scrub-cur">0:00</span>
@@ -2602,6 +2609,39 @@ function _setDetached(val) {
   }
 }
 
+
+// ── Viewer belt touch-scroll (mobile) ──
+(function() {
+  let _vTouchY = null;
+  function setupViewerTouch() {
+    const bw = document.getElementById('v-belt-wrap');
+    if (!bw) return;
+    bw.addEventListener('touchstart', e => {
+      _vTouchY = e.touches[0].clientY;
+    }, { passive: true });
+    bw.addEventListener('touchmove', e => {
+      if (_vTouchY === null) return;
+      const dy = _vTouchY - e.touches[0].clientY;
+      _vTouchY = e.touches[0].clientY;
+      if (Math.abs(dy) > 2) {
+        if (typeof _setDetached === 'function') _setDetached(true);
+        // Shift the belt by dy pixels via APP.offsetAdj
+        if (typeof APP !== 'undefined' && APP.role === 'viewer') {
+          APP.offsetAdj = (APP.offsetAdj || 0) + dy / 1000;
+        }
+      }
+    }, { passive: true });
+    bw.addEventListener('touchend', () => { _vTouchY = null; }, { passive: true });
+  }
+  // Set up once viewer is active
+  const _origShowViewer = window.showViewer;
+  if (typeof _origShowViewer === 'function') {
+    window.showViewer = function() { _origShowViewer.apply(this, arguments); setupViewerTouch(); };
+  }
+  // Also try immediate setup
+  document.addEventListener('DOMContentLoaded', setupViewerTouch);
+})();
+
 function rejoinAutoScroll() {
   _setDetached(false);
   // Immediately re-apply current song position
@@ -2846,7 +2886,7 @@ function vLoad(song) {
       V.song.tabs = Object.assign({}, localSong.tabs, song.tabs || {});
     }
   }
-  document.getElementById('v-song-hdr').textContent =
+  document.getElementById('v-song-title').textContent =
     `${song.title}${song.artist?' — '+song.artist:''}`;
   document.getElementById('v-song-hdr').classList.add('show');
   const belt = document.getElementById('v-belt');
@@ -2982,6 +3022,7 @@ function updateSectionPin(role, lines, t) {
 
   if (!activeSection) {
     pinEl.classList.add('hidden');
+    const _lE=document.getElementById(role+'-section-label');if(_lE){_lE.textContent='';_lE.classList.remove('visible');}
     state.current = '';
     return;
   }
@@ -3007,6 +3048,8 @@ function updateSectionPin(role, lines, t) {
     const _pct = _span > 0 ? Math.min(1, Math.max(0, (t - activeSectionT) / _span)) : 0;
     _progEl.style.width = Math.round(_pct * 100) + '%';
   }
+
+  const _lbl=document.getElementById(role+'-section-label');if(_lbl){if(activeSection){_lbl.textContent=activeSection;_lbl.classList.add('visible');}else{_lbl.textContent='';_lbl.classList.remove('visible');}}
 }
 
 
