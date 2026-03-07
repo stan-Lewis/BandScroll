@@ -2934,9 +2934,8 @@ function vStartCD(wallStart, song, conductorOffset) {
 function vSeek(wallStart, songTime, conductorOffset) {
   if (!V.song) return;
   if (conductorOffset !== undefined) V.conductorOffset = conductorOffset;
-  // FIX: bake conductorOffset into startPN for correct sync after any skip
-  V.startPN = performance.now() - (serverNow() - wallStart) - V.conductorOffset * 1000;
-  const t = Math.max(0, (performance.now() - V.startPN) / 1000);
+  V.startPN = performance.now() - (serverNow() - wallStart);
+  const t = Math.max(0, (serverNow() - wallStart) / 1000 + V.conductorOffset);
   positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, t);
   _vUpdateScrub(t, V.song.duration);
   updateSectionPin('v', V.song.lines, t);
@@ -2946,12 +2945,12 @@ function vBegin(wallStart) {
   if (!V.song) return;
   V.playing = true;
   // Use server-synced reference for accurate start
-  // FIX: bake conductorOffset into startPN so seek/skip syncs on all devices
-  V.startPN = performance.now() - (serverNow() - wallStart) - V.conductorOffset * 1000;
+  // Use server-synced reference for accurate start
+  V.startPN = performance.now() - (serverNow() - wallStart);
   const dur = V.song.duration;
   const tick = (now) => {
     if (!V.playing) return;
-    const t = (now - V.startPN) / 1000; // conductorOffset baked into startPN
+    const t = (now - V.startPN) / 1000 + V.conductorOffset;
     const cl = Math.max(0, Math.min(t, dur));
     positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, cl);
     _vUpdateScrub(cl, dur);
