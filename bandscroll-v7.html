@@ -2748,7 +2748,7 @@ function _seekTo(t) {
   APP.playStartPN = performance.now() - (t - APP.offsetAdj) * 1000;
 
   // Emit seek to all members — wallStart = serverNow() means "song is at t right now"
-  const wallStart = serverNow() - t * 1000;
+  const wallStart = serverNow() - (t - APP.offsetAdj) * 1000;
   emit({ type: 'seek', wallStart, songTime: t, conductorOffset: APP.offsetAdj });
 
   _setDetached(false);
