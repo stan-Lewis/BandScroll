@@ -419,20 +419,21 @@ textarea{resize:vertical;}
 .nudge-btn:active,.nudge-btn:hover{background:var(--lime);color:#000;border-color:var(--lime);}
 .nudge-reset{font-size:0.7rem;padding:0.15rem 0.4rem;}
 
-/* PROGRESS BARS */
-/* Lyric Line Progress */
-.prog-row{display:flex;flex-direction:column;gap:3px;padding:5px 1rem 4px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
-.prog-row-label{display:flex;justify-content:space-between;align-items:center;}
-.prog-bar-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);}
-.prog-track{height:6px;background:var(--border2);border-radius:4px;overflow:hidden;flex-shrink:0;}
-.prog-fill{height:100%;background:var(--lime);box-shadow:0 0 6px rgba(167,139,250,0.5);width:0%;border-radius:4px;transition:width 0.12s linear;}
-/* Section Progress */
-.section-prog-row{display:flex;flex-direction:column;gap:3px;padding:5px 1rem 4px;background:linear-gradient(135deg,rgba(245,158,11,0.09) 0%,rgba(245,158,11,0.03) 100%);border-bottom:1px solid rgba(245,158,11,0.2);flex-shrink:0;}
+/* ═══════════════════════════════════════
+   PROGRESS BARS (Scrub → Section → Lyric)
+═══════════════════════════════════════ */
+.prog-row,.section-prog-row{display:flex;flex-direction:column;gap:4px;padding:6px 1rem 5px;flex-shrink:0;}
+.prog-row{background:var(--bg2);border-bottom:1px solid var(--border);}
+.section-prog-row{background:linear-gradient(135deg,rgba(245,158,11,0.1) 0%,rgba(245,158,11,0.03) 100%);border-bottom:1px solid rgba(245,158,11,0.25);}
 .section-prog-row.hidden{display:none;}
-.section-prog-row .prog-bar-label{color:var(--amber);}
-.section-prog-track{height:6px;background:rgba(245,158,11,0.15);border-radius:4px;overflow:hidden;flex-shrink:0;}
-.section-prog-fill{height:100%;background:var(--amber);box-shadow:0 0 6px rgba(245,158,11,0.45);width:0%;border-radius:4px;transition:width 0.12s linear;}
-.section-prog-name{font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:0.1em;color:var(--amber);opacity:0.85;}
+.prog-row-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;}
+.prog-bar-label{font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.4);font-weight:600;}
+.section-prog-row .prog-bar-label{color:rgba(245,158,11,0.7);}
+.prog-track{height:7px;background:rgba(34,211,238,0.12);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.prog-fill{height:100%;background:#22d3ee;box-shadow:0 0 8px rgba(34,211,238,0.5);width:0%;border-radius:4px;transition:width 0.12s linear;}
+.section-prog-track{height:7px;background:rgba(245,158,11,0.15);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.section-prog-fill{height:100%;background:var(--amber);box-shadow:0 0 8px rgba(245,158,11,0.5);width:0%;border-radius:4px;transition:width 0.12s linear;}
+.section-prog-name{font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:0.12em;color:var(--amber);}
 
 /* ═══════════════════════════════════════
    SONG NOTES OVERLAY
@@ -729,26 +730,26 @@ textarea{resize:vertical;}
    SCRUB BAR
 ═══════════════════════════════════════ */
 .scrub-bar{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:0.3rem 1rem;display:flex;align-items:center;gap:0.6rem;
-  flex-shrink:0;height:36px;
+  background:var(--bg2);border-bottom:2px solid var(--border);
+  padding:0.4rem 1rem;display:flex;align-items:center;gap:0.75rem;
+  flex-shrink:0;height:44px;
 }
 .scrub-time{
-  font-family:'JetBrains Mono',monospace;font-size:0.6rem;
-  color:var(--text-mid);min-width:2.6rem;
+  font-family:'JetBrains Mono',monospace;font-size:0.8rem;
+  color:#ffffff;font-weight:700;min-width:3rem;letter-spacing:0.04em;
 }
 .scrub-track{
   flex:1;position:relative;height:20px;cursor:pointer;
   display:flex;align-items:center;touch-action:none;
 }
 .scrub-rail{
-  position:absolute;left:0;right:0;height:3px;
-  background:var(--border2);border-radius:2px;
+  position:absolute;left:0;right:0;height:5px;
+  background:var(--border2);border-radius:3px;
 }
 .scrub-prog{
-  position:absolute;left:0;height:3px;width:0%;
-  background:var(--lime);border-radius:2px;
-  box-shadow:0 0 5px rgba(167,139,250,0.4);
+  position:absolute;left:0;height:5px;width:0%;
+  background:var(--lime);border-radius:3px;
+  box-shadow:0 0 8px rgba(167,139,250,0.5);
   pointer-events:none;
 }
 .scrub-thumb{
@@ -762,8 +763,8 @@ textarea{resize:vertical;}
   transform:translateX(-50%) scale(1.3);
 }
 .scrub-dur{
-  font-family:'JetBrains Mono',monospace;font-size:0.6rem;
-  color:var(--text-dim);min-width:2.6rem;text-align:right;
+  font-family:'JetBrains Mono',monospace;font-size:0.8rem;
+  color:rgba(255,255,255,0.45);font-weight:600;min-width:3rem;text-align:right;letter-spacing:0.04em;
 }
 
 /* ═══════════════════════════════════════
@@ -989,22 +990,23 @@ textarea{resize:vertical;}
    READ-ONLY SCRUB BAR (viewer)
 ═══════════════════════════════════════ */
 .v-scrub-bar{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:0.3rem 1rem;display:flex;align-items:center;gap:0.6rem;
-  flex-shrink:0;height:36px;
+  background:var(--bg2);border-bottom:2px solid var(--border);
+  padding:0.4rem 1rem;display:flex;align-items:center;gap:0.75rem;
+  flex-shrink:0;height:44px;
 }
 .v-scrub-track{
   flex:1;position:relative;height:20px;
   display:flex;align-items:center;pointer-events:none;
 }
-.v-scrub-rail{position:absolute;left:0;right:0;height:3px;background:var(--border2);border-radius:2px;}
+.v-scrub-rail{position:absolute;left:0;right:0;height:5px;background:var(--border2);border-radius:3px;}
 .v-scrub-prog{
-  position:absolute;left:0;height:3px;width:0%;
-  background:var(--lime);border-radius:2px;opacity:0.5;
+  position:absolute;left:0;height:5px;width:0%;
+  background:var(--lime);border-radius:3px;
+  box-shadow:0 0 8px rgba(167,139,250,0.5);
   pointer-events:none;
 }
-.v-scrub-time{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--text-mid);min-width:2.6rem;}
-.v-scrub-dur{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--text-dim);min-width:2.6rem;text-align:right;}
+.v-scrub-time{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:#ffffff;font-weight:700;min-width:3rem;letter-spacing:0.04em;}
+.v-scrub-dur{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:rgba(255,255,255,0.45);font-weight:600;min-width:3rem;text-align:right;letter-spacing:0.04em;}
 
 /* ═══════════════════════════════════════
    TAB VIEWER
@@ -1499,13 +1501,6 @@ textarea{resize:vertical;}
         </div>
       </div>
 
-      <div class="prog-row" id="c-lyric-prog-row">
-        <div class="prog-row-label">
-          <span class="prog-bar-label">Lyric Line</span>
-        </div>
-        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
-      </div>
-
       <!-- SCRUB BAR -->
       <div class="scrub-bar">
         <span class="scrub-time" id="scrub-cur">0:00</span>
@@ -1534,6 +1529,14 @@ textarea{resize:vertical;}
           <span class="section-prog-name" id="c-section-prog-name"></span>
         </div>
         <div class="section-prog-track"><div class="section-prog-fill" id="c-section-prog-fill"></div></div>
+      </div>
+
+      <!-- LYRIC LINE PROGRESS ROW -->
+      <div class="prog-row" id="c-lyric-prog-row">
+        <div class="prog-row-label">
+          <span class="prog-bar-label">Lyric Line</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
       </div>
 
       <!-- SONG NOTES BANNER -->
@@ -1587,22 +1590,6 @@ textarea{resize:vertical;}
       <div class="section-pin-prog-track"><div class="section-pin-prog-fill" id="v-section-prog"></div></div>
     </div>
   </div>
-  <!-- LYRIC LINE PROGRESS ROW (Viewer) -->
-  <div class="prog-row" id="v-lyric-prog-row">
-    <div class="prog-row-label">
-      <span class="prog-bar-label">Lyric Line</span>
-    </div>
-    <div class="prog-track"><div class="prog-fill" id="v-prog-fill"></div></div>
-  </div>
-  <!-- SECTION PROGRESS ROW (Viewer) -->
-  <div class="section-prog-row hidden" id="v-section-prog-row">
-    <div class="prog-row-label">
-      <span class="prog-bar-label">Section</span>
-      <span class="section-prog-name" id="v-section-prog-name"></span>
-    </div>
-    <div class="section-prog-track"><div class="section-prog-fill" id="v-section-prog-fill"></div></div>
-  </div>
-  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span></div>
   <!-- READ-ONLY SCRUB BAR -->
   <div class="v-scrub-bar" id="v-scrub-bar" style="display:none;">
     <span class="v-scrub-time" id="v-scrub-cur">0:00</span>
@@ -1612,6 +1599,22 @@ textarea{resize:vertical;}
     </div>
     <span class="v-scrub-dur" id="v-scrub-dur">—</span>
   </div>
+  <!-- SECTION PROGRESS ROW (Viewer) -->
+  <div class="section-prog-row hidden" id="v-section-prog-row">
+    <div class="prog-row-label">
+      <span class="prog-bar-label">Section</span>
+      <span class="section-prog-name" id="v-section-prog-name"></span>
+    </div>
+    <div class="section-prog-track"><div class="section-prog-fill" id="v-section-prog-fill"></div></div>
+  </div>
+  <!-- LYRIC LINE PROGRESS ROW (Viewer) -->
+  <div class="prog-row" id="v-lyric-prog-row">
+    <div class="prog-row-label">
+      <span class="prog-bar-label">Lyric Line</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="v-prog-fill"></div></div>
+  </div>
+  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span></div>
   <div class="stage" style="flex:1;">
     <div class="cursor" id="v-cursor"></div>
     <div class="belt-wrap" id="v-belt-wrap">
