@@ -419,9 +419,20 @@ textarea{resize:vertical;}
 .nudge-btn:active,.nudge-btn:hover{background:var(--lime);color:#000;border-color:var(--lime);}
 .nudge-reset{font-size:0.7rem;padding:0.15rem 0.4rem;}
 
-/* PROGRESS */
-.prog-track{height:2px;background:var(--border2);flex-shrink:0;}
-.prog-fill{height:100%;background:var(--lime);box-shadow:0 0 5px var(--lime);width:0%;transition:width 0.18s linear;}
+/* PROGRESS BARS */
+/* Lyric Line Progress */
+.prog-row{display:flex;flex-direction:column;gap:3px;padding:5px 1rem 4px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.prog-row-label{display:flex;justify-content:space-between;align-items:center;}
+.prog-bar-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);}
+.prog-track{height:6px;background:var(--border2);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.prog-fill{height:100%;background:var(--lime);box-shadow:0 0 6px rgba(167,139,250,0.5);width:0%;border-radius:4px;transition:width 0.12s linear;}
+/* Section Progress */
+.section-prog-row{display:flex;flex-direction:column;gap:3px;padding:5px 1rem 4px;background:linear-gradient(135deg,rgba(245,158,11,0.09) 0%,rgba(245,158,11,0.03) 100%);border-bottom:1px solid rgba(245,158,11,0.2);flex-shrink:0;}
+.section-prog-row.hidden{display:none;}
+.section-prog-row .prog-bar-label{color:var(--amber);}
+.section-prog-track{height:6px;background:rgba(245,158,11,0.15);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.section-prog-fill{height:100%;background:var(--amber);box-shadow:0 0 6px rgba(245,158,11,0.45);width:0%;border-radius:4px;transition:width 0.12s linear;}
+.section-prog-name{font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:0.1em;color:var(--amber);opacity:0.85;}
 
 /* ═══════════════════════════════════════
    SONG NOTES OVERLAY
@@ -923,8 +934,8 @@ textarea{resize:vertical;}
   line-height:1.5rem;
   transition:transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.38s;
 }
-.section-pin-prog-track{height:3px;background:var(--bg4);border-radius:2px;margin-top:4px;overflow:hidden;}
-.section-pin-prog-fill{height:100%;background:var(--lime);border-radius:2px;width:0%;transition:width 0.5s linear;}
+.section-pin-prog-track{display:none;}
+.section-pin-prog-fill{width:0%;}
 .section-pin-cur{transform:translateY(0);opacity:1;}
 .section-pin-next{transform:translateY(100%);opacity:0;}
 .section-pin-wrap.slide-out .section-pin-cur{transform:translateY(-100%);opacity:0;}
@@ -934,19 +945,23 @@ textarea{resize:vertical;}
    LOBBY PANEL (conductor sidebar)
 ═══════════════════════════════════════ */
 .lobby-panel{
-  background:var(--bg2);border-top:1px solid var(--border);
-  padding:0.6rem 0.75rem;flex-shrink:0;
+  background:var(--bg2);border-top:2px solid var(--border);
+  padding:0.75rem 0.85rem;flex-shrink:0;
 }
 .lobby-title{
-  font-family:'JetBrains Mono',monospace;font-size:0.52rem;
+  font-family:'JetBrains Mono',monospace;font-size:0.62rem;
   letter-spacing:0.14em;text-transform:uppercase;
-  color:var(--text-dim);margin-bottom:0.4rem;
+  color:var(--text-mid);margin-bottom:0.55rem;display:flex;align-items:center;gap:0.4rem;
 }
-.lobby-members{display:flex;flex-wrap:wrap;gap:0.3rem;}
+.lobby-count{
+  background:var(--lime);color:var(--bg);
+  font-size:0.55rem;padding:0.05rem 0.4rem;border-radius:100px;font-weight:700;
+}
+.lobby-members{display:flex;flex-wrap:wrap;gap:0.4rem;}
 .lobby-member{
-  font-family:'JetBrains Mono',monospace;font-size:0.6rem;
-  background:var(--bg3);border:1px solid var(--border2);
-  color:var(--lime);padding:0.15rem 0.5rem;border-radius:100px;
+  font-family:'JetBrains Mono',monospace;font-size:0.75rem;
+  background:var(--bg3);border:1px solid var(--lime);
+  color:var(--lime);padding:0.3rem 0.7rem;border-radius:100px;
   animation:fadeIn 0.32s cubic-bezier(0.34,1.56,0.64,1);
 }
 @keyframes fadeIn{from{opacity:0;transform:scale(0.75) translateY(4px);}to{opacity:1;transform:scale(1) translateY(0);}}
@@ -1433,7 +1448,7 @@ textarea{resize:vertical;}
       </div>
       <!-- LOBBY PANEL -->
       <div class="lobby-panel">
-        <div class="lobby-title">🎸 In the room</div>
+        <div class="lobby-title">🎸 In the room <span class="lobby-count" id="c-lobby-count">0</span></div>
         <div class="lobby-members" id="c-lobby-members">
           <span class="lobby-empty">No members yet</span>
         </div>
@@ -1484,7 +1499,12 @@ textarea{resize:vertical;}
         </div>
       </div>
 
-      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-row" id="c-lyric-prog-row">
+        <div class="prog-row-label">
+          <span class="prog-bar-label">Lyric Line</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
 
       <!-- SCRUB BAR -->
       <div class="scrub-bar">
@@ -1506,6 +1526,14 @@ textarea{resize:vertical;}
           <div class="section-pin-next" id="c-section-next"></div>
           <div class="section-pin-prog-track"><div class="section-pin-prog-fill" id="c-section-prog"></div></div>
         </div>
+      </div>
+      <!-- SECTION PROGRESS ROW -->
+      <div class="section-prog-row hidden" id="c-section-prog-row">
+        <div class="prog-row-label">
+          <span class="prog-bar-label">Section</span>
+          <span class="section-prog-name" id="c-section-prog-name"></span>
+        </div>
+        <div class="section-prog-track"><div class="section-prog-fill" id="c-section-prog-fill"></div></div>
       </div>
 
       <!-- SONG NOTES BANNER -->
@@ -1558,6 +1586,21 @@ textarea{resize:vertical;}
       <div class="section-pin-next" id="v-section-next"></div>
       <div class="section-pin-prog-track"><div class="section-pin-prog-fill" id="v-section-prog"></div></div>
     </div>
+  </div>
+  <!-- LYRIC LINE PROGRESS ROW (Viewer) -->
+  <div class="prog-row" id="v-lyric-prog-row">
+    <div class="prog-row-label">
+      <span class="prog-bar-label">Lyric Line</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="v-prog-fill"></div></div>
+  </div>
+  <!-- SECTION PROGRESS ROW (Viewer) -->
+  <div class="section-prog-row hidden" id="v-section-prog-row">
+    <div class="prog-row-label">
+      <span class="prog-bar-label">Section</span>
+      <span class="section-prog-name" id="v-section-prog-name"></span>
+    </div>
+    <div class="section-prog-track"><div class="section-prog-fill" id="v-section-prog-fill"></div></div>
   </div>
   <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span></div>
   <!-- READ-ONLY SCRUB BAR -->
@@ -2077,6 +2120,8 @@ function renderLobby() {
       `<span class="lobby-member">${esc(n)}</span>`
     ).join('');
   }
+  const countEl = document.getElementById('c-lobby-count');
+  if (countEl) countEl.textContent = names.length;
   // Broadcast updated lobby to all viewers
   emit({ type: 'lobby', members: names });
 }
@@ -2963,9 +3008,9 @@ function beginPlay(song, wallStart) {
     if(!APP.isPlaying) return;
     const t = (now-APP.playStartPN)/1000 + APP.offsetAdj;
     const cl = Math.max(0,Math.min(t,dur));
-    document.getElementById('prog-fill').style.width=(cl/dur*100)+'%';
     if (!APP.scrubbing) _updateScrub(cl, dur);
     updateSectionPin('c', lines, cl);
+    _updateLyricLineProg('c', lines, cl);
     // Update tab view and lyric overlay if in tab mode
     if (_currentView.c !== 'lyrics') {
       updateTabView('c', cl * _speedMult.c);
@@ -3128,6 +3173,7 @@ function vBegin(wallStart) {
     positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, cl);
     _vUpdateScrub(cl, dur);
     updateSectionPin('v', V.song.lines, cl);
+    _updateLyricLineProg('v', V.song.lines, cl);
     if (_currentView.v !== 'lyrics') {
       updateTabView('v', cl * _speedMult.v);
       updateTabLyricOverlay('v', V.song.lines, cl);
@@ -3226,6 +3272,46 @@ function updateSectionPin(role, lines, t) {
   }
 
   const _lbl=document.getElementById(role+'-section-label');if(_lbl){if(activeSection){_lbl.textContent=activeSection;_lbl.classList.add('visible');}else{_lbl.textContent='';_lbl.classList.remove('visible');}}
+  // Drive new section-prog-row
+  const _spRow = document.getElementById(role+'-section-prog-row');
+  const _spFill = document.getElementById(role+'-section-prog-fill');
+  const _spName = document.getElementById(role+'-section-prog-name');
+  if (_spRow) {
+    if (activeSection) {
+      _spRow.classList.remove('hidden');
+      if (_spName) _spName.textContent = activeSection;
+      if (_spFill) {
+        const _span2 = (nextSectionT < Infinity && activeSectionT < nextSectionT) ? (nextSectionT - activeSectionT) : 0;
+        const _pct2 = _span2 > 0 ? Math.min(1, Math.max(0, (t - activeSectionT) / _span2)) : 0;
+        _spFill.style.width = Math.round(_pct2 * 100) + '%';
+      }
+    } else {
+      _spRow.classList.add('hidden');
+      if (_spName) _spName.textContent = '';
+      if (_spFill) _spFill.style.width = '0%';
+    }
+  }
+}
+
+// Update lyric line progress bar
+function _updateLyricLineProg(role, lines, t) {
+  const fillId = role === 'c' ? 'prog-fill' : 'v-prog-fill';
+  const fillEl = document.getElementById(fillId);
+  if (!fillEl) return;
+  // Find active lyric line index and next lyric line time
+  let activeLyricT = null;
+  let nextLyricT = null;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.type !== 'lyric' || l.t == null) continue;
+    if (l.t <= t) { activeLyricT = l.t; }
+    else if (nextLyricT === null) { nextLyricT = l.t; break; }
+  }
+  if (activeLyricT === null) { fillEl.style.width = '0%'; return; }
+  if (nextLyricT === null) { fillEl.style.width = '100%'; return; }
+  const span = nextLyricT - activeLyricT;
+  const pct = span > 0 ? Math.min(1, Math.max(0, (t - activeLyricT) / span)) : 0;
+  fillEl.style.width = Math.round(pct * 100) + '%';
 }
 
 
