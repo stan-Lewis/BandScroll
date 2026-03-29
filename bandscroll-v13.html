@@ -433,7 +433,7 @@ textarea{resize:vertical;}
 .prog-fill{height:100%;background:#22d3ee;box-shadow:0 0 8px rgba(34,211,238,0.5);width:0%;border-radius:4px;transition:width 0.12s linear;}
 .section-prog-track{height:7px;background:rgba(245,158,11,0.15);border-radius:4px;overflow:hidden;flex-shrink:0;}
 .section-prog-fill{height:100%;background:var(--amber);box-shadow:0 0 8px rgba(245,158,11,0.5);width:0%;border-radius:4px;transition:width 0.12s linear;}
-.section-prog-name{font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:0.12em;color:var(--amber);}
+.section-prog-name{font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:0.12em;color:var(--amber);}.section-upnext{font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.1em;color:rgba(251,191,36,0.55);margin-left:auto;white-space:nowrap;padding-left:0.5rem;}
 
 /* ═══════════════════════════════════════
    SONG NOTES OVERLAY
@@ -1527,6 +1527,7 @@ textarea{resize:vertical;}
         <div class="prog-row-label">
           <span class="prog-bar-label">Section</span>
           <span class="section-prog-name" id="c-section-prog-name"></span>
+          <span class="section-upnext" id="c-section-upnext"></span>
         </div>
         <div class="section-prog-track"><div class="section-prog-fill" id="c-section-prog-fill"></div></div>
       </div>
@@ -1604,6 +1605,7 @@ textarea{resize:vertical;}
     <div class="prog-row-label">
       <span class="prog-bar-label">Section</span>
       <span class="section-prog-name" id="v-section-prog-name"></span>
+      <span class="section-upnext" id="v-section-upnext"></span>
     </div>
     <div class="section-prog-track"><div class="section-prog-fill" id="v-section-prog-fill"></div></div>
   </div>
@@ -3279,10 +3281,12 @@ function updateSectionPin(role, lines, t) {
   const _spRow = document.getElementById(role+'-section-prog-row');
   const _spFill = document.getElementById(role+'-section-prog-fill');
   const _spName = document.getElementById(role+'-section-prog-name');
+  const _spUpNext = document.getElementById(role+'-section-upnext');
   if (_spRow) {
     if (activeSection) {
       _spRow.classList.remove('hidden');
       if (_spName) _spName.textContent = activeSection;
+      if (_spUpNext) { _spUpNext.textContent = nextSection ? 'UP NEXT: ' + nextSection : ''; }
       if (_spFill) {
         const _span2 = (nextSectionT < Infinity && activeSectionT < nextSectionT) ? (nextSectionT - activeSectionT) : 0;
         const _pct2 = _span2 > 0 ? Math.min(1, Math.max(0, (t - activeSectionT) / _span2)) : 0;
