@@ -3286,7 +3286,7 @@ function updateSectionPin(role, lines, t) {
     if (activeSection) {
       _spRow.classList.remove('hidden');
       if (_spName) _spName.textContent = activeSection;
-      if (_spUpNext) { _spUpNext.textContent = nextSection ? 'UP NEXT: ' + nextSection : ''; }
+      if (_spUpNext) { _spUpNext.textContent = nextSectionText ? 'UP NEXT: ' + nextSectionText : ''; }
       if (_spFill) {
         const _span2 = (nextSectionT < Infinity && activeSectionT < nextSectionT) ? (nextSectionT - activeSectionT) : 0;
         const _pct2 = _span2 > 0 ? Math.min(1, Math.max(0, (t - activeSectionT) / _span2)) : 0;
