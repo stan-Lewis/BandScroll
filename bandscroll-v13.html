@@ -1024,6 +1024,24 @@ textarea{resize:vertical;}
 }
 .tab-scroll-area::-webkit-scrollbar{width:2px;height:2px;}
 .tab-scroll-area::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* ── Chord / Tab rows ─────────────────────────────── */
+.ll-chord-row{display:none;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#a3e635;white-space:pre;line-height:1.3;padding:2px 8px 0;letter-spacing:0.02em;pointer-events:none}
+.ll-tab-note{display:none;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#94a3b8;white-space:pre;border-left:2px solid rgba(255,255,255,0.1);margin:2px 8px;padding:2px 6px;line-height:1.4;pointer-events:none}
+.show-chords .ll-chord-row{display:block}
+.show-tabs   .ll-tab-note{display:block}
+/* chord / tab editor fields */
+.chord-tab-fields{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.chord-input{background:rgba(0,0,0,0.3);color:#a3e635;font-family:'JetBrains Mono',monospace;font-size:0.75rem;border:none;border-bottom:1px solid rgba(255,255,255,0.15);padding:3px 6px;width:100%;outline:none;border-radius:2px}
+.chord-input::placeholder{color:rgba(255,255,255,0.25)}
+.tab-input{background:rgba(0,0,0,0.4);color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:0.72rem;border:1px solid rgba(255,255,255,0.1);padding:4px 6px;width:100%;outline:none;resize:vertical;min-height:70px;border-radius:2px}
+.tab-input::placeholder{color:rgba(255,255,255,0.2)}
+/* toggle buttons */
+.chord-tab-tog{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55);font-size:0.65rem;font-weight:700;letter-spacing:0.08em;border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:3px 9px;cursor:pointer;transition:background 0.15s,color 0.15s}
+.chord-tab-tog.active,.chord-tab-tog:hover{background:rgba(255,255,255,0.15);color:#fff}
+/* chord-tab editor rows */
+.ct-row{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 10px}
+.ct-lyric{font-size:0.82rem;color:rgba(255,255,255,0.7);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab-belt{
   font-family:'JetBrains Mono',monospace;
   font-size:clamp(0.65rem,1.8vw,0.82rem);
@@ -1501,6 +1519,14 @@ textarea{resize:vertical;}
         </div>
       </div>
 
+      <!-- CHORD/TAB DISPLAY TOGGLES (conductor) -->
+      <div class="chord-tab-group" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span class="ctrl-label">Display</span>
+        <button class="chord-tab-tog" id="c-tog-chords" onclick="toggleChordView('chords')">CHORDS</button>
+        <button class="chord-tab-tog" id="c-tog-tabs" onclick="toggleChordView('tabs')">TABS</button>
+        <button class="chord-tab-tog" onclick="openChordTabEditor(APP.currentId)" title="Edit chords &amp; tabs for this song" style="margin-left:4px;">✎ C/T</button>
+      </div>
+
       <!-- SCRUB BAR -->
       <div class="scrub-bar">
         <span class="scrub-time" id="scrub-cur">0:00</span>
@@ -1617,7 +1643,7 @@ textarea{resize:vertical;}
     <div class="prog-track"><div class="prog-fill" id="v-prog-fill"></div></div>
   </div>
   <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span></div>
-  <div class="stage" style="flex:1;">
+  <div class="stage" id="v-stage" style="flex:1;">
     <div class="cursor" id="v-cursor"></div>
     <div class="belt-wrap" id="v-belt-wrap">
       <div class="wait-veil" id="v-wait">
@@ -1664,6 +1690,11 @@ textarea{resize:vertical;}
         oninput="setSpeed(parseFloat(this.value),'v')"
         style="width:60px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
       <span class="v-set-val" id="v-speed-val">1.0×</span>
+    </div>
+    <div class="v-set-group">
+      <span class="v-set-label">View</span>
+      <button class="chord-tab-tog" id="v-tog-chords" onclick="toggleChordView('chords')">CHORDS</button>
+      <button class="chord-tab-tog" id="v-tog-tabs" onclick="toggleChordView('tabs')">TABS</button>
     </div>
   </div>
 </div>
@@ -1746,6 +1777,22 @@ textarea{resize:vertical;}
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('ts-modal')">Cancel</button>
       <button class="btn btn-lime" onclick="saveTimestamps()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CHORD/TAB EDITOR MODAL ══════════ -->
+<div class="modal-bg" id="ct-modal">
+  <div class="modal" style="max-width:640px;">
+    <h3>🎸 Edit Chords &amp; Tabs</h3>
+    <p style="font-size:0.78rem;color:var(--text-mid);margin-bottom:12px;">
+      Add chord names above each line (e.g. <code style="font-family:'JetBrains Mono'">G  D  Em  C</code> or
+      <code style="font-family:'JetBrains Mono'">[G]word [Am]word</code>) and optional tab notation below.
+    </p>
+    <div id="ct-list" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('ct-modal')">Cancel</button>
+      <button class="btn btn-lime" onclick="saveChordTab()">Save Chords &amp; Tabs</button>
     </div>
   </div>
 </div>
@@ -2671,6 +2718,30 @@ function clearStage() {
 }
 
 // ── BELT RENDERER ──
+
+// ── ChordPro row renderer ──────────────────────────────────────────
+function _renderChordRow(chordStr, lyricText) {
+  if (!chordStr || !chordStr.trim()) return '';
+  if (chordStr.includes('[')) {
+    let chords = '';
+    let lyrics = '';
+    const re = /\[([^\]]+)\]([^\[]*)/g;
+    let m;
+    while ((m = re.exec(chordStr)) !== null) {
+      const chord = m[1];
+      const word  = m[2];
+      while (chords.length < lyrics.length) chords += ' ';
+      chords += chord;
+      lyrics += word;
+      if (chords.length < lyrics.length + 1) {
+        while (chords.length < lyrics.length) chords += ' ';
+      }
+    }
+    return chords;
+  }
+  return chordStr;
+}
+
 const LINE_H = 64;
 
 function buildBelt(beltEl, lines) {
@@ -2678,14 +2749,32 @@ function buildBelt(beltEl, lines) {
   lines.forEach((line,i) => {
     const div = document.createElement('div');
     let cls = 'll';
-    if (line.type==='section') cls+=' section';
+    if (line.type==='section') cls+=' sect';
     else if (line.type==='empty') cls+=' empty';
-    else if (line.type==='annotation') cls+=` ann-${line.annType}`;
-    else if (line.bv) cls+=' bv';
+    else if (line.type==='annotation') cls+=' ann';
     div.className = cls;
     div.dataset.i = i;
-    div.textContent = line.text;
-    div.style.minHeight = LINE_H + 'px';
+    // Chord row (above text, lyric/section lines only)
+    if (line.type==='lyric' || line.type==='section') {
+      const cr = document.createElement('div');
+      cr.className = 'll-chord-row';
+      cr.dataset.i = i;
+      cr.textContent = line.chords ? _renderChordRow(line.chords, line.text) : '';
+      div.appendChild(cr);
+    }
+    // Main text div
+    const td = document.createElement('div');
+    td.className = 'll-text';
+    td.textContent = line.text || '';
+    div.appendChild(td);
+    // Tab note row (below text, lyric lines only)
+    if (line.type==='lyric') {
+      const tr = document.createElement('div');
+      tr.className = 'll-tab-note';
+      tr.dataset.i = i;
+      tr.textContent = line.tabNote || '';
+      div.appendChild(tr);
+    }
     beltEl.appendChild(div);
   });
 }
@@ -3508,7 +3597,13 @@ function saveEdit() {
     // Edit existing
     const s = getSong(APP.editingId);
     Object.assign(s, {title, artist, duration:dur||s.duration, syncType, notes, rawLyrics, annotations});
+    // Preserve chords/tabNote from existing lines before rebuilding
+    const _oldLines = s.lines || [];
+    const _chordMap = {};
+    _oldLines.forEach(l => { if ((l.chords||l.tabNote) && l.text) _chordMap[l.text] = {chords:l.chords, tabNote:l.tabNote}; });
     s.lines = syncType==='synced' ? parseLRC(rawLyrics) : buildPlainLines(rawLyrics, s.duration);
+    // Restore chords/tabNote by matching on line text
+    s.lines.forEach(l => { const m = _chordMap[l.text]; if (m) { l.chords=m.chords; l.tabNote=m.tabNote; } });
     // Preserve tabs (they are modified in-place via loadTabPdf)
     if (!s.tabs) s.tabs = {};
     persist();
@@ -3561,6 +3656,55 @@ function saveTimestamps() {
   closeModal('ts-modal');
   if (APP.currentId===APP.tsEditingId) loadSong(APP.tsEditingId);
   toast('Timestamps saved');
+}
+
+// ── CHORD / TAB TOGGLE ──
+function toggleChordView(mode) {
+  ['c','v'].forEach(role => {
+    const stage = document.getElementById(role+'-stage');
+    if (!stage) return;
+    const cls = mode === 'chords' ? 'show-chords' : 'show-tabs';
+    stage.classList.toggle(cls);
+    const btn = document.getElementById(role+'-tog-'+mode);
+    if (btn) btn.classList.toggle('active', stage.classList.contains(cls));
+  });
+}
+
+// ── CHORD / TAB EDITOR ──
+function openChordTabEditor(id) {
+  const s = getSong(id || APP.currentId); if (!s) return;
+  APP.ctEditingId = s.id;
+  const lyricLines = s.lines.filter(l => l.type === 'lyric' || l.type === 'section');
+  document.getElementById('ct-list').innerHTML = lyricLines.map((line) => {
+    const realIdx = s.lines.indexOf(line);
+    const chords = (line.chords || '').replace(/"/g,'&quot;');
+    const label = line.type === 'section' ? '🎵 ' + line.text : line.text;
+    return `<div class="ct-row" data-real-idx="${realIdx}">
+      <div class="ct-lyric">${esc(label)}</div>
+      <div class="chord-tab-fields">
+        <input class="chord-input ct-chord-inp" placeholder="Chords e.g. G  D  Em  C  or [G]word [Am]word"
+          value="${chords}" data-idx="${realIdx}">
+        <textarea class="tab-input ct-tab-inp" placeholder="Tab notation (optional)" data-idx="${realIdx}">${line.tabNote || ''}</textarea>
+      </div>
+    </div>`;
+  }).join('');
+  openModal('ct-modal');
+}
+
+function saveChordTab() {
+  const s = getSong(APP.ctEditingId); if (!s) return;
+  document.querySelectorAll('.ct-row').forEach(row => {
+    const ri = parseInt(row.dataset.realIdx);
+    if (isNaN(ri) || !s.lines[ri]) return;
+    const ci = row.querySelector('.ct-chord-inp');
+    const ti = row.querySelector('.ct-tab-inp');
+    if (ci) s.lines[ri].chords = ci.value.trim();
+    if (ti) s.lines[ri].tabNote = ti.value;
+  });
+  persist();
+  closeModal('ct-modal');
+  if (APP.currentId === APP.ctEditingId) loadSong(APP.ctEditingId);
+  toast('Chords & tabs saved');
 }
 
 // ── EXPORT / IMPORT ──
