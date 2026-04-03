@@ -1039,6 +1039,18 @@ textarea{resize:vertical;}
 /* toggle buttons */
 .chord-tab-tog{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55);font-size:0.65rem;font-weight:700;letter-spacing:0.08em;border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:3px 9px;cursor:pointer;transition:background 0.15s,color 0.15s}
 .chord-tab-tog.active,.chord-tab-tog:hover{background:rgba(255,255,255,0.15);color:#fff}
+/* AI import tab panel */
+.ct-ai-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:rgba(163,230,53,0.06);border:1px solid rgba(163,230,53,0.18);border-radius:8px}
+.ct-ai-label{font-size:0.72rem;color:rgba(255,255,255,0.5);letter-spacing:0.05em;flex:1 1 100%;margin-bottom:2px}
+.ct-ai-btn{background:rgba(163,230,53,0.15);color:#a3e635;font-size:0.68rem;font-weight:700;letter-spacing:0.07em;border:1px solid rgba(163,230,53,0.35);border-radius:5px;padding:5px 12px;cursor:pointer;transition:background 0.15s}
+.ct-ai-btn:hover{background:rgba(163,230,53,0.28)}
+.ct-ai-btn:disabled{opacity:0.4;cursor:not-allowed}
+.ct-ai-status{font-size:0.7rem;color:rgba(255,255,255,0.45);font-style:italic;flex:1}
+.ct-review-header{font-size:0.72rem;color:#a3e635;letter-spacing:0.06em;padding:6px 0 10px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:10px}
+.ct-row-unmatched{opacity:0.45}
+.ct-match-badge{font-size:0.58rem;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;font-weight:700;letter-spacing:0.04em}
+.ct-match-ai{background:rgba(163,230,53,0.2);color:#a3e635;border:1px solid rgba(163,230,53,0.3)}
+.ct-match-empty{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.35)}
 /* chord-tab editor rows */
 .ct-row{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 10px}
 .ct-lyric{font-size:0.82rem;color:rgba(255,255,255,0.7);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1789,10 +1801,23 @@ textarea{resize:vertical;}
       Add chord names above each line (e.g. <code style="font-family:'JetBrains Mono'">G  D  Em  C</code> or
       <code style="font-family:'JetBrains Mono'">[G]word [Am]word</code>) and optional tab notation below.
     </p>
+    <div class="ct-ai-bar">
+      <div class="ct-ai-label">🤖 AI IMPORT — Upload a tab PDF and let AI map sections to lyric lines</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">
+        <label class="ct-ai-btn" style="cursor:pointer;">
+          📄 Choose PDF
+          <input type="file" accept=".pdf,application/pdf" style="display:none" onchange="aiImportTabPdf(this)">
+        </label>
+        <span class="ct-ai-status" id="ct-ai-status">No file selected</span>
+      </div>
+    </div>
     <div id="ct-list" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px;"></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('ct-modal')">Cancel</button>
-      <button class="btn btn-lime" onclick="saveChordTab()">Save Chords &amp; Tabs</button>
+    <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeModal('ct-modal')">Cancel</button>
+        <button class="btn btn-ghost" onclick="openChordTabEditor(APP.ctEditingId)" title="Clear AI results, go back to manual edit" style="font-size:0.7rem;">&#8635; Reset</button>
+      </div>
+      <button class="btn btn-lime" onclick="saveChordTab()">&#128190; Save Chords &amp; Tabs</button>
     </div>
   </div>
 </div>
@@ -3658,6 +3683,178 @@ function saveTimestamps() {
   toast('Timestamps saved');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// AI PDF TAB IMPORT
+// Renders PDF pages to canvas via pdfjsLib, calls GPT-4o Vision,
+// returns per-lyric-line chord+tab JSON for user review/edit
+// ══════════════════════════════════════════════════════════════════════
+
+async function aiImportTabPdf(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('ct-ai-status');
+  const apiKey = localStorage.getItem('bs_ai_key');
+  const storedModel = localStorage.getItem('bs_ai_model') || 'gpt-4o';
+  // Vision requires gpt-4o family — upgrade mini automatically
+  const model = (storedModel === 'gpt-4o-mini') ? 'gpt-4o' : storedModel;
+
+  if (!apiKey) {
+    toast('Set your OpenAI key first (the AI KEY button)');
+    if (statusEl) statusEl.textContent = 'No AI key set';
+    return;
+  }
+  const s = getSong(APP.ctEditingId);
+  if (!s || !s.lines || !s.lines.length) { toast('Load a song first'); return; }
+
+  // Collect lyric + section lines for the prompt (skip empty/annotation)
+  const lyricLines = s.lines.filter(l => l.type === 'lyric' || l.type === 'section');
+  const lyricListStr = lyricLines.map((l, i) =>
+    (i + 1) + '. ' + (l.type === 'section' ? '[SECTION: ' + l.text + ']' : l.text)
+  ).join('\n');
+
+  if (statusEl) statusEl.textContent = 'Reading PDF...';
+
+  try {
+    const arrayBuf = await file.arrayBuffer();
+    const pdfLib = window.pdfjsLib;
+    if (!pdfLib) throw new Error('pdf.js not loaded');
+    // Point worker to matching CDN version
+    pdfLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const pdfDoc = await pdfLib.getDocument({ data: arrayBuf }).promise;
+    const numPages = pdfDoc.numPages;
+    if (statusEl) statusEl.textContent = 'Rendering ' + numPages + ' page(s)...';
+
+    const pageImages = [];
+    let allText = '';
+
+    for (let p = 1; p <= numPages; p++) {
+      const page = await pdfDoc.getPage(p);
+      // Extract text content
+      const tc = await page.getTextContent();
+      const pageText = tc.items.map(it => it.str || '').join('\n');
+      allText += '\n--- PAGE ' + p + ' ---\n' + pageText;
+      // Render to canvas at 1.5x then cap to ~1400px wide
+      const vp0 = page.getViewport({ scale: 1.5 });
+      const scale = Math.min(1.5, 1400 / vp0.width);
+      const vp = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(vp.width);
+      canvas.height = Math.round(vp.height);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      // JPEG at 0.75 quality to keep payload manageable
+      pageImages.push(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
+    }
+
+    if (statusEl) statusEl.textContent = 'Asking AI (' + model + ')...';
+
+    const systemPrompt =
+      'You are a music tab analyser. Your job is to read a guitar/bass tab PDF and map ' +
+      'each section of tab notation to the correct lyric lines from the song below.\n\n' +
+      'SONG LYRIC LINES (1-based numbering):\n' + lyricListStr + '\n\n' +
+      'RULES:\n' +
+      '- Return ONLY a valid JSON array. No markdown, no code fences, no commentary.\n' +
+      '- Each element: {"lineNum":<number>,"lineText":"<exact lyric>","chords":"<chord string or empty>","tabNote":"<tab lines or empty>"}\n' +
+      '- lineNum must match the numbered list above exactly.\n' +
+      '- chords: plain spaced names (e.g. "G  D  Em  C") OR inline ChordPro (e.g. "[G]word [D]word"). Empty string if unknown.\n' +
+      '- tabNote: literal ASCII tab lines for this lyric line, newline-separated (e.g. "e|--0-2-\nB|--1-3-"). Empty string if no tab.\n' +
+      '- One tab block in the PDF may span MULTIPLE lyric lines — split it across those lines correctly.\n' +
+      '- Lines with no matching tab: include them with empty chords and tabNote.\n' +
+      '- Fan-made tabs may be imperfect. Align by section names and lyric similarity.\n' +
+      '- IMPORTANT: preserve exact tab characters (|, -, digits, h, p, b, /, \\, ~, x).';
+
+    const userContent = [
+      { type: 'text', text: 'Here is the tab PDF. Map the tab notation to each lyric line per the instructions.' }
+    ];
+    // Include up to 8 page images
+    for (let i = 0; i < Math.min(pageImages.length, 8); i++) {
+      userContent.push({ type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + pageImages[i], detail: 'high' } });
+    }
+    // Append raw extracted text for accuracy on dense/blurry scans
+    userContent.push({ type: 'text', text: 'RAW EXTRACTED TEXT (may be garbled):\n' + allText.slice(0, 8000) });
+
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }],
+        temperature: 0.1,
+        max_tokens: 4096
+      })
+    });
+
+    if (!resp.ok) { const e = await resp.text(); throw new Error(e.slice(0, 300)); }
+    const data = await resp.json();
+    let raw = (data.choices[0].message.content || '').trim();
+    // Strip markdown code fences
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
+    let results;
+    try { results = JSON.parse(raw); }
+    catch(e) {
+      const m = raw.match(/\[[\s\S]*\]/);
+      if (m) results = JSON.parse(m[0]);
+      else throw new Error('AI returned invalid JSON: ' + raw.slice(0, 120));
+    }
+    if (!Array.isArray(results)) throw new Error('AI did not return an array');
+
+    const filled = results.filter(r => r.chords || r.tabNote).length;
+    if (statusEl) statusEl.textContent = 'AI matched ' + filled + ' of ' + lyricLines.length + ' lines — review below';
+    _renderCtReview(s, results);
+
+  } catch(e) {
+    console.error('aiImportTabPdf', e);
+    toast('AI import failed: ' + e.message.slice(0, 120));
+    if (statusEl) statusEl.textContent = 'Failed: ' + e.message.slice(0, 80);
+  }
+  input.value = '';
+}
+
+function _renderCtReview(song, aiResults) {
+  const list = document.getElementById('ct-list');
+  if (!list) return;
+
+  // Map lineNum (1-based) -> result
+  const rmap = {};
+  aiResults.forEach(r => { if (r && r.lineNum) rmap[r.lineNum] = r; });
+
+  const lyricLines = song.lines.filter(l => l.type === 'lyric' || l.type === 'section');
+
+  list.innerHTML = '';
+  const hdr = document.createElement('div');
+  hdr.className = 'ct-review-header';
+  hdr.textContent = 'AI RESULTS — Edit anything below, then click Save Chords & Tabs';
+  list.appendChild(hdr);
+
+  lyricLines.forEach((line, idx) => {
+    const realIdx = song.lines.indexOf(line);
+    const lineNum  = idx + 1;
+    const ai       = rmap[lineNum] || {};
+    const hasData  = !!(ai.chords || ai.tabNote);
+    const chords   = ai.chords   !== undefined ? ai.chords   : (line.chords   || '');
+    const tabNote  = ai.tabNote  !== undefined ? ai.tabNote  : (line.tabNote  || '');
+    const label    = line.type === 'section' ? '🎵 ' + line.text : line.text;
+
+    const row = document.createElement('div');
+    row.className = 'ct-row' + (hasData ? '' : ' ct-row-unmatched');
+    row.dataset.realIdx = realIdx;
+    const badge = '<span class="ct-match-badge ' + (hasData ? 'ct-match-ai' : 'ct-match-empty') + '">' + (hasData ? 'AI ✓' : 'no match') + '</span>';
+    row.innerHTML =
+      '<div class="ct-lyric">' + esc(label) + badge + '</div>' +
+      '<div class="chord-tab-fields">' +
+        '<input class="chord-input ct-chord-inp" placeholder="Chords e.g. G  D  Em  C" value="' + esc(chords) + '" data-idx="' + realIdx + '">' +
+        '<textarea class="tab-input ct-tab-inp" placeholder="Tab notation (optional)" data-idx="' + realIdx + '">' + escTa(tabNote) + '</textarea>' +
+      '</div>';
+    list.appendChild(row);
+  });
+}
+
+function escTa(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 // ── CHORD / TAB TOGGLE ──
 function toggleChordView(mode) {
   ['c','v'].forEach(role => {
@@ -3674,17 +3871,20 @@ function toggleChordView(mode) {
 function openChordTabEditor(id) {
   const s = getSong(id || APP.currentId); if (!s) return;
   APP.ctEditingId = s.id;
+  const aiStatus = document.getElementById('ct-ai-status');
+  if (aiStatus) aiStatus.textContent = 'No file selected';
   const lyricLines = s.lines.filter(l => l.type === 'lyric' || l.type === 'section');
-  document.getElementById('ct-list').innerHTML = lyricLines.map((line) => {
+  const list = document.getElementById('ct-list');
+  list.innerHTML = lyricLines.map((line) => {
     const realIdx = s.lines.indexOf(line);
-    const chords = (line.chords || '').replace(/"/g,'&quot;');
+    const chords = esc(line.chords || '');
     const label = line.type === 'section' ? '🎵 ' + line.text : line.text;
     return `<div class="ct-row" data-real-idx="${realIdx}">
       <div class="ct-lyric">${esc(label)}</div>
       <div class="chord-tab-fields">
         <input class="chord-input ct-chord-inp" placeholder="Chords e.g. G  D  Em  C  or [G]word [Am]word"
           value="${chords}" data-idx="${realIdx}">
-        <textarea class="tab-input ct-tab-inp" placeholder="Tab notation (optional)" data-idx="${realIdx}">${line.tabNote || ''}</textarea>
+        <textarea class="tab-input ct-tab-inp" placeholder="Tab notation (optional)" data-idx="${realIdx}">${escTa(line.tabNote)}</textarea>
       </div>
     </div>`;
   }).join('');
