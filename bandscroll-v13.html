@@ -1808,7 +1808,7 @@ textarea{resize:vertical;}
     <div class="ct-ai-bar">
       <div class="ct-ai-label">🤖 AI IMPORT — Upload a tab PDF and let AI map sections to lyric lines</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">
-        <label class="ct-ai-btn" style="cursor:pointer;">
+        <label class="ct-ai-btn" style="cursor:pointer;" onclick="if(!localStorage.getItem('bs_ai_key')){event.preventDefault();showAiKeyModal();return false;}">
           📄 Choose PDF
           <input type="file" accept=".pdf,application/pdf" style="display:none" onchange="aiImportTabPdf(this)">
         </label>
@@ -3703,7 +3703,7 @@ async function aiImportTabPdf(input) {
   const model = (storedModel === 'gpt-4o-mini') ? 'gpt-4o' : storedModel;
 
   if (!apiKey) {
-    toast('Set your OpenAI key first (the AI KEY button)');
+    toast('Opening AI Key setup…'); showAiKeyModal();
     if (statusEl) statusEl.textContent = 'No AI key set';
     return;
   }
