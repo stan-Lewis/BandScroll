@@ -1415,6 +1415,7 @@ textarea{resize:vertical;}
       <button class="btn btn-ghost btn-sm" onclick="openModal('share-modal')">Share</button>
       <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" title="Confidence Monitor — big text stage view (M)">⊞</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('data-modal')" title="Backup">💾</button>
+        <button class="btn btn-ghost btn-sm" onclick="showAiKeyModal()" title="Set OpenAI API Key">🤖 AI KEY</button>
     </div>
   </div>
 
@@ -1707,6 +1708,9 @@ textarea{resize:vertical;}
       <span class="v-set-label">View</span>
       <button class="chord-tab-tog" id="v-tog-chords" onclick="toggleChordView('chords')">CHORDS</button>
       <button class="chord-tab-tog" id="v-tog-tabs" onclick="toggleChordView('tabs')">TABS</button>
+    </div>
+    <div class="v-set-group">
+      <button class="chord-tab-tog" onclick="showAiKeyModal()" title="Set OpenAI API Key">🤖 AI KEY</button>
     </div>
   </div>
 </div>
