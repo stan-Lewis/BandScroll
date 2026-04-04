@@ -1297,6 +1297,99 @@ textarea{resize:vertical;}
 .acct-pill{display:flex;align-items:center;gap:.45rem;padding:.25rem .65rem;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:.71rem;color:#9ca3af;max-width:210px;flex-shrink:0}
 .acct-pill-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acct-signout{background:none;border:none;color:var(--red);cursor:pointer;font-size:.71rem;font-family:inherit;padding:0;white-space:nowrap;flex-shrink:0}
+
+/* ═══════════════════════════════════════
+   F1 SETLIST SHOW MODE
+═══════════════════════════════════════ */
+#show-mode-overlay{position:fixed;inset:0;background:#040408;z-index:9000;display:none;flex-direction:column;}
+#show-mode-overlay.active{display:flex;}
+.sm-header{display:flex;align-items:center;gap:1rem;padding:0.8rem 1.2rem;background:rgba(0,0,0,0.6);border-bottom:1px solid var(--border2);flex-shrink:0;}
+.sm-title{font-size:0.85rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;color:var(--lime);text-transform:uppercase;}
+.sm-timer{font-size:0.85rem;font-family:'JetBrains Mono',monospace;color:var(--text-mid);margin-left:auto;}
+.sm-close{margin-left:0.5rem;}
+.sm-body{flex:1;overflow-y:auto;padding:0.8rem;}
+.sm-song{display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0.9rem;border-radius:8px;margin-bottom:0.35rem;cursor:pointer;border:1px solid transparent;transition:background 0.15s;}
+.sm-song:hover{background:var(--bg3);}
+.sm-song.sm-active{background:rgba(163,230,53,0.12);border-color:var(--lime-dim);}
+.sm-song.sm-done{opacity:0.4;}
+.sm-idx{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-mid);width:1.6rem;text-align:right;flex-shrink:0;}
+.sm-info{flex:1;min-width:0;}
+.sm-song-title{font-size:0.95rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sm-song-artist{font-size:0.72rem;color:var(--text-mid);}
+.sm-dur{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-mid);flex-shrink:0;}
+.sm-now-badge{background:var(--lime);color:#000;font-size:0.65rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:100px;letter-spacing:0.07em;flex-shrink:0;}
+.sm-footer{padding:0.6rem 1.2rem;border-top:1px solid var(--border2);display:flex;gap:1rem;align-items:center;font-size:0.78rem;font-family:'JetBrains Mono',monospace;color:var(--text-mid);flex-shrink:0;}
+.sm-total{margin-left:auto;}
+.sm-set-timer{font-size:1.1rem;font-weight:700;color:var(--lime);letter-spacing:0.05em;}
+.sm-warn{color:var(--amber)!important;}
+.sm-over{color:var(--red)!important;}
+.show-mode-btn{background:var(--bg3);border:1px solid var(--lime-dim);color:var(--lime);border-radius:6px;padding:0.2rem 0.55rem;font-size:0.7rem;font-family:'JetBrains Mono',monospace;cursor:pointer;letter-spacing:0.05em;}
+.show-mode-btn:hover{background:rgba(163,230,53,0.15);}
+/* ═══════════════════════════════════════
+   F2 INSTRUMENT PARTS
+═══════════════════════════════════════ */
+.instr-badge{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.07em;padding:0.15rem 0.5rem;border-radius:100px;background:var(--bg3);border:1px solid var(--border2);cursor:pointer;transition:border-color 0.15s;}
+.instr-badge:hover{border-color:var(--lime-dim);}
+#instr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:8000;display:none;align-items:center;justify-content:center;}
+#instr-modal-overlay.open{display:flex;}
+.instr-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.4rem;width:min(340px,90vw);display:flex;flex-direction:column;gap:1rem;}
+.instr-modal h3{font-size:1rem;font-weight:700;margin:0;}
+.instr-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;}
+.instr-opt{display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.9rem 0.5rem;border-radius:8px;border:1px solid var(--border2);cursor:pointer;background:var(--bg3);transition:all 0.15s;}
+.instr-opt:hover{border-color:var(--lime-dim);background:rgba(163,230,53,0.08);}
+.instr-opt.selected{border-color:var(--lime);background:rgba(163,230,53,0.15);}
+.instr-opt-icon{font-size:1.6rem;}
+.instr-opt-label{font-size:0.75rem;font-weight:600;letter-spacing:0.05em;}
+.instr-opt-desc{font-size:0.65rem;color:var(--text-mid);text-align:center;}
+/* ═══════════════════════════════════════
+   F3 ARRANGEMENT NOTES
+═══════════════════════════════════════ */
+.notes-edit-btn{background:none;border:1px solid rgba(251,191,36,0.3);color:var(--amber);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.7rem;cursor:pointer;flex-shrink:0;}
+#arr-notes-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:8000;display:none;align-items:center;justify-content:center;}
+#arr-notes-modal-bg.open{display:flex;}
+.arr-notes-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.4rem;width:min(480px,90vw);display:flex;flex-direction:column;gap:1rem;}
+.arr-notes-modal h3{font-size:1rem;font-weight:700;margin:0;}
+.arr-notes-modal textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:0.7rem;font-size:0.88rem;resize:vertical;min-height:120px;width:100%;box-sizing:border-box;}
+.arr-notes-modal textarea:focus{outline:none;border-color:var(--lime-dim);}
+.arr-notes-footer{display:flex;gap:0.6rem;justify-content:flex-end;}
+/* ═══════════════════════════════════════
+   F4 VISUAL METRONOME
+═══════════════════════════════════════ */
+.metro-ball-wrap{display:flex;align-items:center;justify-content:center;padding:0.2rem 0.6rem;}
+.metro-ball{width:18px;height:18px;border-radius:50%;background:var(--lime);opacity:0.25;transition:opacity 0.06s,transform 0.06s;flex-shrink:0;}
+.metro-ball.beat{opacity:1;transform:scale(1.35);}
+.metro-ball.beat-2{opacity:0.65;transform:scale(1.12);}
+/* ═══════════════════════════════════════
+   F5 PDF EXPORT
+═══════════════════════════════════════ */
+@media print{body>*:not(#print-frame){display:none!important;}#print-frame{display:block!important;position:fixed;inset:0;background:#fff;color:#000;overflow:auto;padding:1.5cm;}}
+#print-frame{display:none;font-family:'Instrument Sans',sans-serif;padding:1.5cm;color:#111;line-height:1.5;}
+.pf-title{font-size:1.5rem;font-weight:700;margin-bottom:0.1rem;}
+.pf-artist{font-size:0.95rem;color:#555;margin-bottom:1rem;}
+.pf-section{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin:1rem 0 0.2rem;}
+.pf-chords{font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#555;letter-spacing:0.05em;}
+.pf-lyric{font-size:0.9rem;margin:0.05rem 0;}
+.pf-tab{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#777;white-space:pre;border-left:2px solid #ccc;padding-left:0.4rem;margin:0.15rem 0;}
+.pf-page-break{page-break-after:always;}
+/* ═══════════════════════════════════════
+   F6 TRANSPOSE
+═══════════════════════════════════════ */
+.transpose-group{display:flex;align-items:center;gap:0.25rem;}
+.transpose-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:5px;width:22px;height:22px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.1s;}
+.transpose-btn:hover{background:var(--bg4);}
+.transpose-display{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--lime);min-width:2.2rem;text-align:center;}
+.transpose-label{font-size:0.65rem;color:var(--text-mid);letter-spacing:0.05em;}
+/* ═══════════════════════════════════════
+   F8 SET TIMER
+═══════════════════════════════════════ */
+.set-timer-wrap{display:flex;align-items:center;gap:0.35rem;padding:0.15rem 0.5rem;border-radius:6px;background:var(--bg3);border:1px solid var(--border2);font-family:'JetBrains Mono',monospace;font-size:0.72rem;cursor:pointer;user-select:none;}
+.set-timer-wrap:hover{border-color:var(--lime-dim);}
+.set-timer-dot{width:6px;height:6px;border-radius:50%;background:var(--text-mid);flex-shrink:0;}
+.set-timer-dot.running{background:var(--lime);animation:blip 1s infinite;}
+.set-timer-val{color:var(--text);}
+.set-timer-warn .set-timer-val{color:var(--amber);}
+.set-timer-over .set-timer-val{color:var(--red);}
+
 </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -1415,7 +1508,18 @@ textarea{resize:vertical;}
       <button class="btn btn-ghost btn-sm" onclick="openModal('share-modal')">Share</button>
       <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" title="Confidence Monitor — big text stage view (M)">⊞</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('data-modal')" title="Backup">💾</button>
-        <button class="btn btn-ghost btn-sm" onclick="showAiKeyModal()" title="Set OpenAI API Key">🤖 AI KEY</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSongPdf()" title="Export song PDF">🖨 PDF</button>
+        <div class="transpose-group" title="Transpose chords">
+        <span class="transpose-label">KEY</span>
+        <button class="transpose-btn" onclick="transposeAll(-1)" title="Down">♭</button>
+        <span class="transpose-display" id="transpose-display">0</span>
+        <button class="transpose-btn" onclick="transposeAll(1)" title="Up">♯</button>
+      </div>
+      <div class="set-timer-wrap" id="set-timer-wrap" onclick="toggleSetTimer()" title="Set timer — click to start/stop, right-click to reset">
+        <div class="set-timer-dot" id="set-timer-dot"></div>
+        <span class="set-timer-val" id="set-timer-val">SET</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showAiKeyModal()" title="Set OpenAI API Key">🤖 AI KEY</button>
     </div>
   </div>
 
@@ -1456,6 +1560,7 @@ textarea{resize:vertical;}
         <div class="setlist-header">
           <div class="setlist-name" id="sl-name-display">No Setlist</div>
           <button class="btn btn-ghost btn-xs" onclick="openModal('sets-modal')">⚙</button>
+          <button class="show-mode-btn" onclick="openShowMode()" title="Setlist Show Mode">▶ SHOW</button>
         </div>
         <div class="pane-scroll" id="setlist-list">
           <div class="empty-msg">No songs in setlist.</div>
@@ -1511,6 +1616,7 @@ textarea{resize:vertical;}
         <div class="bpm-group" id="bpm-group">
           <span class="ctrl-label">BPM</span>
           <span class="bpm-display" id="bpm-display">--- </span>
+          <div class="metro-ball-wrap"><div class="metro-ball" id="metro-ball"></div></div>
           <button class="bpm-btn" id="tap-btn" onclick="tapTempo()" title="Tap T">TAP</button>
           <button class="bpm-btn" id="lock-btn" onclick="toggleBpmLock()" title="Lock scroll speed to BPM">LOCK</button>
           <button class="bpm-btn" onclick="resetBpm()" title="Reset BPM">✕</button>
@@ -1583,6 +1689,7 @@ textarea{resize:vertical;}
       <div class="notes-banner" id="notes-banner">
         <div class="notes-banner-label">📝 Song Notes</div>
         <div class="notes-banner-text" id="notes-banner-text"></div>
+        <button class="notes-edit-btn" onclick="openArrNotes()" title="Edit arrangement notes">✎</button>
       </div>
 
       <div class="stage" id="c-stage">
@@ -1612,6 +1719,7 @@ textarea{resize:vertical;}
   <div class="appbar">
     <div class="appbar-brand">Band<span>Scroll</span></div>
     <span class="pill pill-v" id="v-name-pill">Member</span>
+    <button class="instr-badge" id="instr-badge" onclick="openInstrModal()" title="Choose your instrument">🎸 <span id="instr-badge-label">Guitar</span></button>
     <div class="ab-right">
       <div class="view-toggle" id="v-view-toggle" style="display:none;">
         <button class="view-toggle-btn on" onclick="setView('lyrics','v')" id="v-vt-lyrics">Lyrics</button>
@@ -1631,7 +1739,8 @@ textarea{resize:vertical;}
     </div>
   </div>
   <!-- READ-ONLY SCRUB BAR -->
-  <div class="v-scrub-bar" id="v-scrub-bar" style="display:none;">
+  <div class="v-scrub-bar" id="v-scrub-bar" style="display:none;position:relative;">
+    <div class="metro-ball-wrap" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;"><div class="metro-ball" id="v-metro-ball"></div></div>
     <span class="v-scrub-time" id="v-scrub-cur">0:00</span>
     <div class="v-scrub-track">
       <div class="v-scrub-rail"></div>
@@ -2187,6 +2296,12 @@ function onBC(msg) {
   else if (msg.type === 'play') vStartCD(msg.wallStart, msg.song, msg.conductorOffset);
   else if (msg.type === 'stop') vStop();
   else if (msg.type === 'seek') vSeek(msg.wallStart, msg.songTime, msg.conductorOffset);
+  else if (msg.type === 'arr-notes') {
+    const _s = getSong(msg.songId); if (_s) _s.arrNotes = msg.notes;
+    const _nb = document.getElementById('notes-banner');
+    const _nbt = document.getElementById('notes-banner-text');
+    if (_nb && _nbt) { _nbt.textContent = msg.notes||''; _nb.classList.toggle('visible', !!(msg.notes&&msg.notes.trim())); }
+  }
 }
 
 // ── Lobby ──
@@ -2703,8 +2818,9 @@ function loadSong(id) {
   // Song notes banner
   const banner = document.getElementById('notes-banner');
   const bannerText = document.getElementById('notes-banner-text');
-  if (song.notes && song.notes.trim()) {
-    bannerText.textContent = song.notes;
+  const _dn = song.arrNotes || song.notes || '';
+  if (_dn.trim()) {
+    bannerText.textContent = _dn;
     banner.classList.add('visible');
   } else {
     banner.classList.remove('visible');
@@ -2786,9 +2902,10 @@ function buildBelt(beltEl, lines) {
     // Chord row (above text, lyric/section lines only)
     if (line.type==='lyric' || line.type==='section') {
       const cr = document.createElement('div');
-      cr.className = 'll-chord-row';
+      cr.className = 'll-chord-row chord-row';
       cr.dataset.i = i;
-      cr.textContent = line.chords ? _renderChordRow(line.chords, line.text) : '';
+      cr.dataset.chords = line.chords || '';
+      cr.textContent = line.chords ? _getTransposedChords(_renderChordRow(line.chords, line.text)) : '';
       div.appendChild(cr);
     }
     // Main text div
@@ -4873,42 +4990,181 @@ async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{con
 async function _saveCloudData(){if(!_fbUser||!_cloudSyncEnabled)return;const uid=_fbUser.uid;try{const b=_fbDb.batch();APP.bank.forEach(s=>{const d=Object.assign({},s);delete d.tabs;b.set(_fbDb.doc('users/'+uid+'/bank/'+s.id),d);});APP.setlists.forEach((sl,i)=>{b.set(_fbDb.doc('users/'+uid+'/setlists/'+sl.id),{id:sl.id,name:sl.name,songIds:sl.songIds||[],order:i});});b.set(_fbDb.doc('users/'+uid+'/settings/prefs'),{activeSetlistId:APP.activeSetlistId,ablyKey:APP.ablyKey||''});await b.commit();}catch(e){console.error('Cloud save:',e);}}
 function _renderAccountPill(){const ab=document.querySelector('#s-conductor .ab-right');if(!ab)return;const ex=ab.querySelector('.acct-pill');if(ex)ex.remove();if(!_fbUser)return;const nm=_fbUser.displayName||_fbUser.email.split('@')[0];const p=document.createElement('div');p.className='acct-pill';p.innerHTML='<span class="acct-pill-name" title="'+esc(_fbUser.email)+'">&#128100; '+esc(nm)+'</span><button class="acct-signout" onclick="authSignOut()">Sign out</button>';ab.insertBefore(p,ab.firstChild);}
 
+
+/* ═══════════ F1 SETLIST SHOW MODE ═══════════ */
+function openShowMode(){const o=document.getElementById('show-mode-overlay');if(!o)return;o.classList.add('active');_renderShowMode();if(!_setTimerRunning)startSetTimer();}
+function closeShowMode(){document.getElementById('show-mode-overlay')?.classList.remove('active');}
+function _renderShowMode(){
+  const body=document.getElementById('sm-body');const countEl=document.getElementById('sm-song-count');const totalEl=document.getElementById('sm-total-dur');
+  if(!body)return;const sl=getActiveSetlist();if(!sl){body.innerHTML='<p style="padding:1rem;color:var(--text-mid)">No setlist.</p>';return;}
+  const songs=(sl.songIds||[]).map(id=>getSong(id)).filter(Boolean);
+  const totalSec=songs.reduce((s,sg)=>s+(sg.duration||0),0);
+  const curIdx=songs.findIndex(s=>s.id===APP.currentId);
+  let html='';
+  songs.forEach((song,i)=>{
+    const isCur=song.id===APP.currentId;const isDone=curIdx>0&&i<curIdx;
+    const cls=isCur?'sm-song sm-active':isDone?'sm-song sm-done':'sm-song';
+    html+=`<div class="${cls}" onclick="loadSong('${song.id}');_renderShowMode();">
+      <span class="sm-idx">${i+1}</span>
+      <div class="sm-info"><div class="sm-song-title">${esc(song.title||'Untitled')}</div><div class="sm-song-artist">${esc(song.artist||'')}</div></div>
+      ${isCur?'<span class="sm-now-badge">NOW</span>':''}
+      <span class="sm-dur">${song.duration?fmtTime(song.duration):'—'}</span>
+    </div>`;
+  });
+  body.innerHTML=html;
+  if(countEl)countEl.textContent=songs.length+' songs';
+  if(totalEl)totalEl.textContent='Total: '+fmtTime(totalSec);
+}
+
+/* ═══════════ F2 INSTRUMENT PARTS ═══════════ */
+const _instrIcons={vocalist:'🎤',guitarist:'🎸',bassist:'🎵',keys:'🎹',drums:'🥁',all:'👁'};
+const _instrLabels={vocalist:'Vocalist',guitarist:'Guitarist',bassist:'Bassist',keys:'Keys',drums:'Drums',all:'All Parts'};
+function openInstrModal(){
+  const o=document.getElementById('instr-modal-overlay');if(!o)return;
+  const cur=localStorage.getItem('bs_instrument')||'all';
+  document.querySelectorAll('.instr-opt').forEach(el=>el.classList.toggle('selected',el.dataset.instr===cur));
+  o.classList.add('open');
+}
+function pickInstr(instr){
+  localStorage.setItem('bs_instrument',instr);
+  const lbl=document.getElementById('instr-badge-label');if(lbl)lbl.textContent=_instrLabels[instr]||instr;
+  const b=document.getElementById('instr-badge');if(b&&b.childNodes[0])b.childNodes[0].textContent=(_instrIcons[instr]||'🎸')+' ';
+  document.getElementById('instr-modal-overlay')?.classList.remove('open');
+  _applyInstrumentView(instr);toast('Instrument: '+(_instrLabels[instr]||instr));
+}
+function _applyInstrumentView(instr){
+  const stage=document.getElementById('v-stage');if(!stage)return;
+  const showC=['guitarist','keys','all'].includes(instr);
+  const showT=['guitarist','bassist','all'].includes(instr);
+  stage.classList.toggle('show-chords',showC);stage.classList.toggle('show-tabs',showT);
+  const tc=document.getElementById('v-tog-chords');if(tc)tc.classList.toggle('on',showC);
+  const tt=document.getElementById('v-tog-tabs');if(tt)tt.classList.toggle('on',showT);
+}
+function _initInstrBadge(){
+  const instr=localStorage.getItem('bs_instrument')||'all';
+  const l=document.getElementById('instr-badge-label');if(l)l.textContent=_instrLabels[instr]||instr;
+  const b=document.getElementById('instr-badge');if(b&&b.childNodes[0])b.childNodes[0].textContent=(_instrIcons[instr]||'🎸')+' ';
+}
+
+/* ═══════════ F3 ARRANGEMENT NOTES ═══════════ */
+function openArrNotes(){
+  const song=getSong(APP.currentId);if(!song){toast('Load a song first');return;}
+  const ta=document.getElementById('arr-notes-input');if(ta)ta.value=song.arrNotes||song.notes||'';
+  document.getElementById('arr-notes-modal-bg')?.classList.add('open');
+}
+function closeArrNotes(){document.getElementById('arr-notes-modal-bg')?.classList.remove('open');}
+function saveArrNotes(){
+  const song=getSong(APP.currentId);if(!song)return;
+  const notes=(document.getElementById('arr-notes-input')?.value||'').trim();
+  song.arrNotes=notes;
+  const banner=document.getElementById('notes-banner');const bt=document.getElementById('notes-banner-text');
+  if(banner&&bt){bt.textContent=notes;banner.classList.toggle('visible',!!notes);}
+  persist();emit({type:'arr-notes',songId:song.id,notes});
+  closeArrNotes();toast('Arrangement notes saved');
+}
+
+/* ═══════════ F4 VISUAL METRONOME ═══════════ */
+let _metroBpm=0,_metroRaf=null,_metroLastBeat=0,_metroBeatPhase=0;
+function _startMetronome(bpm){_metroBpm=bpm;_metroLastBeat=performance.now();if(_metroRaf)cancelAnimationFrame(_metroRaf);_metroRaf=requestAnimationFrame(_metroTick);}
+function _stopMetronome(){_metroBpm=0;if(_metroRaf){cancelAnimationFrame(_metroRaf);_metroRaf=null;}['metro-ball','v-metro-ball'].forEach(id=>{document.getElementById(id)?.classList.remove('beat','beat-2');});}
+function _metroTick(now){
+  if(!_metroBpm)return;
+  const interval=60000/_metroBpm;
+  if(now-_metroLastBeat>=interval){_metroLastBeat=now-((now-_metroLastBeat)%interval);_metroBeatPhase++;_flashMetro(_metroBeatPhase%4===1);}
+  _metroRaf=requestAnimationFrame(_metroTick);
+}
+function _flashMetro(isDown){
+  ['metro-ball','v-metro-ball'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.classList.remove('beat','beat-2');el.classList.add(isDown?'beat':'beat-2');
+    setTimeout(()=>el.classList.remove('beat','beat-2'),110);
+  });
+}
+function _watchBpmDisplay(){
+  const d=document.getElementById('bpm-display');if(!d)return;
+  new MutationObserver(()=>{const v=parseInt(d.textContent);v>=20&&v<=300?_startMetronome(v):_stopMetronome();}).observe(d,{childList:true,characterData:true,subtree:true});
+}
+
+/* ═══════════ F5 PDF EXPORT ═══════════ */
+function exportSongPdf(){
+  const song=getSong(APP.currentId);if(!song){toast('Load a song first');return;}
+  const frame=document.getElementById('print-frame');if(!frame)return;
+  let html=`<div class="pf-title">${esc(song.title||'Untitled')}</div><div class="pf-artist">${esc(song.artist||'')}${song.duration?' · '+fmtTime(song.duration):''}</div>`;
+  (song.lines||[]).forEach(l=>{
+    if(l.type==='section')html+=`<div class="pf-section">${esc(l.text)}</div>`;
+    else if(l.type==='lyric'){if(l.chords)html+=`<div class="pf-chords">${esc(_getTransposedChords(l.chords))}</div>`;html+=`<div class="pf-lyric">${esc(l.text||'')}</div>`;if(l.tabNote)html+=`<pre class="pf-tab">${esc(l.tabNote)}</pre>`;}
+  });
+  if(song.arrNotes)html+=`<div style="margin-top:1rem;color:#777;font-size:0.82rem">📝 ${esc(song.arrNotes)}</div>`;
+  frame.innerHTML=html;frame.style.display='block';
+  setTimeout(()=>{window.print();frame.style.display='none';},80);
+}
+function exportSetlistPdf(){
+  const sl=getActiveSetlist();if(!sl){toast('No setlist loaded');return;}
+  const frame=document.getElementById('print-frame');if(!frame)return;
+  const songs=(sl.songIds||[]).map(id=>getSong(id)).filter(Boolean);
+  let html=`<div class="pf-title">${esc(sl.name||'Setlist')}</div><div class="pf-artist">${songs.length} songs · ${fmtTime(songs.reduce((s,sg)=>s+(sg.duration||0),0))}</div>`;
+  songs.forEach((song,i)=>{
+    if(i>0)html+='<div class="pf-page-break"></div>';
+    html+=`<div class="pf-section">${i+1}. ${esc(song.title||'Untitled')} — ${esc(song.artist||'')}</div>`;
+    (song.lines||[]).forEach(l=>{
+      if(l.type==='section')html+=`<div class="pf-section">${esc(l.text)}</div>`;
+      else if(l.type==='lyric'){if(l.chords)html+=`<div class="pf-chords">${esc(l.chords)}</div>`;html+=`<div class="pf-lyric">${esc(l.text||'')}</div>`;if(l.tabNote)html+=`<pre class="pf-tab">${esc(l.tabNote)}</pre>`;}
+    });
+    if(song.arrNotes)html+=`<div style="color:#777;font-size:0.8rem;margin-bottom:0.5rem">📝 ${esc(song.arrNotes)}</div>`;
+  });
+  frame.innerHTML=html;frame.style.display='block';
+  setTimeout(()=>{window.print();frame.style.display='none';},80);
+}
+
+/* ═══════════ F6 TRANSPOSE ═══════════ */
+const _SH=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const _FL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+let _transposeSteps=0;
+function _transposeChord(chord,steps){
+  if(!steps)return chord;
+  const m=chord.match(/^([A-G][#b]?)(.*)$/);if(!m)return chord;
+  const root=m[1],suffix=m[2];
+  let idx=_SH.indexOf(root),useFlat=false;
+  if(idx<0){idx=_FL.indexOf(root);useFlat=true;}if(idx<0)return chord;
+  return(useFlat?_FL:_SH)[(((idx+steps)%12)+12)%12]+suffix;
+}
+function _getTransposedChords(str){
+  if(!_transposeSteps||!str)return str;
+  return str.split(/(\s+)/).map(t=>/^\s+$/.test(t)?t:_transposeChord(t,_transposeSteps)).join('');
+}
+function transposeAll(delta){
+  _transposeSteps=((_transposeSteps+delta)%12+12)%12;
+  if(_transposeSteps>6)_transposeSteps-=12;
+  const d=document.getElementById('transpose-display');
+  if(d)d.textContent=(_transposeSteps>0?'+':'')+_transposeSteps;
+  if(APP.currentId){document.querySelectorAll('.chord-row').forEach(r=>{if(r.dataset.chords!==undefined)r.textContent=_getTransposedChords(_renderChordRow(r.dataset.chords,'')||r.dataset.chords)||'';});}
+}
+function _rerenderTransposed(){
+  document.querySelectorAll('.chord-row').forEach(r=>{if(r.dataset.chords!==undefined)r.textContent=_getTransposedChords(_renderChordRow(r.dataset.chords,'')||r.dataset.chords)||'';});
+}
+
+/* ═══════════ F8 SET TIMER ═══════════ */
+let _setTimerRunning=false,_setTimerStart=0,_setTimerRaf=null,_setSlotMins=45,_setWarnMins=5;
+function startSetTimer(){_setTimerStart=Date.now();_setTimerRunning=true;document.getElementById('set-timer-dot')?.classList.add('running');_tickSetTimer();}
+function stopSetTimer(){_setTimerRunning=false;if(_setTimerRaf){cancelAnimationFrame(_setTimerRaf);_setTimerRaf=null;}document.getElementById('set-timer-dot')?.classList.remove('running');}
+function resetSetTimer(){stopSetTimer();const v=document.getElementById('set-timer-val');if(v)v.textContent='SET';document.getElementById('set-timer-wrap')?.classList.remove('set-timer-warn','set-timer-over');const sv=document.getElementById('sm-set-val');if(sv){sv.textContent='00:00';sv.className='sm-set-timer';}_setTimerStart=0;}
+function toggleSetTimer(){_setTimerRunning?stopSetTimer():startSetTimer();}
+function _tickSetTimer(){
+  if(!_setTimerRunning)return;
+  const e=Math.floor((Date.now()-_setTimerStart)/1000);
+  const disp=String(Math.floor(e/60)).padStart(2,'0')+':'+String(e%60).padStart(2,'0');
+  const v=document.getElementById('set-timer-val');if(v)v.textContent=disp;
+  const sv=document.getElementById('sm-set-val');if(sv){sv.textContent=disp;sv.className='sm-set-timer';}
+  const wrap=document.getElementById('set-timer-wrap');
+  if(wrap){wrap.classList.remove('set-timer-warn','set-timer-over');const rem=_setSlotMins*60-e;if(rem<0){wrap.classList.add('set-timer-over');if(sv)sv.classList.add('sm-over');}else if(rem<_setWarnMins*60){wrap.classList.add('set-timer-warn');if(sv)sv.classList.add('sm-warn');}}
+  _setTimerRaf=requestAnimationFrame(_tickSetTimer);
+}
+
+/* ═══════════ INIT ═══════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  _watchBpmDisplay();
+  _initInstrBadge();
+  document.getElementById('set-timer-wrap')?.addEventListener('contextmenu',e=>{e.preventDefault();resetSetTimer();});
+});
+
 </script>
-
-<!-- AI KEY MODAL -->
-<div class="ai-modal-overlay" id="ai-modal-overlay" style="display:none" onclick="if(event.target===this)closeAiModal()">
-  <div class="ai-modal">
-    <h3>🤖 AI Tab Processing</h3>
-    <p style="font-size:13px;color:#aaa;margin:0 0 14px">Enter your OpenAI API key to enable AI-powered PDF tab parsing. Key stored locally in your browser only.</p>
-    <label style="font-size:12px;color:#bf9fff;display:block;margin-bottom:4px">OpenAI API Key</label>
-    <input type="password" id="ai-key-input" placeholder="sk-..." autocomplete="off"/>
-    <label style="font-size:12px;color:#bf9fff;display:block;margin-bottom:4px">Model</label>
-    <select id="ai-model-select">
-      <option value="gpt-4o-mini">gpt-4o-mini (fast, cheap)</option>
-      <option value="gpt-4o">gpt-4o (best quality)</option>
-      <option value="gpt-3.5-turbo">gpt-3.5-turbo (legacy)</option>
-    </select>
-    <div class="btn-row">
-      <button class="ai-cancel-btn" onclick="closeAiModal()">Cancel</button>
-      <button class="ai-save-btn" onclick="saveAiKey()">Save Key</button>
-    </div>
-  </div>
-</div>
-
-  <!-- PDF Tab Viewer Overlay -->
-  <div class="pdf-viewer-overlay" id="pdf-viewer-overlay">
-    <div class="pdf-viewer-bar">
-      <span class="pdf-viewer-title" id="pdf-viewer-title">Tab</span>
-      <div class="pdf-viewer-zoom-btns">
-        <button onclick="pdfViewerZoom(-0.25)" title="Zoom out">&#8722;</button>
-        <button id="pdf-zoom-label" onclick="pdfViewerZoom(0)" title="Reset zoom" style="min-width:48px;font-size:12px;">100%</button>
-        <button onclick="pdfViewerZoom(0.25)" title="Zoom in">&#65291;</button>
-      </div>
-      <button class="pdf-viewer-close" onclick="closePdfViewer()">&#10005; Close</button>
-    </div>
-    <div class="pdf-viewer-frame-wrap" id="pdf-viewer-frame-wrap">
-      <iframe id="pdf-viewer-iframe" src="" title="Tab PDF"></iframe>
-    </div>
-  </div>
-</body>
-</html>
