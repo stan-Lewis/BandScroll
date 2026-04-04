@@ -3042,10 +3042,25 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     } else if (line.type==='annotation') {
       el.classList.remove('past','active-ann');
       if (line.t!=null && songTime >= line.t) el.classList.add('past');
-      // Active window: show annotation as active for 6 seconds after it fires
-      if (line.t!=null && songTime >= line.t && songTime < line.t+6) {
-        el.classList.remove('past');
-        el.classList.add('active-ann');
+      if (line.annType === 'section') {
+        // Section annotations: stay active from when they fire until the NEXT section fires
+        if (line.t != null && songTime >= line.t) {
+          let isActive = true;
+          for (let k = i+1; k < lines.length; k++) {
+            if (lines[k].type === 'annotation' && lines[k].annType === 'section'
+                && lines[k].t != null && songTime >= lines[k].t) {
+              isActive = false; break;
+            }
+          }
+          if (isActive) { el.classList.remove('past'); el.classList.add('active-ann'); }
+          else { el.classList.add('past'); }
+        }
+      } else {
+        // Non-section annotations: active window of 6 seconds
+        if (line.t!=null && songTime >= line.t && songTime < line.t+6) {
+          el.classList.remove('past');
+          el.classList.add('active-ann');
+        }
       }
     } else if (line.type==='section') {
       el.classList.remove('sect-past','sect-active','sect-upcoming');
