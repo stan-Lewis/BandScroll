@@ -486,7 +486,12 @@ textarea{resize:vertical;}
   font-family:'JetBrains Mono',monospace;
   font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;
   color:var(--lime-dim);opacity:0.65;margin-top:0.35rem;
+  transition:opacity 0.3s, color 0.3s;
 }
+/* Section belt states during play */
+.ll.section.sect-past{opacity:0.18;color:var(--lime-dim);}
+.ll.section.sect-active{opacity:1;color:var(--lime);text-shadow:0 0 12px rgba(163,230,53,0.5);}
+.ll.section.sect-upcoming{opacity:0.45;color:var(--lime-dim);}
 .ll.empty{opacity:0;font-size:0.4rem !important;}
 
 /* LINE STATES */
@@ -780,16 +785,17 @@ textarea{resize:vertical;}
   padding-bottom:80px !important;
 }
 .rejoin-btn{
-  position:absolute;bottom:1.1rem;right:1.1rem;z-index:20;
   background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;cursor:pointer;
-  font-family:'Bebas Neue',sans-serif;font-size:0.88rem;letter-spacing:0.1em;
-  padding:0.45rem 1.2rem;border-radius:6px;
-  box-shadow:0 0 20px rgba(167,139,250,0.4);
-  display:none;user-select:none;-webkit-appearance:none;
+  font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:0.08em;
+  padding:0.3rem 0.7rem;border-radius:6px;
+  box-shadow:0 0 12px rgba(167,139,250,0.35);
+  display:none;user-select:none;-webkit-appearance:none;flex-shrink:0;
 }
-@media(max-width:768px){.rejoin-btn{display:block!important;}}
+/* rejoin-btn now in appbar, always visible when active */
 
 .rejoin-btn.visible{display:block;animation:rejoin-pulse 1.8s ease-in-out infinite;}
+.ab-right .rejoin-btn{display:none;}
+.ab-right .rejoin-btn.visible{display:block;}
 @keyframes rejoin-pulse{
   0%,100%{box-shadow:0 0 18px rgba(167,139,250,0.35), 0 4px 20px rgba(124,58,237,0.3);}
   50%{box-shadow:0 0 38px rgba(167,139,250,0.75), 0 6px 28px rgba(124,58,237,0.5);}
@@ -1519,6 +1525,7 @@ textarea{resize:vertical;}
         <div class="set-timer-dot" id="set-timer-dot"></div>
         <span class="set-timer-val" id="set-timer-val">SET</span>
       </div>
+      <button class="rejoin-btn" id="rejoin-btn" onclick="rejoinAutoScroll()" title="Rejoin auto-scroll">↩ Rejoin</button>
       <button class="btn btn-ghost btn-sm" onclick="showAiKeyModal()" title="Set OpenAI API Key">🤖 AI KEY</button>
     </div>
   </div>
@@ -1697,7 +1704,6 @@ textarea{resize:vertical;}
         <div class="belt-wrap" id="c-belt-wrap">
           <div class="belt" id="c-belt"></div>
         </div>
-        <button class="rejoin-btn" id="rejoin-btn" onclick="rejoinAutoScroll()">↩ Rejoin Scroll</button>
         <div class="veil" id="c-veil">
           <div class="veil-num" id="c-veil-num">5</div>
           <div class="veil-song" id="c-veil-song"></div>
@@ -2154,6 +2160,8 @@ function hydrate() {
     APP.setlists = [{ id: 'sl_default', name: 'Main Set', songIds: [] }];
     APP.activeSetlistId = 'sl_default';
   }
+  // Migrate existing songs to have intro section at t=0
+  _migrateIntroSections();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2795,6 +2803,64 @@ function dragDrop(e, targetId) {
 }
 
 // ── LOAD SONG ──
+// Ensures the first section line in a song has t=0 so it shows immediately on load
+function _ensureIntroSectionAtZero(song) {
+  if (!song || !song.lines) return;
+  // Find first line that is a section type with a timing
+  let firstSect = null;
+  for (let i = 0; i < song.lines.length; i++) {
+    const l = song.lines[i];
+    if (l.type === 'section' && l.t != null) {
+      firstSect = l;
+      break;
+    }
+  }
+  // If the first section doesn't start at 0, move it to 0
+  if (firstSect && firstSect.t > 0.5) {
+    firstSect.t = 0;
+    // Persist the change so it's saved
+    persist();
+  }
+  // Also check annotations for first section annotation
+  if (song.annotations) {
+    let firstAnnSect = null;
+    for (let j = 0; j < song.annotations.length; j++) {
+      const a = song.annotations[j];
+      if (a.annType === 'section' && a.t != null) {
+        if (!firstAnnSect || a.t < firstAnnSect.t) firstAnnSect = a;
+      }
+    }
+    if (firstAnnSect && firstAnnSect.t > 0.5 && (!firstSect || firstAnnSect.t < firstSect.t)) {
+      firstAnnSect.t = 0;
+      persist();
+    }
+  }
+}
+
+// Migrate all songs in bank — run once after cloud/local load
+function _migrateIntroSections() {
+  let changed = false;
+  APP.bank.forEach(song => {
+    if (!song.lines) return;
+    let firstSect = null;
+    for (let i = 0; i < song.lines.length; i++) {
+      const l = song.lines[i];
+      if (l.type === 'section' && l.t != null) { firstSect = l; break; }
+    }
+    if (firstSect && firstSect.t > 0.5) { firstSect.t = 0; changed = true; }
+    if (song.annotations) {
+      song.annotations.forEach(a => {
+        if (a.annType === 'section' && a.t != null && a.t > 0.5) {
+          // Only move it if it's the first section
+          const hasSectBefore = song.lines.some(l => l.type === 'section' && l.t != null && l.t <= 0.5);
+          if (!hasSectBefore) { a.t = 0; changed = true; }
+        }
+      });
+    }
+  });
+  if (changed) persist();
+}
+
 function loadSong(id) {
   if (_autoAdvanceTimer) { clearTimeout(_autoAdvanceTimer); _autoAdvanceTimer = null; }
   stopPlay();
@@ -2836,13 +2902,19 @@ function loadSong(id) {
   // Reset manual scroll state
   _setDetached(false);
 
-  buildBelt(document.getElementById('c-belt'), lines);
-  positionBelt('c-belt','c-belt-wrap','c-cursor', lines, 0);
+  // Ensure first section line in song starts at t=0 (intro always visible from start)
+  _ensureIntroSectionAtZero(song);
+  // Rebuild lines after normalization
+  const normalizedLines = mergeAnnotations(song);
+  buildBelt(document.getElementById('c-belt'), normalizedLines);
+  positionBelt('c-belt','c-belt-wrap','c-cursor', normalizedLines, 0);
   document.getElementById('prog-fill').style.width = '0%';
-  // Reset section pin
+  // Reset section pin then immediately show if song has a section at t=0
   _sectionPinState.c.current = '';
   const cp = document.getElementById('c-section-pin');
   if (cp) cp.classList.add('hidden');
+  // Show section pin immediately for sections at t=0
+  setTimeout(() => { updateSectionPin('c', normalizedLines, 0); }, 50);
   // Update tab view visibility and render if in tab mode
   updateViewToggleVisibility(song, 'c');
   if (_currentView.c !== 'lyrics') {
@@ -2974,6 +3046,23 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       if (line.t!=null && songTime >= line.t && songTime < line.t+6) {
         el.classList.remove('past');
         el.classList.add('active-ann');
+      }
+    } else if (line.type==='section') {
+      el.classList.remove('sect-past','sect-active','sect-upcoming');
+      if (line.t == null) {
+        el.classList.add('sect-upcoming');
+      } else if (songTime >= line.t) {
+        // Check if a later section has started — if so, this one is past
+        let isActive = true;
+        for (let k = i+1; k < lines.length; k++) {
+          if ((lines[k].type==='section' || (lines[k].type==='annotation' && lines[k].annType==='section'))
+              && lines[k].t != null && songTime >= lines[k].t) {
+            isActive = false; break;
+          }
+        }
+        el.classList.add(isActive ? 'sect-active' : 'sect-past');
+      } else {
+        el.classList.add('sect-upcoming');
       }
     }
   });
@@ -3226,6 +3315,8 @@ function startCountdown() {
 
 function beginPlay(song, wallStart) {
   APP.isPlaying = true;
+  // Auto-start set timer on first play of the session
+  if (!_setTimerRunning) { startSetTimer(); }
   // Use server-synced offset for accurate playback position
   APP.playStartPN = performance.now() - (serverNow() - wallStart);
   document.getElementById('play-btn').textContent='⏹ Stop';
@@ -3295,8 +3386,42 @@ function autoAdvance() {
 }
 
 function prevSong() {
-  const ids=getSetlistSongIds(), i=ids.indexOf(APP.currentId);
-  if(i>0) loadSong(ids[i-1]);
+  // If currently playing, stop and restart this song from the beginning
+  if (APP.isPlaying) {
+    stopPlay();
+    APP.offsetAdj = 0;
+    _updateOffsetDisplay();
+    _updateScrub(0, getSong(APP.currentId)?.duration || 0);
+    const song = getSong(APP.currentId);
+    if (song) {
+      const lines = mergeAnnotations(song);
+      positionBelt('c-belt','c-belt-wrap','c-cursor', lines, 0);
+      updateSectionPin('c', lines, 0);
+    }
+    return;
+  }
+  // If song has been scrubbed past 1 second, restart it
+  const song = getSong(APP.currentId);
+  if (song) {
+    const lines = mergeAnnotations(song);
+    const dur = song.duration || 0;
+    // Check current position via scrub bar width
+    const fill = document.getElementById('prog-fill');
+    const pct = fill ? parseFloat(fill.style.width) : 0;
+    const curT = (pct / 100) * dur;
+    if (curT > 1.5) {
+      APP.offsetAdj = 0;
+      _updateOffsetDisplay();
+      _updateScrub(0, dur);
+      positionBelt('c-belt','c-belt-wrap','c-cursor', lines, 0);
+      updateSectionPin('c', lines, 0);
+      _sectionPinState.c.current = '';
+      return;
+    }
+  }
+  // Go to previous song
+  const ids = getSetlistSongIds(), i = ids.indexOf(APP.currentId);
+  if (i > 0) loadSong(ids[i-1]);
 }
 function nextSong() {
   const ids=getSetlistSongIds(), i=ids.indexOf(APP.currentId);
@@ -4986,7 +5111,10 @@ function authGuest(){_fbUser=null;_cloudSyncEnabled=false;show('s-conductor');st
 async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopPlay();await _fbAuth.signOut();APP.bank=[];APP.setlists=[{id:'main',name:'Main Set',songIds:[]}];APP.activeSetlistId='main';_fbUser=null;_cloudSyncEnabled=false;show('s-land');toast('Signed out');}
 function _authErrMsg(c){return({'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account found with that email.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'An account with this email already exists.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'Network error. Check your connection.'})[c]||('Error: '+c);}
 _fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;await _loadCloudData();_renderAccountPill();if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}}});
-async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>cb.push(Object.assign({id:d.id},d.data())));APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;if(p.ablyKey)APP.ablyKey=p.ablyKey;}}catch(e){console.error('Cloud load:',e);toast('Could not load cloud data');}}
+async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>cb.push(Object.assign({id:d.id},d.data())));APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;if(p.ablyKey)APP.ablyKey=p.ablyKey;}}catch(e){console.error('Cloud load:',e);toast('Could not load cloud data');}
+  // One-time migration: ensure all songs have intro section starting at t=0
+  _migrateIntroSections();
+}
 async function _saveCloudData(){if(!_fbUser||!_cloudSyncEnabled)return;const uid=_fbUser.uid;try{const b=_fbDb.batch();APP.bank.forEach(s=>{const d=Object.assign({},s);delete d.tabs;b.set(_fbDb.doc('users/'+uid+'/bank/'+s.id),d);});APP.setlists.forEach((sl,i)=>{b.set(_fbDb.doc('users/'+uid+'/setlists/'+sl.id),{id:sl.id,name:sl.name,songIds:sl.songIds||[],order:i});});b.set(_fbDb.doc('users/'+uid+'/settings/prefs'),{activeSetlistId:APP.activeSetlistId,ablyKey:APP.ablyKey||''});await b.commit();}catch(e){console.error('Cloud save:',e);}}
 function _renderAccountPill(){const ab=document.querySelector('#s-conductor .ab-right');if(!ab)return;const ex=ab.querySelector('.acct-pill');if(ex)ex.remove();if(!_fbUser)return;const nm=_fbUser.displayName||_fbUser.email.split('@')[0];const p=document.createElement('div');p.className='acct-pill';p.innerHTML='<span class="acct-pill-name" title="'+esc(_fbUser.email)+'">&#128100; '+esc(nm)+'</span><button class="acct-signout" onclick="authSignOut()">Sign out</button>';ab.insertBefore(p,ab.firstChild);}
 
