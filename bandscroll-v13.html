@@ -5168,3 +5168,42 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 </script>
+
+<!-- ══════════ SHOW MODE OVERLAY ══════════ -->
+<div id="show-mode-overlay">
+  <div class="sm-header">
+    <span class="sm-title">🎭 Show Mode</span>
+    <span class="sm-timer" id="sm-set-timer">SET: <span id="sm-set-val" class="sm-set-timer">00:00</span></span>
+    <button class="btn btn-ghost btn-sm sm-close" onclick="closeShowMode()">✕ Exit</button>
+  </div>
+  <div class="sm-body" id="sm-body"></div>
+  <div class="sm-footer"><span id="sm-song-count"></span><span class="sm-total" id="sm-total-dur"></span></div>
+</div>
+<div id="instr-modal-overlay">
+  <div class="instr-modal">
+    <h3>🎸 Your Instrument</h3>
+    <p style="font-size:0.82rem;color:var(--text-mid);margin:0;">Choose what you play — BandScroll shows you the right parts.</p>
+    <div class="instr-grid">
+      <div class="instr-opt" data-instr="vocalist" onclick="pickInstr('vocalist')"><span class="instr-opt-icon">🎤</span><span class="instr-opt-label">VOCALIST</span><span class="instr-opt-desc">Lyrics only</span></div>
+      <div class="instr-opt" data-instr="guitarist" onclick="pickInstr('guitarist')"><span class="instr-opt-icon">🎸</span><span class="instr-opt-label">GUITARIST</span><span class="instr-opt-desc">Lyrics + chords + tabs</span></div>
+      <div class="instr-opt" data-instr="bassist" onclick="pickInstr('bassist')"><span class="instr-opt-icon">🎵</span><span class="instr-opt-label">BASSIST</span><span class="instr-opt-desc">Lyrics + tabs</span></div>
+      <div class="instr-opt" data-instr="keys" onclick="pickInstr('keys')"><span class="instr-opt-icon">🎹</span><span class="instr-opt-label">KEYS</span><span class="instr-opt-desc">Lyrics + chords</span></div>
+      <div class="instr-opt" data-instr="drums" onclick="pickInstr('drums')"><span class="instr-opt-icon">🥁</span><span class="instr-opt-label">DRUMS</span><span class="instr-opt-desc">Sections only</span></div>
+      <div class="instr-opt" data-instr="all" onclick="pickInstr('all')"><span class="instr-opt-icon">👁</span><span class="instr-opt-label">ALL PARTS</span><span class="instr-opt-desc">See everything</span></div>
+    </div>
+  </div>
+</div>
+<div id="arr-notes-modal-bg">
+  <div class="arr-notes-modal">
+    <h3>📝 Arrangement Notes</h3>
+    <p style="font-size:0.82rem;color:var(--text-mid);margin:0;">Notes visible to the whole band. Key changes, cues, arrangement reminders.</p>
+    <textarea id="arr-notes-input" placeholder="e.g. Key change at bridge. Drummer comes in late on verse 2."></textarea>
+    <div class="arr-notes-footer">
+      <button class="btn btn-ghost" onclick="closeArrNotes()">Cancel</button>
+      <button class="btn btn-lime" onclick="saveArrNotes()">💾 Save Notes</button>
+    </div>
+  </div>
+</div>
+<div id="print-frame"></div>
+</body>
+</html>
