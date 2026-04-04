@@ -2160,8 +2160,6 @@ function hydrate() {
     APP.setlists = [{ id: 'sl_default', name: 'Main Set', songIds: [] }];
     APP.activeSetlistId = 'sl_default';
   }
-  // Migrate existing songs to have intro section at t=0
-  _migrateIntroSections();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2837,29 +2835,8 @@ function _ensureIntroSectionAtZero(song) {
   }
 }
 
-// Migrate all songs in bank — run once after cloud/local load
-function _migrateIntroSections() {
-  let changed = false;
-  APP.bank.forEach(song => {
-    if (!song.lines) return;
-    let firstSect = null;
-    for (let i = 0; i < song.lines.length; i++) {
-      const l = song.lines[i];
-      if (l.type === 'section' && l.t != null) { firstSect = l; break; }
-    }
-    if (firstSect && firstSect.t > 0.5) { firstSect.t = 0; changed = true; }
-    if (song.annotations) {
-      song.annotations.forEach(a => {
-        if (a.annType === 'section' && a.t != null && a.t > 0.5) {
-          // Only move it if it's the first section
-          const hasSectBefore = song.lines.some(l => l.type === 'section' && l.t != null && l.t <= 0.5);
-          if (!hasSectBefore) { a.t = 0; changed = true; }
-        }
-      });
-    }
-  });
-  if (changed) persist();
-}
+// _migrateIntroSections: disabled to prevent wiping section timings
+function _migrateIntroSections() { /* intentionally empty */ }
 
 function loadSong(id) {
   if (_autoAdvanceTimer) { clearTimeout(_autoAdvanceTimer); _autoAdvanceTimer = null; }
@@ -2902,19 +2879,15 @@ function loadSong(id) {
   // Reset manual scroll state
   _setDetached(false);
 
-  // Ensure first section line in song starts at t=0 (intro always visible from start)
-  _ensureIntroSectionAtZero(song);
-  // Rebuild lines after normalization
-  const normalizedLines = mergeAnnotations(song);
-  buildBelt(document.getElementById('c-belt'), normalizedLines);
-  positionBelt('c-belt','c-belt-wrap','c-cursor', normalizedLines, 0);
+  buildBelt(document.getElementById('c-belt'), lines);
+  positionBelt('c-belt','c-belt-wrap','c-cursor', lines, 0);
   document.getElementById('prog-fill').style.width = '0%';
-  // Reset section pin then immediately show if song has a section at t=0
+  // Reset section pin
   _sectionPinState.c.current = '';
   const cp = document.getElementById('c-section-pin');
   if (cp) cp.classList.add('hidden');
-  // Show section pin immediately for sections at t=0
-  setTimeout(() => { updateSectionPin('c', normalizedLines, 0); }, 50);
+  // Show section pin immediately if song has a section at t=0
+  setTimeout(() => { updateSectionPin('c', lines, 0); }, 50);
   // Update tab view visibility and render if in tab mode
   updateViewToggleVisibility(song, 'c');
   if (_currentView.c !== 'lyrics') {
@@ -3017,7 +2990,13 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       if (lines[i].t!=null && lines[i].t <= songTime) ai=i;
       else if (lines[i].t!=null && lines[i].t > songTime) break;
     }
-    ai = Math.max(0,ai);
+    // If no lyric found at or before songTime, find actual index of first lyric element
+    if (ai === -1) {
+      for (let k = 0; k < lines.length; k++) {
+        if (lines[k].type === 'lyric') { ai = k; break; }
+      }
+    }
+    if (ai < 0) ai = 0;
     let ni = ai + 1;
 
     belt.style.paddingTop = cursorY + 'px';
@@ -5127,8 +5106,6 @@ async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopP
 function _authErrMsg(c){return({'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account found with that email.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'An account with this email already exists.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'Network error. Check your connection.'})[c]||('Error: '+c);}
 _fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;await _loadCloudData();_renderAccountPill();if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}}});
 async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>cb.push(Object.assign({id:d.id},d.data())));APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;if(p.ablyKey)APP.ablyKey=p.ablyKey;}}catch(e){console.error('Cloud load:',e);toast('Could not load cloud data');}
-  // One-time migration: ensure all songs have intro section starting at t=0
-  _migrateIntroSections();
 }
 async function _saveCloudData(){if(!_fbUser||!_cloudSyncEnabled)return;const uid=_fbUser.uid;try{const b=_fbDb.batch();APP.bank.forEach(s=>{const d=Object.assign({},s);delete d.tabs;b.set(_fbDb.doc('users/'+uid+'/bank/'+s.id),d);});APP.setlists.forEach((sl,i)=>{b.set(_fbDb.doc('users/'+uid+'/setlists/'+sl.id),{id:sl.id,name:sl.name,songIds:sl.songIds||[],order:i});});b.set(_fbDb.doc('users/'+uid+'/settings/prefs'),{activeSetlistId:APP.activeSetlistId,ablyKey:APP.ablyKey||''});await b.commit();}catch(e){console.error('Cloud save:',e);}}
 function _renderAccountPill(){const ab=document.querySelector('#s-conductor .ab-right');if(!ab)return;const ex=ab.querySelector('.acct-pill');if(ex)ex.remove();if(!_fbUser)return;const nm=_fbUser.displayName||_fbUser.email.split('@')[0];const p=document.createElement('div');p.className='acct-pill';p.innerHTML='<span class="acct-pill-name" title="'+esc(_fbUser.email)+'">&#128100; '+esc(nm)+'</span><button class="acct-signout" onclick="authSignOut()">Sign out</button>';ab.insertBefore(p,ab.firstChild);}
