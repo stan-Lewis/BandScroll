@@ -863,6 +863,31 @@ textarea{resize:vertical;}
 .ann-editor-wrap{
   margin-top:1rem;border-top:1px solid var(--border2);padding-top:0.85rem;
 }
+
+/* ── SECTION PLACER ── */
+.sect-placer-wrap{margin-top:1rem;border-top:1px solid var(--border2);padding-top:0.85rem;}
+.sect-placer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;}
+.sect-placer-title{font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);}
+.sect-palette{display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.7rem;padding:0.5rem;background:var(--bg2);border-radius:4px;border:1px solid var(--border2);}
+.sect-chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.25rem 0.6rem;border-radius:3px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;font-size:0.72rem;font-weight:700;font-style:italic;font-family:'Instrument Sans',sans-serif;cursor:grab;user-select:none;transition:all 0.12s;white-space:nowrap;}
+.sect-chip:hover{background:rgba(245,158,11,0.22);border-color:rgba(245,158,11,0.7);}
+.sect-chip:active{cursor:grabbing;}
+.sect-chip.custom-chip{background:rgba(245,158,11,0.06);border-style:dashed;}
+.sect-lyric-list{display:flex;flex-direction:column;max-height:52vh;overflow-y:auto;border:1px solid var(--border2);border-radius:4px;background:var(--bg2);}
+.sect-drop-zone{height:6px;background:transparent;transition:all 0.15s;border:1.5px dashed transparent;border-radius:2px;margin:0 6px;flex-shrink:0;}
+.sect-drop-zone.drag-active{height:22px;background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.5);}
+.sect-lyric-row{display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;font-size:0.78rem;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;flex-shrink:0;}
+.sect-lyric-t{font-size:0.62rem;color:var(--text-dim);opacity:0.5;flex-shrink:0;min-width:38px;font-family:'JetBrains Mono',monospace;}
+.sect-banner-row{display:flex;align-items:center;gap:0.4rem;padding:0.28rem 0.5rem 0.28rem 0.3rem;background:rgba(245,158,11,0.1);border-top:1px solid rgba(245,158,11,0.25);border-bottom:1px solid rgba(245,158,11,0.25);flex-shrink:0;}
+.sect-banner-handle{color:rgba(245,158,11,0.5);cursor:grab;font-size:0.8rem;flex-shrink:0;}
+.sect-banner-handle:active{cursor:grabbing;}
+.sect-banner-label{flex:1;color:#f59e0b;font-size:0.78rem;font-weight:700;font-style:italic;font-family:'Instrument Sans',sans-serif;background:transparent;border:none;min-width:0;padding:0;}
+.sect-banner-label:focus{outline:1px solid rgba(245,158,11,0.4);border-radius:2px;}
+.sect-banner-del{color:rgba(245,158,11,0.4);background:none;border:none;cursor:pointer;font-size:0.8rem;flex-shrink:0;line-height:1;padding:0 2px;}
+.sect-banner-del:hover{color:#f59e0b;}
+.sect-custom-input{display:flex;gap:0.4rem;margin-top:0.4rem;flex-basis:100%;}
+.sect-custom-input input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.25rem 0.5rem;border-radius:3px;font-size:0.78rem;}
+.sect-custom-input button{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;padding:0.25rem 0.6rem;border-radius:3px;font-size:0.72rem;font-weight:700;cursor:pointer;}
 .ann-editor-head{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:0.5rem;
@@ -3746,23 +3771,156 @@ function addAnn(type) {
   }, 50);
 }
 
+
+// ══════════════════════════════════════════════════════════════════════
+// SECTION PLACER — drag-and-drop section banners onto lyric lines
+// ══════════════════════════════════════════════════════════════════════
+let _sectDragLabel = null;
+let _sectDragBannerIdx = null;
+let _sectState = [];
+
+function _sectBuildState(song) {
+  const annotations = (song.annotations||[]).filter(a=>a.annType==='section'&&a.text);
+  const lyrics = (song.lines||[])
+    .filter(l=>l.type==='lyric')
+    .sort((a,b)=>(a.t||0)-(b.t||0))
+    .map((l,i)=>({ kind:'lyric', t:l.t, text:l.text, origIdx:i }));
+  if (!lyrics.length) return [];
+  const banners = [];
+  annotations.forEach(ann => {
+    let bestIdx = lyrics.length - 1;
+    for (let i = 0; i < lyrics.length; i++) {
+      if ((lyrics[i].t||0) >= (ann.t||0) - 0.5) { bestIdx = i; break; }
+    }
+    banners.push({ kind:'banner', label:ann.text, beforeLyricIdx:bestIdx });
+  });
+  const ordered = [];
+  for (let i = 0; i < lyrics.length; i++) {
+    banners.filter(b=>b.beforeLyricIdx===i).forEach(b=>ordered.push({...b}));
+    ordered.push(lyrics[i]);
+  }
+  return ordered;
+}
+
+function _sectGetAnnotations() {
+  const annotations = [];
+  _sectState.forEach((item, idx) => {
+    if (item.kind !== 'banner') return;
+    let nextLyric = null;
+    for (let i = idx+1; i < _sectState.length; i++) {
+      if (_sectState[i].kind === 'lyric') { nextLyric = _sectState[i]; break; }
+    }
+    if (!nextLyric) {
+      let prevLyric = null;
+      for (let i = idx-1; i >= 0; i--) {
+        if (_sectState[i].kind === 'lyric') { prevLyric = _sectState[i]; break; }
+      }
+      annotations.push({ annType:'section', text:item.label, t: prevLyric ? (prevLyric.t||0)+1 : 0 });
+    } else {
+      annotations.push({ annType:'section', text:item.label, t: nextLyric.t||0 });
+    }
+  });
+  return annotations;
+}
+
+function _renderSectPlacer(song) {
+  const list = document.getElementById('sect-lyric-list');
+  if (!list) return;
+  _sectState = _sectBuildState(song);
+  if (!_sectState.length) {
+    list.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">No synced lyric lines yet. Add lyrics with timestamps first.</div>';
+    return;
+  }
+  _sectRenderList(list);
+}
+
+function _sectRenderList(list) {
+  if (!list) list = document.getElementById('sect-lyric-list');
+  if (!list) return;
+  let html = '';
+  html += `<div class="sect-drop-zone" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,0)"></div>`;
+  _sectState.forEach((item, idx) => {
+    if (item.kind === 'banner') {
+      html += `<div class="sect-banner-row" draggable="true" ondragstart="_sectBannerDrag(event,${idx})">
+        <span class="sect-banner-handle">⠿</span>
+        <input class="sect-banner-label" type="text" value="${esc(item.label)}" oninput="_sectState[${idx}].label=this.value">
+        <button class="sect-banner-del" onclick="_sectRemoveBanner(${idx})" title="Remove">✕</button>
+      </div>`;
+    } else {
+      const t = item.t != null ? fmtTime(item.t) : '?';
+      html += `<div class="sect-lyric-row"><span class="sect-lyric-t">${t}</span><span>${esc(item.text)}</span></div>`;
+    }
+    html += `<div class="sect-drop-zone" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,${idx+1})"></div>`;
+  });
+  list.innerHTML = html;
+}
+
+function _sectChipDrag(event, label) {
+  _sectDragLabel = label; _sectDragBannerIdx = null;
+  event.dataTransfer.effectAllowed = 'copy';
+}
+function _sectBannerDrag(event, idx) {
+  _sectDragBannerIdx = idx; _sectDragLabel = null;
+  event.dataTransfer.effectAllowed = 'move';
+}
+function _sectDragOver(event, el) {
+  event.preventDefault();
+  el.classList.add('drag-active');
+}
+function _sectDragLeave(el) { el.classList.remove('drag-active'); }
+function _sectDrop(event, pos) {
+  event.preventDefault();
+  document.querySelectorAll('.sect-drop-zone').forEach(z=>z.classList.remove('drag-active'));
+  if (_sectDragLabel !== null) {
+    _sectState.splice(pos, 0, { kind:'banner', label:_sectDragLabel });
+    _sectDragLabel = null;
+  } else if (_sectDragBannerIdx !== null) {
+    const moved = _sectState.splice(_sectDragBannerIdx, 1)[0];
+    const adj = pos > _sectDragBannerIdx ? pos-1 : pos;
+    _sectState.splice(adj, 0, moved);
+    _sectDragBannerIdx = null;
+  }
+  _sectRenderList();
+}
+function _sectRemoveBanner(idx) { _sectState.splice(idx,1); _sectRenderList(); }
+function _sectAddCustom() {
+  const inp = document.getElementById('sect-custom-text');
+  if (!inp) return;
+  const label = inp.value.trim(); if (!label) return;
+  const palette = document.getElementById('sect-palette');
+  if (palette) {
+    const chip = document.createElement('span');
+    chip.className = 'sect-chip custom-chip';
+    chip.draggable = true;
+    chip.textContent = label;
+    chip.setAttribute('ondragstart', "_sectChipDrag(event," + JSON.stringify(label) + ")");
+    palette.insertBefore(chip, palette.querySelector('.sect-custom-input'));
+  }
+  inp.value = '';
+}
+
 function openManualAdd() {
   APP.editingId = null;
   _annRows = [];
   document.getElementById('edit-modal-title').textContent = 'Add Song Manually';
   document.getElementById('edit-form').innerHTML = buildEditForm(null);
   _renderAnnList();
+  _sectState = [];
+  const sectList = document.getElementById('sect-lyric-list');
+  if (sectList) sectList.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Save the song first, then re-open to place sections.</div>';
   openModal('edit-modal');
 }
 
 function openEdit(id) {
   APP.editingId = id;
   const s = getSong(id); if(!s) return;
-  // Deep-copy annotations into working list
-  _annRows = (s.annotations || []).map(a => ({...a}));
+  _annRows = (s.annotations || []).filter(a=>a.annType!=='section').map(a => ({...a}));
   document.getElementById('edit-modal-title').textContent = 'Edit Song';
   document.getElementById('edit-form').innerHTML = buildEditForm(s);
   _renderAnnList();
+  const legacyEl = document.getElementById('ann-editor-legacy');
+  if (legacyEl) legacyEl.style.display = _annRows.length ? '' : 'none';
+  _renderSectPlacer(s);
   openModal('edit-modal');
 }
 
@@ -3820,19 +3978,37 @@ function buildEditForm(s) {
     </div>
     ${s&&s.syncType==='synced'?`<button class="btn btn-ghost btn-sm" type="button" onclick="openTSEditor('${s.id}')" style="margin-bottom:0.5rem;">⏱ Edit Timestamps</button>`:''}
 
-    <div class="ann-editor-wrap">
+    <div class="sect-placer-wrap" id="sect-placer-wrap">
+      <div class="sect-placer-head">
+        <span class="sect-placer-title">🎸 Section Markers</span>
+      </div>
+      <div class="sect-palette" id="sect-palette">
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Intro')">🎸 Intro</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 1')">🎤 Verse 1</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 2')">🎤 Verse 2</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Pre-Chorus')">🎵 Pre-Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Chorus')">🎵 Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Bridge')">🎵 Bridge</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Guitar Solo')">🎸 Guitar Solo</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Outro')">🎸 Outro</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Instrumental')">🎵 Instrumental</span>
+        <div class="sect-custom-input">
+          <input id="sect-custom-text" placeholder="Custom section…" onkeydown="if(event.key==='Enter')_sectAddCustom()">
+          <button onclick="_sectAddCustom()">＋ Add</button>
+        </div>
+      </div>
+      <div class="sect-lyric-list" id="sect-lyric-list"></div>
+    </div>
+    <div class="ann-editor-wrap" style="display:none" id="ann-editor-legacy">
       <div class="ann-editor-head">
-        <span class="ann-editor-title">🎨 Annotations</span>
+        <span class="ann-editor-title">🎨 Annotations (Chord/Note)</span>
         <div class="ann-add-btns">
-          <button class="ann-add-btn type-section" onclick="addAnn('section')">＋ Section</button>
           <button class="ann-add-btn type-chord"   onclick="addAnn('chord')">＋ Chord/Key</button>
           <button class="ann-add-btn type-note"    onclick="addAnn('note')">＋ Note</button>
         </div>
       </div>
       <div class="ann-list" id="ann-list"></div>
       <div class="ann-hint">
-        Drag to reorder. Set the timestamp (m:ss) for when each appears.
-        <span style="color:#f59e0b;">■ Section</span> = Verse/Chorus/Solo &nbsp;
         <span style="color:#60a5fa;">■ Chord/Key</span> = Am G F / Key of A &nbsp;
         <span style="color:#34d399;">■ Note</span> = performance cues
       </div>
@@ -3866,7 +4042,9 @@ function saveEdit() {
     if (textInp) _annRows[i].text = textInp.value;
     if (timeInp) _annRows[i].t = parseTime(timeInp.value);
   });
-  const annotations = _annRows.filter(a => a.text && a.text.trim());
+  const sectAnnotations = _sectGetAnnotations();
+  const nonSectAnns = _annRows.filter(a => a.text && a.text.trim() && a.annType !== 'section');
+  const annotations = [...sectAnnotations, ...nonSectAnns];
 
   if (APP.editingId) {
     // Edit existing
