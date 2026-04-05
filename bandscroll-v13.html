@@ -816,9 +816,7 @@ textarea{resize:vertical;}
   color:#f59e0b;opacity:0.9;
   letter-spacing:0.02em;line-height:1.3;padding:0.12rem 0;
 }
-.ll.ann-section::before{
-  content:'§';font-size:0.6em;margin-right:0.4em;opacity:0.6;vertical-align:0.1em;
-}
+/* .ll.ann-section::before removed */
 .ll.ann-section.active-ann,.ll.ann.active-ann{opacity:1;text-shadow:0 0 22px rgba(245,158,11,0.35);}
 .ll.ann{
   font-family:'Instrument Sans',sans-serif;
@@ -827,9 +825,7 @@ textarea{resize:vertical;}
   color:#f59e0b;opacity:0.9;
   letter-spacing:0.02em;line-height:1.3;padding:0.12rem 0;
 }
-.ll.ann::before{
-  content:'§';font-size:0.6em;margin-right:0.4em;opacity:0.6;vertical-align:0.1em;
-}
+/* .ll.ann::before removed */
 
 /* CHORD annotations — Am G F / Key change (blue, mono) */
 .ll.ann-chord{
@@ -886,6 +882,22 @@ textarea{resize:vertical;}
 .sect-banner-label:focus{outline:1px solid rgba(245,158,11,0.4);border-radius:2px;}
 .sect-banner-del{color:rgba(245,158,11,0.4);background:none;border:none;cursor:pointer;font-size:0.8rem;flex-shrink:0;line-height:1;padding:0 2px;}
 .sect-banner-del:hover{color:#f59e0b;}
+/* chord/note banner colour variants */
+.sect-banner-row.chord-banner .sect-banner-label{color:#60a5fa;}
+.sect-banner-row.chord-banner .sect-banner-handle{color:#60a5fa;opacity:0.5;}
+.sect-banner-row.chord-banner .sect-banner-del{color:rgba(96,165,250,0.4);}
+.sect-banner-row.chord-banner .sect-banner-del:hover{color:#60a5fa;}
+.sect-banner-row.note-banner .sect-banner-label{color:#34d399;}
+.sect-banner-row.note-banner .sect-banner-handle{color:#34d399;opacity:0.5;}
+.sect-banner-row.note-banner .sect-banner-del{color:rgba(52,211,153,0.4);}
+.sect-banner-row.note-banner .sect-banner-del:hover{color:#34d399;}
+/* chord/note chip palette variants */
+.sect-chip.chord-chip{border-color:#60a5fa44;color:#60a5fa;}
+.sect-chip.chord-chip:hover,.sect-chip.chord-chip:active{background:#60a5fa18;border-color:#60a5fa88;}
+.sect-chip.note-chip{border-color:#34d39944;color:#34d399;}
+.sect-chip.note-chip:hover,.sect-chip.note-chip:active{background:#34d39918;border-color:#34d39988;}
+/* palette group sub-labels */
+.sect-palette-label{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);opacity:0.55;width:100%;margin:0.4rem 0 0.1rem;padding:0 0.1rem;font-family:'JetBrains Mono',monospace;}
 .sect-custom-input{display:flex;gap:0.4rem;margin-top:0.4rem;flex-basis:100%;}
 .sect-custom-input input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:0.25rem 0.5rem;border-radius:3px;font-size:0.78rem;}
 .sect-custom-input button{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;padding:0.25rem 0.6rem;border-radius:3px;font-size:0.72rem;font-weight:700;cursor:pointer;}
@@ -3781,11 +3793,12 @@ function addAnn(type) {
 // SECTION PLACER — drag-and-drop section banners onto lyric lines
 // ══════════════════════════════════════════════════════════════════════
 let _sectDragLabel = null;
+let _sectDragAnnType = null;
 let _sectDragBannerIdx = null;
 let _sectState = [];
 
 function _sectBuildState(song) {
-  const annotations = (song.annotations||[]).filter(a=>a.annType==='section'&&a.text);
+  const annotations = (song.annotations||[]).filter(a=>a.annType&&a.text);
   const lyrics = (song.lines||[])
     .filter(l=>l.type==='lyric')
     .sort((a,b)=>(a.t||0)-(b.t||0))
@@ -3797,7 +3810,7 @@ function _sectBuildState(song) {
     for (let i = 0; i < lyrics.length; i++) {
       if ((lyrics[i].t||0) >= (ann.t||0) - 0.5) { bestIdx = i; break; }
     }
-    banners.push({ kind:'banner', label:ann.text, beforeLyricIdx:bestIdx });
+    banners.push({ kind:'banner', label:ann.text, annType:ann.annType||'section', beforeLyricIdx:bestIdx });
   });
   const ordered = [];
   for (let i = 0; i < lyrics.length; i++) {
@@ -3820,9 +3833,9 @@ function _sectGetAnnotations() {
       for (let i = idx-1; i >= 0; i--) {
         if (_sectState[i].kind === 'lyric') { prevLyric = _sectState[i]; break; }
       }
-      annotations.push({ annType:'section', text:item.label, t: prevLyric ? (prevLyric.t||0)+1 : 0 });
+      annotations.push({ annType:item.annType||'section', text:item.label, t: prevLyric ? (prevLyric.t||0)+1 : 0 });
     } else {
-      annotations.push({ annType:'section', text:item.label, t: Math.max(0, (nextLyric.t||0) - 0.001) });
+      annotations.push({ annType:item.annType||'section', text:item.label, t: Math.max(0, (nextLyric.t||0) - 0.001) });
     }
   });
   return annotations;
@@ -3846,7 +3859,8 @@ function _sectRenderList(list) {
   html += `<div class="sect-drop-zone sect-drop-top" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,0)"></div>`;
   _sectState.forEach((item, idx) => {
     if (item.kind === 'banner') {
-      html += `<div class="sect-banner-row" draggable="true" ondragstart="_sectBannerDrag(event,${idx})">
+      const bannerClass = item.annType==='chord'?'chord-banner':item.annType==='note'?'note-banner':'';
+      html += `<div class="sect-banner-row ${bannerClass}" draggable="true" ondragstart="_sectBannerDrag(event,${idx})">
         <span class="sect-banner-handle">⠿</span>
         <input class="sect-banner-label" type="text" value="${esc(item.label)}" oninput="_sectState[${idx}].label=this.value">
         <button class="sect-banner-del" onclick="_sectRemoveBanner(${idx})" title="Remove">✕</button>
@@ -3860,8 +3874,8 @@ function _sectRenderList(list) {
   list.innerHTML = html;
 }
 
-function _sectChipDrag(event, label) {
-  _sectDragLabel = label; _sectDragBannerIdx = null;
+function _sectChipDrag(event, label, annType) {
+  _sectDragLabel = label; _sectDragAnnType = annType||'section'; _sectDragBannerIdx = null;
   event.dataTransfer.effectAllowed = 'copy';
 }
 function _sectBannerDrag(event, idx) {
@@ -3877,8 +3891,8 @@ function _sectDrop(event, pos) {
   event.preventDefault();
   document.querySelectorAll('.sect-drop-zone').forEach(z=>z.classList.remove('drag-active'));
   if (_sectDragLabel !== null) {
-    _sectState.splice(pos, 0, { kind:'banner', label:_sectDragLabel });
-    _sectDragLabel = null;
+    _sectState.splice(pos, 0, { kind:'banner', label:_sectDragLabel, annType:_sectDragAnnType||'section' });
+    _sectDragLabel = null; _sectDragAnnType = null;
   } else if (_sectDragBannerIdx !== null) {
     const moved = _sectState.splice(_sectDragBannerIdx, 1)[0];
     const adj = pos > _sectDragBannerIdx ? pos-1 : pos;
@@ -3988,17 +4002,27 @@ function buildEditForm(s) {
         <span class="sect-placer-title">🎸 Section Markers</span>
       </div>
       <div class="sect-palette" id="sect-palette">
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Intro')">🎸 Intro</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 1')">🎤 Verse 1</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 2')">🎤 Verse 2</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Pre-Chorus')">🎵 Pre-Chorus</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Chorus')">🎵 Chorus</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Bridge')">🎵 Bridge</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Guitar Solo')">🎸 Guitar Solo</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Outro')">🎸 Outro</span>
-        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Instrumental')">🎵 Instrumental</span>
+        <span class="sect-palette-label">Sections</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Intro','section')">🎸 Intro</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 1','section')">🎤 Verse 1</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 2','section')">🎤 Verse 2</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Pre-Chorus','section')">🎵 Pre-Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Chorus','section')">🎵 Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Bridge','section')">🎵 Bridge</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Guitar Solo','section')">🎸 Guitar Solo</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Outro','section')">🎸 Outro</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Instrumental','section')">🎵 Instrumental</span>
+        <span class="sect-palette-label">Chords / Key</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Am G F C','chord')">Am G F C</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Key of A','chord')">Key of A</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Capo 2','chord')">Capo 2</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Drop D','chord')">Drop D</span>
+        <span class="sect-palette-label">Notes / Cues</span>
+        <span class="sect-chip note-chip" draggable="true" ondragstart="_sectChipDrag(event,'Slow build','note')">Slow build</span>
+        <span class="sect-chip note-chip" draggable="true" ondragstart="_sectChipDrag(event,'Full band','note')">Full band</span>
+        <span class="sect-chip note-chip" draggable="true" ondragstart="_sectChipDrag(event,'Quiet','note')">Quiet</span>
         <div class="sect-custom-input">
-          <input id="sect-custom-text" placeholder="Custom section…" onkeydown="if(event.key==='Enter')_sectAddCustom()">
+          <input id="sect-custom-text" placeholder="Custom…" onkeydown="if(event.key==='Enter')_sectAddCustom()">
           <button onclick="_sectAddCustom()">＋ Add</button>
         </div>
       </div>
