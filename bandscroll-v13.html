@@ -3131,7 +3131,11 @@ function mergeAnnotations(song) {
   combined.sort((a,b) => {
     const ta = a.t ?? -1;
     const tb = b.t ?? -1;
-    return ta - tb;
+    if (ta !== tb) return ta - tb;
+    // On tie, annotations before lyrics so section banners precede their lyric
+    const aIsAnn = a.type === 'annotation' ? 0 : 1;
+    const bIsAnn = b.type === 'annotation' ? 0 : 1;
+    return aIsAnn - bIsAnn;
   });
   return combined;
 }
@@ -3818,7 +3822,7 @@ function _sectGetAnnotations() {
       }
       annotations.push({ annType:'section', text:item.label, t: prevLyric ? (prevLyric.t||0)+1 : 0 });
     } else {
-      annotations.push({ annType:'section', text:item.label, t: nextLyric.t||0 });
+      annotations.push({ annType:'section', text:item.label, t: Math.max(0, (nextLyric.t||0) - 0.001) });
     }
   });
   return annotations;
