@@ -3225,14 +3225,19 @@ function _setDetached(val) {
 
 function rejoinAutoScroll() {
   _setDetached(false);
-  // Immediately re-apply current song position
   const song = getSong(APP.currentId);
   if (!song) return;
+  // Use real current playback time whether playing or paused
   const t = APP.isPlaying
     ? Math.max(0, (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj)
-    : 0;
+    : Math.max(0, APP.offsetAdj || 0);
   const lines = mergeAnnotations(song);
+  // Force browser reflow so belt elements have correct offsetHeight before positioning
+  const belt = document.getElementById('c-belt');
+  if (belt) void belt.offsetHeight;
   positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t);
+  // Second pass on next frame guarantees the active line is truly on screen
+  requestAnimationFrame(() => positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t));
 }
 
 // Wire up wheel + touch scroll to detach
