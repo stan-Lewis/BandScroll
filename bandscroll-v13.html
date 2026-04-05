@@ -874,7 +874,8 @@ textarea{resize:vertical;}
 .sect-chip:active{cursor:grabbing;}
 .sect-chip.custom-chip{background:rgba(245,158,11,0.06);border-style:dashed;}
 .sect-lyric-list{display:flex;flex-direction:column;max-height:52vh;overflow-y:auto;border:1px solid var(--border2);border-radius:4px;background:var(--bg2);}
-.sect-drop-zone{height:6px;background:transparent;transition:all 0.15s;border:1.5px dashed transparent;border-radius:2px;margin:0 6px;flex-shrink:0;}
+.sect-drop-zone{height:10px;background:transparent;transition:all 0.15s;border:1.5px dashed transparent;border-radius:2px;margin:0 6px;flex-shrink:0;}
+.sect-drop-zone.sect-drop-top{height:20px;}
 .sect-drop-zone.drag-active{height:22px;background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.5);}
 .sect-lyric-row{display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;font-size:0.78rem;color:var(--text-dim);font-family:'Instrument Sans',sans-serif;flex-shrink:0;}
 .sect-lyric-t{font-size:0.62rem;color:var(--text-dim);opacity:0.5;flex-shrink:0;min-width:38px;font-family:'JetBrains Mono',monospace;}
@@ -3838,7 +3839,7 @@ function _sectRenderList(list) {
   if (!list) list = document.getElementById('sect-lyric-list');
   if (!list) return;
   let html = '';
-  html += `<div class="sect-drop-zone" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,0)"></div>`;
+  html += `<div class="sect-drop-zone sect-drop-top" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,0)"></div>`;
   _sectState.forEach((item, idx) => {
     if (item.kind === 'banner') {
       html += `<div class="sect-banner-row" draggable="true" ondragstart="_sectBannerDrag(event,${idx})">
