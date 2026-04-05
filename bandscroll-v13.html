@@ -1654,6 +1654,7 @@ textarea{resize:vertical;}
         <div class="t-info">
           <div class="t-title" id="t-title">No song loaded</div><span class="c-section-label" id="c-section-label"></span>
           <div class="t-next" id="t-next"></div>
+          <button id="auto-play-btn" class="btn btn-ghost btn-sm" onclick="toggleAutoPlay()" title="Auto-play next song" style="font-size:0.6rem;padding:0.15rem 0.4rem;opacity:0.5;margin-top:0.1rem;">▶▶ AUTO</button>
         </div>
         <div class="t-ctrl">
           <button class="btn btn-ghost btn-sm" onclick="prevSong()">⏮</button>
@@ -2898,6 +2899,10 @@ function loadSong(id) {
   // Restore saved timing offset for this song
   APP.offsetAdj = song.savedOffset || 0;
   _updateOffsetDisplay();
+  const _savedSpd = song.savedSpeed || 1;
+  setSpeed(_savedSpd, 'c');
+  const _spdSlider = document.getElementById('c-speed-slider');
+  if (_spdSlider) _spdSlider.value = _savedSpd;
 
   document.getElementById('t-title').textContent = song.title;
 
@@ -2930,6 +2935,7 @@ function loadSong(id) {
   _setDetached(false);
 
   buildBelt(document.getElementById('c-belt'), lines);
+  { const _el = document.querySelector('#c-belt .ll'); if (_el && _el.offsetHeight > 0) APP._cachedLineH = _el.offsetHeight; }
   positionBelt('c-belt','c-belt-wrap','c-cursor', lines, 0);
   document.getElementById('prog-fill').style.width = '0%';
   // Reset section pin
@@ -3052,7 +3058,9 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     belt.style.paddingTop = cursorY + 'px';
     belt.style.paddingBottom = (wrapH-cursorY) + 'px';
   const els = belt.querySelectorAll('.ll');
-  const lineH = (els.length > 0 && els[0].offsetHeight > 0) ? els[0].offsetHeight : LINE_H;
+  const _measuredH = (els.length > 0 && els[0].offsetHeight > 0) ? els[0].offsetHeight : 0;
+  if (_measuredH > 0) APP._cachedLineH = _measuredH;
+  const lineH = APP._cachedLineH || LINE_H;
     belt.style.transform = `translateY(${cursorY - ai*lineH}px)`;
 
 
@@ -3411,6 +3419,7 @@ function stopPlay() {
   const song = getSong(APP.currentId);
   if (song) {
     song.savedOffset = APP.offsetAdj;
+    song.savedSpeed = _speedMult.c;
     persist();
   }
   APP.isPlaying=false;
@@ -3434,7 +3443,21 @@ function autoAdvance() {
   const ids=getSetlistSongIds();
   const i=ids.indexOf(APP.currentId);
   if(i>=0&&i<ids.length-1) {
-    _autoAdvanceTimer = setTimeout(()=>{ _autoAdvanceTimer=null; loadSong(ids[i+1]); },1200);
+    _autoAdvanceTimer = setTimeout(()=>{
+      _autoAdvanceTimer=null;
+      loadSong(ids[i+1]);
+      if (_autoPlayNext) { setTimeout(() => togglePlay(), 400); }
+    },1200);
+  }
+}
+
+function toggleAutoPlay() {
+  _autoPlayNext = !_autoPlayNext;
+  const btn = document.getElementById('auto-play-btn');
+  if (btn) {
+    btn.style.opacity = _autoPlayNext ? '1' : '0.5';
+    btn.style.color = _autoPlayNext ? 'var(--lime)' : '';
+    btn.title = _autoPlayNext ? 'Auto-play ON — click to turn off' : 'Auto-play next song';
   }
 }
 
@@ -3512,9 +3535,7 @@ function vLoad(song) {
   if (V.playing) vStop();
   // If the received song has annotations, re-merge them into lines
   // to guarantee nothing is lost in transit
-  if (song.annotations && song.annotations.length) {
-    song.lines = mergeAnnotations(song);
-  }
+  song.lines = mergeAnnotations(song);
   V.song = song;
   // Merge tabs from local bank if member doesn't have PDF data in received song
   if (!song.tabs || !Object.values(song.tabs).some(t => t && t.pdfData)) {
@@ -4464,6 +4485,7 @@ function serializeSong(s){
 let _userInstrument = 'lyrics'; // 'lyrics'|'bass'|'rhythm'|'lead'
 let _currentView = { c: 'lyrics', v: 'lyrics' }; // current view per role
 let _speedMult = { c: 1.0, v: 1.0 };
+let _autoPlayNext = false;
 
 function selectInstrument(el, inst) {
   _userInstrument = inst;
@@ -5298,6 +5320,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='+') nudgeOffset(0.1);
   if(e.key==='-') nudgeOffset(-0.1);
   if(e.key==='m'||e.key==='M') toggleConfidenceMonitor();
+  if(e.key==='r'||e.key==='R') { if(APP.detached) rejoinAutoScroll(); }
   if(e.code==='Tab'&&!e.shiftKey){e.preventDefault();
     const cv=_currentView.c; setView(cv==='lyrics'?'tab':'lyrics','c');}
 });
