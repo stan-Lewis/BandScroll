@@ -883,10 +883,12 @@ textarea{resize:vertical;}
 .sect-banner-del{color:rgba(245,158,11,0.4);background:none;border:none;cursor:pointer;font-size:0.8rem;flex-shrink:0;line-height:1;padding:0 2px;}
 .sect-banner-del:hover{color:#f59e0b;}
 /* chord/note banner colour variants */
+.sect-banner-row.chord-banner{background:rgba(96,165,250,0.1);border-top-color:rgba(96,165,250,0.25);border-bottom-color:rgba(96,165,250,0.25);}
 .sect-banner-row.chord-banner .sect-banner-label{color:#60a5fa;}
 .sect-banner-row.chord-banner .sect-banner-handle{color:#60a5fa;opacity:0.5;}
 .sect-banner-row.chord-banner .sect-banner-del{color:rgba(96,165,250,0.4);}
 .sect-banner-row.chord-banner .sect-banner-del:hover{color:#60a5fa;}
+.sect-banner-row.note-banner{background:rgba(52,211,153,0.1);border-top-color:rgba(52,211,153,0.25);border-bottom-color:rgba(52,211,153,0.25);}
 .sect-banner-row.note-banner .sect-banner-label{color:#34d399;}
 .sect-banner-row.note-banner .sect-banner-handle{color:#34d399;opacity:0.5;}
 .sect-banner-row.note-banner .sect-banner-del{color:rgba(52,211,153,0.4);}
@@ -2989,7 +2991,7 @@ function buildBelt(beltEl, lines) {
     let cls = 'll';
     if (line.type==='section') cls+=' sect';
     else if (line.type==='empty') cls+=' empty';
-    else if (line.type==='annotation') cls+=' ann';
+    else if (line.type==='annotation') cls+=' ann' + (line.annType ? ' ann-'+line.annType : '');
     div.className = cls;
     div.dataset.i = i;
     // Chord row (above text, lyric/section lines only)
