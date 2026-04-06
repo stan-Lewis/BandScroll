@@ -518,6 +518,17 @@ textarea{resize:vertical;}
 .ll.past{opacity:0.08;color:var(--text-dim);}
 
 /* BV indicator dot */
+/* SETTINGS POPOVER */
+.settings-popover-wrap{position:relative;display:inline-block;}
+.settings-popover{position:absolute;top:calc(100% + 6px);right:0;z-index:300;background:var(--bg2);border:1px solid var(--bg4);border-radius:8px;padding:0.5rem;min-width:210px;box-shadow:0 8px 28px rgba(0,0,0,0.5);display:none;flex-direction:column;gap:0.3rem;}
+.settings-popover.open{display:flex;}
+.sp-section{font-size:0.6rem;letter-spacing:0.1em;color:var(--text-dim);padding:0.15rem 0.4rem 0;text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+.sp-divider{height:1px;background:var(--bg4);margin:0.15rem 0;}
+.sp-row{border-radius:5px;overflow:hidden;}
+.sp-row button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:0.5rem;width:100%;padding:0.3rem 0.5rem;font-size:0.78rem;color:var(--text);border-radius:5px;}
+.sp-row button:hover{background:var(--bg3);}
+.sp-fontsize-row{display:flex;align-items:center;justify-content:center;gap:0.35rem;padding:0.2rem 0.4rem;}
+.t-sep{width:1px;height:1.4rem;background:var(--bg4);flex-shrink:0;}
 /* DARK THEME */
 html[data-theme="light"] {
   --bg:       #f5f5f5;
@@ -1585,12 +1596,28 @@ html[data-theme="light"] {
     <div class="ab-right">
       <div class="room-chip" id="c-room" onclick="copyRoom()">------</div>
       <button class="btn btn-ghost btn-sm" onclick="openModal('overview-modal')" title="Setlist Overview">☰</button>
-      <button class="btn btn-ghost btn-sm" onclick="openModal('share-modal')">Share</button>
+      <div class="settings-popover-wrap" id="settings-wrap">
+        <button class="btn btn-ghost btn-sm" id="settings-btn" onclick="toggleSettings()" title="Settings">⚙</button>
+        <div class="settings-popover" id="settings-popover">
+          <div class="sp-section">Song</div>
+          <div class="sp-row"><button onclick="openModal('share-modal');toggleSettings()">🔗 Share room</button></div>
+          <div class="sp-row"><button onclick="openModal('data-modal');toggleSettings()">💾 Backup / Import</button></div>
+          <div class="sp-row"><button onclick="exportSongPdf();toggleSettings()">📄 Export song PDF</button></div>
+          <div class="sp-divider"></div>
+          <div class="sp-section">Display</div>
+          <div class="sp-row"><button onclick="toggleFullscreen()">⧆ Fullscreen <span style="opacity:0.4;font-size:0.7em;">(F)</span></button></div>
+          <div class="sp-row"><button onclick="toggleTheme()" id="sp-theme-btn">🌓 Light Dark <span style="opacity:0.4;font-size:0.7em;">(D)</span></button></div>
+          <div class="sp-divider"></div>
+          <div class="sp-section">Text size</div>
+          <div class="sp-fontsize-row">
+            <button class="nudge-btn" onclick="setFontSize(-1)">−</button>
+            <span class="nudge-val" id="sp-fontsize-display" style="min-width:2.5rem;text-align:center;">1.0×</span>
+            <button class="nudge-btn" onclick="setFontSize(1)">+</button>
+            <button class="nudge-btn" onclick="setFontSize(0)">↺</button>
+          </div>
+        </div>
+      </div>
       <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" title="Confidence Monitor — big text stage view (M)">⊞</button>
-      <button class="btn btn-ghost btn-sm" onclick="openModal('data-modal')" title="Backup">💾</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportSongPdf()" title="Export song PDF">🖨 PDF</button>
-        <button class="btn btn-ghost btn-sm" id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (F)">⧆ Full</button>
-        <button class="btn btn-ghost btn-sm" id="theme-btn" onclick="toggleTheme()" title="Dark/Light (D)">🌓</button>
         <div class="transpose-group" title="Transpose chords">
         <span class="transpose-label">KEY</span>
         <button class="transpose-btn" onclick="transposeAll(-1)" title="Down">♭</button>
@@ -1689,6 +1716,7 @@ html[data-theme="light"] {
           <button class="btn btn-ghost btn-sm" onclick="nextSong()">⏭</button>
         </div>
         <!-- SPEED MULTIPLIER -->
+        <span class="t-sep"></span>
         <div class="speed-group">
           <span class="ctrl-label">Speed</span>
           <input type="range" min="0.7" max="1.3" step="0.01" value="1" id="c-speed-slider"
@@ -1698,6 +1726,7 @@ html[data-theme="light"] {
           <button class="nudge-btn nudge-reset" onclick="setSpeed(1,'c');document.getElementById('c-speed-slider').value=1" title="Reset speed">↺</button>
         </div>
         <!-- BPM TAP TEMPO -->
+        <span class="t-sep"></span>
         <div class="bpm-group" id="bpm-group">
           <span class="ctrl-label">BPM</span>
           <span class="bpm-display" id="bpm-display">--- </span>
@@ -1707,6 +1736,7 @@ html[data-theme="light"] {
           <button class="bpm-btn" onclick="resetBpm()" title="Reset BPM">✕</button>
         </div>
         <!-- VIEW TOGGLE (conductor) -->
+        <span class="t-sep"></span>
         <div class="view-toggle" id="c-view-toggle">
           <button class="view-toggle-btn on" onclick="setView('lyrics','c')" id="c-vt-lyrics">Lyrics</button>
           <button class="view-toggle-btn" onclick="setView('bass','c')" id="c-vt-bass">Bass</button>
@@ -1714,6 +1744,7 @@ html[data-theme="light"] {
           <button class="view-toggle-btn" onclick="setView('lead','c')" id="c-vt-lead">Lead</button>
         </div>
         <!-- NUDGE TIMING -->
+        <span class="t-sep"></span>
         <div class="nudge-group">
           <span class="ctrl-label">Timing</span>
           <button class="nudge-btn" onclick="nudgeOffset(-0.5)" title="Lyrics showing too late — nudge earlier">−</button>
@@ -1723,15 +1754,8 @@ html[data-theme="light"] {
         </div>
       </div>
 
-      <!-- FONT SIZE CONTROL -->
-        <div class="nudge-group" id="fontsize-group" style="min-width:7rem;">
-          <span class="ctrl-label">Size</span>
-          <button class="nudge-btn" onclick="setFontSize(-1)" title="Smaller (Z)">&#8722;</button>
-          <span class="nudge-val" id="fontsize-display">1.0&#xD7;</span>
-          <button class="nudge-btn" onclick="setFontSize(1)" title="Larger (X)">+</button>
-          <button class="nudge-btn" onclick="setFontSize(0)" title="Reset">&#8634;</button>
-        </div>
-        <!-- A-B LOOP -->
+      <!-- A-B LOOP -->
+        <span class="t-sep"></span>
         <div class="ab-loop-group" id="ab-loop-group" title="A-B Loop: set start and end">
           <button class="ab-loop-btn" id="ab-a-btn" onclick="setLoopA()" title="Set loop start (A)">A</button>
           <button class="ab-loop-btn" id="ab-b-btn" onclick="setLoopB()" title="Set loop end (B)">B</button>
@@ -3547,6 +3571,29 @@ function toggleTheme() {
   const b = document.getElementById('theme-btn'); if(b) b.textContent = light ? '🌓' : '☀️';
 }
 
+function toggleSettings(forceClose) {
+  const pop = document.getElementById('settings-popover');
+  if (!pop) return;
+  const isOpen = pop.classList.contains('open');
+  if (forceClose || isOpen) {
+    pop.classList.remove('open');
+    document.removeEventListener('click', _settingsOutsideHandler);
+  } else {
+    pop.classList.add('open');
+    const d = document.getElementById('sp-fontsize-display');
+    const src = document.getElementById('fontsize-display');
+    if (d && src) d.textContent = src.textContent;
+    setTimeout(() => {
+      _settingsOutsideHandler = (e) => {
+        const w = document.getElementById('settings-wrap');
+        if (w && !w.contains(e.target)) toggleSettings(true);
+      };
+      document.addEventListener('click', _settingsOutsideHandler);
+    }, 0);
+  }
+}
+let _settingsOutsideHandler = null;
+
 function filterBank(q) {
   const term = q.toLowerCase().trim();
   document.querySelectorAll('#bank-list .song-item').forEach(el => {
@@ -3565,6 +3612,7 @@ function setFontSize(dir) {
   if(belt) belt.style.fontSize = _fontSize+'rem';
   const d = document.getElementById('fontsize-display');
   if(d) d.textContent = _fontSize.toFixed(1)+'×';
+  const d2=document.getElementById('sp-fontsize-display'); if(d2) d2.textContent=_fontSize.toFixed(1)+'×';
   if(APP) APP._cachedLineH = null;
 }
 
