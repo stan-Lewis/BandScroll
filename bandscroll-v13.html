@@ -518,6 +518,25 @@ textarea{resize:vertical;}
 .ll.past{opacity:0.08;color:var(--text-dim);}
 
 /* BV indicator dot */
+/* DARK THEME */
+html[data-theme="light"] {
+  --bg:       #f5f5f5;
+  --bg2:      #e8e8ec;
+  --bg3:      #d8d8e0;
+  --bg4:      #c8c8d4;
+  --bg5:      #b8b8c8;
+  --text:     #111118;
+  --text-dim: #555566;
+}
+/* BANK SEARCH */
+.bank-search-input{display:block;width:calc(100% - 1rem);margin:0.4rem 0.5rem 0.4rem;padding:0.3rem 0.5rem;background:var(--bg3);border:1px solid var(--bg4);border-radius:4px;color:var(--text);font-size:0.75rem;outline:none;}
+.bank-search-input::placeholder{color:var(--text-dim);}
+/* SONG COLOUR DOT */
+.song-color-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:0.35rem;flex-shrink:0;vertical-align:middle;}
+.si-tags{display:flex;flex-wrap:wrap;gap:0.15rem;margin-top:0.1rem;}
+.tag-chip{font-size:0.6rem;padding:0.05rem 0.3rem;background:var(--bg4);border-radius:10px;color:var(--text-dim);}
+/* BV lines visually dimmed */
+.ll.bv .ll-text{opacity:0.6;font-style:italic;}
 .ll.bv::before{
   content:'BV';
   font-family:'JetBrains Mono',monospace;
@@ -1565,6 +1584,8 @@ textarea{resize:vertical;}
       <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" title="Confidence Monitor — big text stage view (M)">⊞</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('data-modal')" title="Backup">💾</button>
         <button class="btn btn-ghost btn-sm" onclick="exportSongPdf()" title="Export song PDF">🖨 PDF</button>
+        <button class="btn btn-ghost btn-sm" id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (F)">⧆ Full</button>
+        <button class="btn btn-ghost btn-sm" id="theme-btn" onclick="toggleTheme()" title="Dark/Light (D)">🌓</button>
         <div class="transpose-group" title="Transpose chords">
         <span class="transpose-label">KEY</span>
         <button class="transpose-btn" onclick="transposeAll(-1)" title="Down">♭</button>
@@ -1627,6 +1648,7 @@ textarea{resize:vertical;}
       <!-- BANK -->
       <div class="tab-pane" id="t-bank">
         <div style="font-size:0.68rem;color:var(--text-dim);padding-bottom:0.3rem;">All saved songs. Tap ＋ to add to setlist.</div>
+        <input id="bank-search" class="bank-search-input" type="text" placeholder="🔍 Search…" oninput="filterBank(this.value)" autocomplete="off" spellcheck="false">
         <div class="pane-scroll" id="bank-list">
           <div class="empty-msg">No saved songs yet.</div>
         </div>
@@ -1696,7 +1718,15 @@ textarea{resize:vertical;}
         </div>
       </div>
 
-      <!-- CHORD/TAB DISPLAY TOGGLES (conductor) -->
+      <!-- FONT SIZE CONTROL -->
+        <div class="nudge-group" id="fontsize-group" style="min-width:7rem;">
+          <span class="ctrl-label">Size</span>
+          <button class="nudge-btn" onclick="setFontSize(-1)" title="Smaller (Z)">&#8722;</button>
+          <span class="nudge-val" id="fontsize-display">1.0&#xD7;</span>
+          <button class="nudge-btn" onclick="setFontSize(1)" title="Larger (X)">+</button>
+          <button class="nudge-btn" onclick="setFontSize(0)" title="Reset">&#8634;</button>
+        </div>
+        <!-- CHORD/TAB DISPLAY TOGGLES (conductor) -->
       <div class="chord-tab-group" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span class="ctrl-label">Display</span>
         <button class="chord-tab-tog" id="c-tog-chords" onclick="toggleChordView('chords')">CHORDS</button>
@@ -2776,10 +2806,12 @@ function renderBank() {
   const setIds = getSetlistSongIds();
   el.innerHTML = APP.bank.map(s => {
     const inSet = setIds.includes(s.id);
-    return `<div class="song-item" onclick="loadSong('${s.id}')">
+    return `<div class="song-item" onclick="loadSong('${s.id}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc((s.tags||[]).join(' '))}">
       <div class="si-info">
-        <div class="si-title">${esc(s.title)}</div>
+        <div class="si-title">${s.color?'<span class=\"song-color-dot\" style=\"background:'+s.color+'\"></span>':''}${esc(s.title)}${s.key?' <small style=\"opacity:0.5;\">('+esc(s.key)+')</small>':''}</div>
         <div class="si-meta">${esc(s.artist||'—')} · ${fmtTime(s.duration)}</div>
+        ${s.tags&&s.tags.length?'<div class="si-tags">'+s.tags.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>':''}
+        </div>
       </div>
       ${s.syncType==='synced'?`<div class="sync-badge">SYNC</div>`:''}
       <div class="si-actions" onclick="event.stopPropagation()">
@@ -3461,6 +3493,47 @@ function toggleAutoPlay() {
   }
 }
 
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    const b = document.getElementById('fs-btn'); if(b) b.textContent = '⧆ Exit';
+  } else {
+    document.exitFullscreen && document.exitFullscreen();
+    const b = document.getElementById('fs-btn'); if(b) b.textContent = '⧆ Full';
+  }
+  document.addEventListener('fullscreenchange', ()=>{
+    if(!document.fullscreenElement){const b=document.getElementById('fs-btn');if(b)b.textContent='⧆ Full';}
+  }, {once:true});
+}
+
+function toggleTheme() {
+  const h = document.documentElement;
+  const light = h.getAttribute('data-theme')==='light';
+  h.setAttribute('data-theme', light ? 'dark' : 'light');
+  const b = document.getElementById('theme-btn'); if(b) b.textContent = light ? '🌓' : '☀️';
+}
+
+function filterBank(q) {
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('#bank-list .song-item').forEach(el => {
+    const t = (el.dataset.title||'').toLowerCase();
+    const a = (el.dataset.artist||'').toLowerCase();
+    const g = (el.dataset.tags||'').toLowerCase();
+    el.style.display = (!term||t.includes(term)||a.includes(term)||g.includes(term)) ? '' : 'none';
+  });
+}
+
+let _fontSize = 1.0;
+function setFontSize(dir) {
+  if (dir===0) _fontSize=1.0;
+  else _fontSize = Math.max(0.5, Math.min(2.5, Math.round((_fontSize + dir*0.1)*10)/10));
+  const belt = document.getElementById('c-belt');
+  if(belt) belt.style.fontSize = _fontSize+'rem';
+  const d = document.getElementById('fontsize-display');
+  if(d) d.textContent = _fontSize.toFixed(1)+'×';
+  if(APP) APP._cachedLineH = null;
+}
+
 function prevSong() {
   // If currently playing, stop and restart this song from the beginning
   if (APP.isPlaying) {
@@ -4014,6 +4087,14 @@ function buildEditForm(s) {
       <input id="e-notes" value="${esc(e.notes||'')}" placeholder="e.g. Capo 3 · Drop D · Start slow">
       <div class="hint">Shown above lyrics before you hit play.</div>
     </div>
+    <div class="two-col">
+      <div class="field"><label>Key</label><input id="e-key" value="${esc(e.key||'')}" placeholder="e.g. G, Dbm, F#"></div>
+      <div class="field"><label>Capo</label><input id="e-capo" type="number" min="0" max="11" value="${e.capo||0}" style="width:3.5rem;"></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Tags</label><input id="e-tags" value="${esc((e.tags||[]).join(', '))}" placeholder="slow, cover, encore…"></div>
+      <div class="field"><label>Colour</label><input id="e-color" type="color" value="${e.color||'#6366f1'}" style="width:3rem;height:2rem;padding:2px;cursor:pointer;"></div>
+    </div>
     <div class="lyrics-tips">
       <strong>Lyrics formatting:</strong><br>
       <code>[Intro]</code> <code>[Verse 1]</code> <code>[Chorus]</code> <code>[Bridge]</code> <code>[Guitar Solo]</code> — section markers (any text in square brackets)<br>
@@ -4106,7 +4187,11 @@ function saveEdit() {
   if (APP.editingId) {
     // Edit existing
     const s = getSong(APP.editingId);
-    Object.assign(s, {title, artist, duration:dur||s.duration, syncType, notes, rawLyrics, annotations});
+    Object.assign(s, {title, artist, duration:dur||s.duration, syncType, notes, rawLyrics, annotations,
+      key:(document.getElementById('e-key')||{value:''}).value.trim(),
+      capo:parseInt((document.getElementById('e-capo')||{value:0}).value)||0,
+      tags:(document.getElementById('e-tags')||{value:''}).value.split(',').map(t=>t.trim()).filter(Boolean),
+      color:(document.getElementById('e-color')||{value:'#6366f1'}).value});
     // Preserve chords/tabNote from existing lines before rebuilding
     const _oldLines = s.lines || [];
     const _chordMap = {};
@@ -4124,7 +4209,7 @@ function saveEdit() {
     // New manual song
     if (!dur) { toast('Enter the song duration'); return; }
     const song = {
-      id: 'song_'+Date.now(), title, artist, album:'', duration:dur,
+      id: 'song_'+Date.now(), title, artist, album:'', duration:dur, key:'', capo:0, tags:[], color:'#6366f1',
       syncType, notes, rawLyrics, annotations, savedOffset: 0, tabs: {},
       lines: syncType==='synced' ? parseLRC(rawLyrics) : buildPlainLines(rawLyrics, dur)
     };
@@ -5321,6 +5406,10 @@ document.addEventListener('keydown', e=>{
   if(e.key==='-') nudgeOffset(-0.1);
   if(e.key==='m'||e.key==='M') toggleConfidenceMonitor();
   if(e.key==='r'||e.key==='R') { if(APP.detached) rejoinAutoScroll(); }
+  if(e.key==='f'||e.key==='F') toggleFullscreen();
+  if(e.key==='d'||e.key==='D') toggleTheme();
+  if(e.key==='z'||e.key==='Z') setFontSize(-1);
+  if(e.key==='x'||e.key==='X') setFontSize(1);
   if(e.code==='Tab'&&!e.shiftKey){e.preventDefault();
     const cv=_currentView.c; setView(cv==='lyrics'?'tab':'lyrics','c');}
 });
