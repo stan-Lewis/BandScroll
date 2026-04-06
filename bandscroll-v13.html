@@ -547,6 +547,11 @@ html[data-theme="light"] {
   opacity:0.7;
 }
 
+/* A-B LOOP */
+.ab-loop-btn{padding:0.15rem 0.4rem;font-size:0.7rem;font-family:'JetBrains Mono',monospace;border:1px solid var(--bg4);border-radius:4px;background:var(--bg3);color:var(--text-dim);cursor:pointer;transition:background 0.15s;}
+.ab-loop-btn.set{background:var(--green);color:#000;border-color:var(--green);}
+.ab-loop-btn.active{background:var(--amber);color:#000;border-color:var(--amber);}
+.ab-loop-group{display:flex;align-items:center;gap:0.25rem;padding:0.1rem 0.5rem;border:1px solid var(--bg4);border-radius:6px;background:var(--bg2);}
 /* CURSOR */
 .cursor{
   position:absolute;left:0;right:0;height:1px;
@@ -1726,6 +1731,12 @@ html[data-theme="light"] {
           <button class="nudge-btn" onclick="setFontSize(1)" title="Larger (X)">+</button>
           <button class="nudge-btn" onclick="setFontSize(0)" title="Reset">&#8634;</button>
         </div>
+        <!-- A-B LOOP -->
+        <div class="ab-loop-group" id="ab-loop-group" title="A-B Loop: set start and end">
+          <button class="ab-loop-btn" id="ab-a-btn" onclick="setLoopA()" title="Set loop start (A)">A</button>
+          <button class="ab-loop-btn" id="ab-b-btn" onclick="setLoopB()" title="Set loop end (B)">B</button>
+          <button class="ab-loop-btn" id="ab-clear-btn" onclick="clearLoop()" title="Clear loop">×</button>
+        </div>
         <!-- CHORD/TAB DISPLAY TOGGLES (conductor) -->
       <div class="chord-tab-group" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span class="ctrl-label">Display</span>
@@ -1855,6 +1866,10 @@ html[data-theme="light"] {
   <div class="stage" id="v-stage" style="flex:1;">
     <div class="cursor" id="v-cursor"></div>
     <div class="belt-wrap" id="v-belt-wrap">
+      <div id="viewer-notes-overlay" style="position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0.3rem 0.5rem;background:rgba(0,0,0,0.8);display:none;">
+        <textarea id="viewer-notes-input" placeholder="My notes for this song…" style="width:100%;min-height:3rem;background:transparent;color:#eee;border:1px solid var(--bg4);border-radius:4px;font-size:0.8rem;padding:0.3rem;resize:vertical;" oninput="saveViewerNote(this.value)"></textarea>
+      </div>
+      <button id="viewer-notes-btn" onclick="toggleViewerNotes()" title="My personal notes" style="position:absolute;bottom:0.5rem;right:0.5rem;z-index:11;background:var(--bg3);border:1px solid var(--bg4);border-radius:50%;width:2rem;height:2rem;font-size:0.9rem;cursor:pointer;opacity:0.7;">📝</button>
       <div class="wait-veil" id="v-wait">
         <div class="wv-icon">🎵</div>
         <div class="wv-t">Waiting for conductor</div>
@@ -3280,6 +3295,22 @@ function rejoinAutoScroll() {
   requestAnimationFrame(() => positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t));
 }
 
+// Swipe left/right on conductor belt for next/prev song
+(function(){
+  let _sx=null, _sy=null;
+  const bw=document.getElementById('c-belt-wrap');
+  if(!bw) return;
+  bw.addEventListener('touchstart', e=>{_sx=e.touches[0].clientX; _sy=e.touches[0].clientY;},{passive:true});
+  bw.addEventListener('touchend', e=>{
+    if(_sx===null) return;
+    const dx=e.changedTouches[0].clientX-_sx;
+    const dy=e.changedTouches[0].clientY-_sy;
+    if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
+      if(dx<0) nextSong(); else prevSong();
+    }
+    _sx=null; _sy=null;
+  },{passive:true});
+})();
 // Wire up wheel + touch scroll to detach
 (function() {
   function onStageScroll(e) {
@@ -3440,7 +3471,10 @@ function beginPlay(song, wallStart) {
       updateTabView('c', cl * _speedMult.c);
       updateTabLyricOverlay('c', lines, cl);
     }
-          positionBelt('c-belt','c-belt-wrap','c-cursor', lines, cl);    if(t * _speedMult.c > dur + 1){ stopPlay(); autoAdvance(); return; }
+          positionBelt('c-belt','c-belt-wrap','c-cursor', lines, cl);
+    // A-B loop
+    if(_loopB>0 && cl>=_loopB && _loopA>=0){ APP.offsetAdj=_loopA; APP.playStartPN=performance.now(); }
+    if(t * _speedMult.c > dur + 1){ stopPlay(); autoAdvance(); return; }
     APP.raf = requestAnimationFrame(tick);
   };
   APP.raf = requestAnimationFrame(tick);
@@ -3532,6 +3566,58 @@ function setFontSize(dir) {
   const d = document.getElementById('fontsize-display');
   if(d) d.textContent = _fontSize.toFixed(1)+'×';
   if(APP) APP._cachedLineH = null;
+}
+
+// A-B Loop
+let _loopA=-1, _loopB=-1;
+function _loopTime(){return APP.isPlaying?(performance.now()-APP.playStartPN)/1000+(APP.offsetAdj||0):(APP.offsetAdj||0);}
+function setLoopA(){
+  _loopA=Math.max(0,_loopTime());
+  const b=document.getElementById('ab-a-btn');
+  if(b){b.classList.add('set');b.textContent='A:​'+fmtTime(_loopA);}
+  clearLoopB(); toast('Loop A set: '+fmtTime(_loopA));
+}
+function clearLoopB(){
+  _loopB=-1;
+  const b=document.getElementById('ab-b-btn');
+  if(b){b.classList.remove('set','active');b.textContent='B';}
+  const a=document.getElementById('ab-a-btn');
+  if(a) a.classList.remove('active');
+}
+function setLoopB(){
+  if(_loopA<0){toast('Set A first');return;}
+  _loopB=Math.max(_loopA+1,_loopTime());
+  const b=document.getElementById('ab-b-btn');
+  if(b){b.classList.add('set','active');b.textContent='B:​'+fmtTime(_loopB);}
+  const a=document.getElementById('ab-a-btn');
+  if(a) a.classList.add('active');
+  toast('A–B loop: '+fmtTime(_loopA)+'–'+fmtTime(_loopB));
+}
+function clearLoop(){
+  _loopA=-1;_loopB=-1;
+  ['ab-a-btn','ab-b-btn'].forEach(id=>{const b=document.getElementById(id);if(b){b.classList.remove('set','active');b.textContent=id.includes('-a-')?'A':'B';}});
+  toast('Loop cleared');
+}
+
+// Viewer personal notes (localStorage)
+function saveViewerNote(text){
+  const id=APP.currentId; if(!id) return;
+  const notes=JSON.parse(localStorage.getItem('bs_vnotes')||'{}');
+  if(text.trim()) notes[id]=text; else delete notes[id];
+  localStorage.setItem('bs_vnotes',JSON.stringify(notes));
+}
+function loadViewerNote(){
+  const id=APP.currentId; if(!id) return;
+  const notes=JSON.parse(localStorage.getItem('bs_vnotes')||'{}');
+  const ta=document.getElementById('viewer-notes-input');
+  if(ta) ta.value=notes[id]||'';
+}
+function toggleViewerNotes(){
+  const el=document.getElementById('viewer-notes-overlay');
+  if(!el) return;
+  const shown=el.style.display!=='none';
+  el.style.display=shown?'none':'block';
+  if(!shown) loadViewerNote();
 }
 
 function prevSong() {
@@ -4166,7 +4252,7 @@ function saveEdit() {
   const title = document.getElementById('e-title').value.trim();
   if (!title) { toast('Enter a title'); return; }
   const artist = document.getElementById('e-artist').value.trim();
-  const dur = parseTime(document.getElementById('e-dur').value);
+  const dur = (()=>{ const raw=document.getElementById('e-dur').value; if(raw.trim()) return parseTime(raw); const lyrics=document.getElementById('e-lyrics')?document.getElementById('e-lyrics').value:''; const syncT=document.getElementById('e-sync')?document.getElementById('e-sync').value:''; if(syncT==='synced'){ const lns=parseLRC(lyrics); const last=lns.filter(l=>l.type==='lyric').pop(); if(last&&last.t>0) return Math.ceil(last.t)+5; } return 0; })();
   const syncType = document.getElementById('e-sync').value;
   const notes = document.getElementById('e-notes').value.trim();
   const rawLyrics = document.getElementById('e-lyrics').value;
