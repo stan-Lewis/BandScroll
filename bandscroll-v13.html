@@ -1481,6 +1481,37 @@ html[data-theme="light"] {
 .set-timer-warn .set-timer-val{color:var(--amber);}
 .set-timer-over .set-timer-val{color:var(--red);}
 
+
+/* ===== TIDY UI OVERHAUL ===== */
+.transport{padding:0.3rem 0.75rem!important;gap:0.4rem!important;min-height:44px!important;flex-wrap:nowrap!important;align-items:center!important;overflow:visible!important;}
+.transport .t-sep,.speed-group,.bpm-group,.nudge-group,.view-toggle,.chord-tab-group,.ab-loop-group{display:none!important;}
+.t-info{flex:0 1 auto!important;min-width:0;max-width:180px!important;}
+.t-title{font-size:clamp(0.75rem,1.2vw,0.95rem)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.t-next{font-size:0.6rem!important;}
+#auto-play-btn{font-size:0.55rem!important;padding:2px 6px!important;}
+#play-btn{min-width:80px;}
+.transpose-group{display:none!important;}
+.appbar{height:40px!important;padding:0 0.6rem!important;}
+.ab-right{gap:6px!important;}
+.tidy-pill{position:relative;display:flex;align-items:center;flex-shrink:0;}
+.tidy-pill-btn{display:flex;align-items:center;gap:4px;padding:3px 9px;font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:var(--text-dim);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;user-select:none;}
+.tidy-pill-btn:hover,.tidy-pill-btn.open{background:rgba(255,255,255,0.12)!important;color:var(--text);border-color:rgba(255,255,255,0.25)!important;}
+.tidy-chevron{display:inline-block;font-style:normal;font-size:0.5rem;transition:transform 0.2s;}
+.tidy-pill-btn.open .tidy-chevron{transform:rotate(180deg);}
+.tidy-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:9999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:180px;gap:8px;flex-direction:column;backdrop-filter:blur(12px);}
+.tidy-panel.open{display:flex;}
+.tidy-panel-row{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+.tidy-panel-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);opacity:0.5;min-width:52px;margin-bottom:3px;}
+.tidy-panel input[type=range]{width:100px;accent-color:var(--lime);}
+.tidy-panel .ctrl-val,.tidy-panel .bpm-display,.tidy-panel .nudge-val{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--lime);min-width:36px;}
+#tidy-key-panel{left:auto!important;right:0!important;min-width:140px;}
+#tidy-key-row{display:flex;align-items:center;gap:10px;justify-content:center;}
+.tidy-panel .transpose-btn{font-size:1.1rem!important;padding:4px 10px!important;background:var(--bg3)!important;border:1px solid var(--border2)!important;border-radius:4px!important;color:var(--text)!important;cursor:pointer!important;}
+.tidy-panel .transpose-btn:hover{background:var(--bg4,#2a2a3a)!important;}
+.tidy-panel .transpose-display{font-family:'JetBrains Mono',monospace!important;font-size:1rem!important;color:var(--lime)!important;min-width:24px;text-align:center;}
+#tidy-view-panel{left:auto!important;right:0!important;}
+#tidy-bpm-panel{min-width:200px;}
+
 </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -1618,7 +1649,13 @@ html[data-theme="light"] {
         </div>
       </div>
       <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" title="Confidence Monitor — big text stage view (M)">⊞</button>
-        <div class="transpose-group" title="Transpose chords">
+        
+      <!-- KEY PILL -->
+      <div class="tidy-pill tidy-key-pill" id="tidy-key-pill">
+        <button class="tidy-pill-btn" id="tidy-key-btn" onclick="tidyToggle('key')">KEY <span id="tidy-key-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">0</span> <i class="tidy-chevron">&#9662;</i></button>
+        <div class="tidy-panel" id="tidy-key-panel"><div class="tidy-panel-row" id="tidy-key-row"></div></div>
+      </div>
+      <div class="transpose-group" title="Transpose chords">
         <span class="transpose-label">KEY</span>
         <button class="transpose-btn" onclick="transposeAll(-1)" title="Down">♭</button>
         <span class="transpose-display" id="transpose-display">0</span>
@@ -1751,6 +1788,28 @@ html[data-theme="light"] {
           <span class="nudge-val" id="offset-display">0.0s</span>
           <button class="nudge-btn" onclick="nudgeOffset(+0.5)" title="Lyrics showing too early — nudge later">+</button>
           <button class="nudge-btn nudge-reset" onclick="resetOffset()" title="Reset timing to zero">↺</button>
+        </div>
+      </div>
+      <!-- SPEED PILL -->
+      <div class="tidy-pill" id="tidy-speed-pill">
+        <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
+        <div class="tidy-panel" id="tidy-speed-panel"><div class="tidy-panel-row" id="tidy-speed-row"></div></div>
+      </div>
+      <!-- BPM PILL -->
+      <div class="tidy-pill" id="tidy-bpm-pill">
+        <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
+        <div class="tidy-panel" id="tidy-bpm-panel" style="min-width:220px"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div></div>
+      </div>
+      <!-- VIEW PILL -->
+      <div class="tidy-pill" id="tidy-view-pill">
+        <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">VIEW <i class="tidy-chevron">&#9662;</i></button>
+        <div class="tidy-panel" id="tidy-view-panel" style="min-width:240px">
+          <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+            <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
+            <div><div class="tidy-panel-label">Display</div><div id="tidy-chord-tab-wrap" style="display:flex;gap:4px"></div></div>
+            <div><div class="tidy-panel-label">Timing</div><div id="tidy-nudge-wrap" style="display:flex;align-items:center;gap:6px"></div></div>
+            <div><div class="tidy-panel-label">A-B Loop</div><div id="tidy-ab-wrap" style="display:flex;align-items:center;gap:4px"></div></div>
+          </div>
         </div>
       </div>
 
@@ -5795,5 +5854,75 @@ document.addEventListener('DOMContentLoaded',()=>{
   </div>
 </div>
 <div id="print-frame"></div>
+
+<script id="tidy-ui-init">
+(function(){
+  function tidyInit(){
+    const transport=document.querySelector('#s-conductor .transport');
+    if(!transport){setTimeout(tidyInit,100);return;}
+    const speedGroup=transport.querySelector('.speed-group');
+    const speedSlider=speedGroup.querySelector('#c-speed-slider');
+    const speedVal=speedGroup.querySelector('#c-speed-val');
+    const speedReset=Array.from(speedGroup.querySelectorAll('button')).find(b=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes('resetSpeed'));
+    const speedRow=document.getElementById('tidy-speed-row');
+    if(speedRow){speedRow.appendChild(speedSlider);speedRow.appendChild(speedVal);if(speedReset)speedRow.appendChild(speedReset);}
+    const updateSpeedLabel=()=>{const l=document.getElementById('tidy-speed-label');if(l&&speedVal)l.textContent=speedVal.textContent;};
+    speedSlider.addEventListener('input',updateSpeedLabel);
+    new MutationObserver(updateSpeedLabel).observe(speedVal,{childList:true,characterData:true,subtree:true});
+    const bpmGroup=document.getElementById('bpm-group');
+    const bpmDisplay=document.getElementById('bpm-display');
+    const metroBallWrap=bpmGroup.querySelector('.metro-ball-wrap');
+    const tapBtn=document.getElementById('tap-btn');
+    const lockBtn=document.getElementById('lock-btn');
+    const bpmReset=Array.from(bpmGroup.querySelectorAll('button')).find(b=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes('resetBpm'));
+    const bpmRow=document.getElementById('tidy-bpm-row');
+    const bpmRow2=document.getElementById('tidy-bpm-row2');
+    if(bpmRow){bpmRow.appendChild(bpmDisplay);if(metroBallWrap)bpmRow.appendChild(metroBallWrap);}
+    if(bpmRow2){if(tapBtn)bpmRow2.appendChild(tapBtn);if(lockBtn)bpmRow2.appendChild(lockBtn);if(bpmReset)bpmRow2.appendChild(bpmReset);}
+    new MutationObserver(()=>{const l=document.getElementById('tidy-bpm-label');if(l)l.textContent=bpmDisplay.textContent.trim();}).observe(bpmDisplay,{childList:true,characterData:true,subtree:true});
+    const viewToggle=document.getElementById('c-view-toggle');
+    const viewWrap=document.getElementById('tidy-view-toggle-wrap');
+    if(viewWrap&&viewToggle)Array.from(viewToggle.children).forEach(btn=>viewWrap.appendChild(btn));
+    const mainArea=document.querySelector('#s-conductor .main-area');
+    const chordTabGroup=mainArea?mainArea.querySelector('.chord-tab-group'):null;
+    const chordWrap=document.getElementById('tidy-chord-tab-wrap');
+    if(chordWrap&&chordTabGroup)Array.from(chordTabGroup.querySelectorAll('button')).forEach(btn=>chordWrap.appendChild(btn));
+    const nudgeGroup=transport.querySelector('.nudge-group');
+    const nudgeWrap=document.getElementById('tidy-nudge-wrap');
+    if(nudgeWrap&&nudgeGroup)Array.from(nudgeGroup.children).forEach(el=>{if(!el.classList.contains('ctrl-label'))nudgeWrap.appendChild(el);});
+    const abLoopGroup=document.getElementById('ab-loop-group');
+    const abWrap=document.getElementById('tidy-ab-wrap');
+    if(abWrap&&abLoopGroup)Array.from(abLoopGroup.querySelectorAll('button')).forEach(btn=>abWrap.appendChild(btn));
+    const abRight=document.querySelector('#s-conductor .ab-right');
+    const transposeGroup=abRight?abRight.querySelector('.transpose-group'):null;
+    const keyRow=document.getElementById('tidy-key-row');
+    if(keyRow&&transposeGroup){
+      const tDown=transposeGroup.querySelector('button[onclick*="-1"]');
+      const tDisplay=document.getElementById('transpose-display');
+      const tUp=transposeGroup.querySelector('button[onclick*="transposeAll(1)"]');
+      if(tDown)keyRow.appendChild(tDown);if(tDisplay)keyRow.appendChild(tDisplay);if(tUp)keyRow.appendChild(tUp);
+    }
+    const tDisp=document.getElementById('transpose-display');
+    if(tDisp)new MutationObserver(()=>{const l=document.getElementById('tidy-key-label');if(l)l.textContent=tDisp.textContent.trim();}).observe(tDisp,{childList:true,characterData:true,subtree:true});
+  }
+  window.tidyToggle=function(id){
+    const panel=document.getElementById('tidy-'+id+'-panel');
+    const btn=document.getElementById('tidy-'+id+'-btn');
+    if(!panel||!btn)return;
+    const isOpen=panel.classList.contains('open');
+    document.querySelectorAll('.tidy-panel.open').forEach(p=>p.classList.remove('open'));
+    document.querySelectorAll('.tidy-pill-btn.open').forEach(b=>b.classList.remove('open'));
+    if(!isOpen){panel.classList.add('open');btn.classList.add('open');}
+  };
+  document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('.tidy-pill')){
+      document.querySelectorAll('.tidy-panel.open').forEach(p=>p.classList.remove('open'));
+      document.querySelectorAll('.tidy-pill-btn.open').forEach(b=>b.classList.remove('open'));
+    }
+  },true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tidyInit);
+  else tidyInit();
+})();
+</script>
 </body>
 </html>
