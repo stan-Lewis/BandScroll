@@ -189,8 +189,8 @@ body{
 .btn-red{background:var(--red);color:#fff;box-shadow:0 2px 12px rgba(244,63,94,0.2);}
 .btn-red:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(244,63,94,0.4);}
 .btn-purple{background:var(--purple);color:#000;}
-.btn-sm{font-size:0.7rem;padding:0.32rem 0.72rem;min-height:32px;border-radius:5px;}
-.btn-xs{font-size:0.65rem;padding:0.22rem 0.55rem;min-height:28px;border-radius:4px;}
+.btn-sm{font-size:0.78rem;padding:0.45rem 0.9rem;min-height:38px;border-radius:6px;}
+.btn-xs{font-size:0.72rem;padding:0.35rem 0.7rem;min-height:34px;border-radius:5px;}
 .btn:disabled{opacity:0.3;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
 
 .icon-btn{
@@ -476,8 +476,8 @@ textarea{resize:vertical;}
   letter-spacing:0.04em;
   line-height:1.3;
   padding:0.12rem 0;
-  color:var(--text-dim);
-  opacity:0.18;
+  color:#8888aa;
+  opacity:0.75;
   transition:color 0.22s, font-size 0.22s, opacity 0.22s, text-shadow 0.22s;
   user-select:none;
 }
@@ -495,7 +495,7 @@ textarea{resize:vertical;}
 .ll.empty{opacity:0;font-size:0.4rem !important;}
 
 /* LINE STATES */
-.ll.upcoming{opacity:0.4;color:var(--text-mid);}
+.ll.upcoming{opacity:0.85;color:#aaaacc;}
 .ll.active-lead{
   color:#ffffff;opacity:1;
   font-size:calc(clamp(1.65rem,4.5vw,2.6rem) * var(--lyric-scale));
@@ -515,7 +515,7 @@ textarea{resize:vertical;}
   opacity:0.38;color:var(--purple);
   font-size:calc(clamp(0.9rem,2vw,1.2rem) * var(--lyric-scale));
 }
-.ll.past{opacity:0.08;color:var(--text-dim);}
+.ll.past{opacity:0.35;color:#6666aa;}
 
 /* BV indicator dot */
 /* SETTINGS POPOVER */
@@ -1625,7 +1625,7 @@ html[data-theme="light"] {
     <div class="appbar-brand">Band<span>Scroll</span></div>
     <span class="pill pill-c">Conductor</span>
     <div class="ab-right">
-      <div class="room-chip" id="c-room" onclick="copyRoom()">------</div>
+      <div class="room-chip" id="c-room" onclick="updateShareUrl();openModal('share-modal')" title="Click to share / show QR code">------</div>
       <button class="btn btn-ghost btn-sm" onclick="openModal('overview-modal')" title="Setlist Overview">☰</button>
       <div class="settings-popover-wrap" id="settings-wrap">
         <button class="btn btn-ghost btn-sm" id="settings-btn" onclick="toggleSettings()" title="Settings">⚙</button>
@@ -1803,7 +1803,7 @@ html[data-theme="light"] {
       </div>
       <!-- VIEW PILL -->
       <div class="tidy-pill" id="tidy-view-pill">
-        <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">VIEW <i class="tidy-chevron">&#9662;</i></button>
+        <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">PLAY SETTINGS <i class="tidy-chevron">&#9662;</i></button>
         <div class="tidy-panel" id="tidy-view-panel" style="min-width:240px">
           <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:10px">
             <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
@@ -1982,8 +1982,8 @@ html[data-theme="light"] {
   <div class="v-settings">
     <div class="v-set-group">
       <span class="v-set-label">Size</span>
-      <input type="range" min="0.6" max="2" step="0.05" value="1"
-        oninput="setLyricScale(this.value)" style="width:70px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
+      <input type="range" min="0.5" max="2.5" step="0.05" value="1" id="v-scale-slider"
+        oninput="setLyricScale(this.value)" style="width:80px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
       <span class="v-set-val" id="v-scale-val">1.0×</span>
     </div>
     <div class="v-set-group">
