@@ -2513,6 +2513,13 @@ function onBC(msg) {
   else if (msg.type === 'play') vStartCD(msg.wallStart, msg.song, msg.conductorOffset);
   else if (msg.type === 'stop') vStop();
   else if (msg.type === 'seek') vSeek(msg.wallStart, msg.songTime, msg.conductorOffset);
+  else if (msg.type === 'speed') {
+    _speedMult.v = msg.speed;
+    const el = document.getElementById('v-speed-val');
+    if (el) el.textContent = msg.speed.toFixed(2) + '×';
+    const sl = document.getElementById('v-speed-slider');
+    if (sl) sl.value = msg.speed;
+  }
   else if (msg.type === 'arr-notes') {
     const _s = getSong(msg.songId); if (_s) _s.arrNotes = msg.notes;
     const _nb = document.getElementById('notes-banner');
@@ -3868,6 +3875,15 @@ function vLoad(song) {
   const vp = document.getElementById('v-section-pin');
   if (vp) vp.classList.add('hidden');
   V.localOffset = 0;
+  // Apply conductor's per-song settings so band members match without waiting for play
+  if (song.savedOffset !== undefined) V.conductorOffset = song.savedOffset;
+  if (song.savedSpeed && song.savedSpeed !== 1) {
+    _speedMult.v = song.savedSpeed;
+    const el = document.getElementById('v-speed-val');
+    if (el) el.textContent = song.savedSpeed.toFixed(2) + '×';
+    const sl = document.getElementById('v-speed-slider');
+    if (sl) sl.value = song.savedSpeed;
+  }
 }
 
 function vStartCD(wallStart, song, conductorOffset) {
@@ -4793,7 +4809,9 @@ function serializeSong(s){
     lines: mergedLines,
     rawLyrics: s.rawLyrics || '',
     annotations: s.annotations || [],
-    tabs
+    tabs,
+    savedOffset: s.savedOffset || 0,
+    savedSpeed: s.savedSpeed || 1
   };
 }
 
@@ -4849,6 +4867,8 @@ function setSpeed(val, role) {
   if (role === 'c') {
     const el = document.getElementById('c-speed-val');
     if (el) el.textContent = display;
+    // Broadcast speed change to band members in real-time
+    emit({ type: 'speed', speed: val });
   } else {
     const el = document.getElementById('v-speed-val');
     if (el) el.textContent = display;
