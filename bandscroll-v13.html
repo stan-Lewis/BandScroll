@@ -1493,12 +1493,20 @@ html[data-theme="light"] {
 .transpose-group{display:none!important;}
 .appbar{height:40px!important;padding:0 0.6rem!important;}
 .ab-right{gap:6px!important;}
+/* ── TIDY BAR — the row that holds SPEED / BPM / PLAY SETTINGS pills ── */
+.tidy-bar{
+  display:flex;flex-direction:row;align-items:center;
+  gap:6px;padding:5px 10px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  flex-shrink:0;position:relative;flex-wrap:wrap;
+}
 .tidy-pill{position:relative;display:flex;align-items:center;flex-shrink:0;}
-.tidy-pill-btn{display:flex;align-items:center;gap:4px;padding:3px 9px;font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:var(--text-dim);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;user-select:none;}
-.tidy-pill-btn:hover,.tidy-pill-btn.open{background:rgba(255,255,255,0.12)!important;color:var(--text);border-color:rgba(255,255,255,0.25)!important;}
+.tidy-pill-btn{display:flex;align-items:center;gap:4px;padding:5px 11px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:var(--text);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;user-select:none;}
+.tidy-pill-btn:hover,.tidy-pill-btn.open{background:rgba(167,139,250,0.15)!important;color:var(--lime);border-color:rgba(167,139,250,0.4)!important;}
 .tidy-chevron{display:inline-block;font-style:normal;font-size:0.5rem;transition:transform 0.2s;}
 .tidy-pill-btn.open .tidy-chevron{transform:rotate(180deg);}
-.tidy-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:9999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:180px;gap:8px;flex-direction:column;backdrop-filter:blur(12px);}
+/* Panels drop from the bottom of the tidy-bar row, aligned to their button */
+.tidy-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:180px;gap:8px;flex-direction:column;backdrop-filter:blur(12px);}
 .tidy-panel.open{display:flex;}
 .tidy-panel-row{display:flex;align-items:center;gap:8px;white-space:nowrap;}
 .tidy-panel-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);opacity:0.5;min-width:52px;margin-bottom:3px;}
@@ -1791,25 +1799,28 @@ html[data-theme="light"] {
           <button class="nudge-btn nudge-reset" onclick="resetOffset()" title="Reset timing to zero">↺</button>
         </div>
       </div>
-      <!-- SPEED PILL -->
-      <div class="tidy-pill" id="tidy-speed-pill">
-        <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
-        <div class="tidy-panel" id="tidy-speed-panel"><div class="tidy-panel-row" id="tidy-speed-row"></div></div>
-      </div>
-      <!-- BPM PILL -->
-      <div class="tidy-pill" id="tidy-bpm-pill">
-        <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
-        <div class="tidy-panel" id="tidy-bpm-panel" style="min-width:220px"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div></div>
-      </div>
-      <!-- VIEW PILL -->
-      <div class="tidy-pill" id="tidy-view-pill">
-        <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">PLAY SETTINGS <i class="tidy-chevron">&#9662;</i></button>
-        <div class="tidy-panel" id="tidy-view-panel" style="min-width:240px">
-          <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:10px">
-            <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
-            <div><div class="tidy-panel-label">Display</div><div id="tidy-chord-tab-wrap" style="display:flex;gap:4px"></div></div>
-            <div><div class="tidy-panel-label">Timing</div><div id="tidy-nudge-wrap" style="display:flex;align-items:center;gap:6px"></div></div>
-            <div><div class="tidy-panel-label">A-B Loop</div><div id="tidy-ab-wrap" style="display:flex;align-items:center;gap:4px"></div></div>
+      <!-- TIDY BAR: all three pill-buttons in one consistent row -->
+      <div class="tidy-bar">
+        <!-- SPEED PILL -->
+        <div class="tidy-pill" id="tidy-speed-pill">
+          <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
+          <div class="tidy-panel" id="tidy-speed-panel"><div class="tidy-panel-row" id="tidy-speed-row"></div></div>
+        </div>
+        <!-- BPM PILL -->
+        <div class="tidy-pill" id="tidy-bpm-pill">
+          <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
+          <div class="tidy-panel" id="tidy-bpm-panel" style="min-width:220px"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div></div>
+        </div>
+        <!-- PLAY SETTINGS PILL -->
+        <div class="tidy-pill" id="tidy-view-pill">
+          <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">PLAY SETTINGS <i class="tidy-chevron">&#9662;</i></button>
+          <div class="tidy-panel" id="tidy-view-panel" style="min-width:240px">
+            <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+              <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
+              <div><div class="tidy-panel-label">Display</div><div id="tidy-chord-tab-wrap" style="display:flex;gap:4px"></div></div>
+              <div><div class="tidy-panel-label">Timing</div><div id="tidy-nudge-wrap" style="display:flex;align-items:center;gap:6px"></div></div>
+              <div><div class="tidy-panel-label">A-B Loop</div><div id="tidy-ab-wrap" style="display:flex;align-items:center;gap:4px"></div></div>
+            </div>
           </div>
         </div>
       </div>
