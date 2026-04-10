@@ -2447,12 +2447,32 @@ function initAbly(code) {
     });
     _ablyChannel = _ablyClient.channels.get('bandscroll_' + code);
 
+    // Fix 7: periodically resync server clock to prevent drift on mobile network changes
+    if (!_ablyClient._resyncInterval) {
+      _ablyClient._resyncInterval = setInterval(() => {
+        if (_ablyClient && _ablyClient.connection.state === 'connected') {
+          _syncServerTime(_ablyClient);
+        }
+      }, 30000);
+    }
+
     _ablyClient.connection.on('connected', async () => {
       await _syncServerTime(_ablyClient);
       if (APP.role === 'conductor') {
         toast('🟢 Connected — band can now join');
-        // Announce conductor presence
         emit({ type: 'presence', role: 'conductor', name: 'Conductor' });
+        // Fix 6: re-send current song state so viewers who lost connection catch up
+        const _reconnectSong = getSong(APP.currentId);
+        if (_reconnectSong) {
+          setTimeout(() => {
+            emit({ type: 'load', song: serializeSong(_reconnectSong) });
+            if (APP.isPlaying) {
+              const _rt = (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj;
+              const _rw = serverNow() - (_rt - APP.offsetAdj) * 1000;
+              emit({ type: 'seek', wallStart: _rw, songTime: _rt, conductorOffset: APP.offsetAdj });
+            }
+          }, 800);
+        }
       }
     });
     _ablyClient.connection.on('failed', () => toast('❌ Ably connection failed — check your API key'));
@@ -2510,7 +2530,11 @@ function onBC(msg) {
   }
   if (APP.role !== 'viewer') return;
   if (msg.type === 'load') vLoad(msg.song);
-  else if (msg.type === 'play') vStartCD(msg.wallStart, msg.song, msg.conductorOffset);
+  else if (msg.type === 'play') {
+    // Fix 5: queue if song not yet loaded (Ably doesn't guarantee message order)
+    if (!V.song) { _pendingPlay = msg; }
+    else { vStartCD(msg.wallStart, msg.song, msg.conductorOffset); }
+  }
   else if (msg.type === 'stop') vStop();
   else if (msg.type === 'seek') vSeek(msg.wallStart, msg.songTime, msg.conductorOffset);
   else if (msg.type === 'speed') {
@@ -2519,6 +2543,13 @@ function onBC(msg) {
     if (el) el.textContent = msg.speed.toFixed(2) + '×';
     const sl = document.getElementById('v-speed-slider');
     if (sl) sl.value = msg.speed;
+  }
+  else if (msg.type === 'transpose') {
+    // Fix 4: apply conductor's transpose to viewer
+    _transposeSteps = msg.steps;
+    const d = document.getElementById('transpose-display');
+    if (d) d.textContent = (_transposeSteps > 0 ? '+' : '') + _transposeSteps;
+    _rerenderTransposed();
   }
   else if (msg.type === 'arr-notes') {
     const _s = getSong(msg.songId); if (_s) _s.arrNotes = msg.notes;
@@ -2613,6 +2644,9 @@ function showVJoin() {
     }
   } catch(e) {}
 }
+// Fix 3: module-level interval handle so rejoins don't stack up multiple intervals
+let _lsInterval = null;
+
 function doJoin() {
   const code = document.getElementById('v-code').value.trim().toUpperCase();
   const name = document.getElementById('v-name').value.trim() || 'Band Member';
@@ -2622,9 +2656,10 @@ function doJoin() {
   document.getElementById('v-name-pill').textContent = name;
   document.getElementById('v-room-pill').textContent = code;
   initAbly(code);
-  // localStorage fallback for same-device use
+  // localStorage fallback for same-device use — clear any previous interval first
   let _lastBCt = 0;
-  setInterval(() => {
+  if (_lsInterval) clearInterval(_lsInterval);
+  _lsInterval = setInterval(() => {
     try {
       const raw = localStorage.getItem('bs4_live_' + code);
       if (!raw) return;
@@ -3837,7 +3872,9 @@ function _updateOffsetDisplay() {
 }
 
 // ── VIEWER ──
-const V = { song:null, raf:null, playing:false, startPN:null, offsetAdj:0, conductorOffset:0, localOffset:0 };
+const V = { song:null, raf:null, playing:false, startPN:null, wallStart:null, offsetAdj:0, conductorOffset:0, localOffset:0, wakeLock:null };
+// Fix 5: queue a play/seek message that arrived before the song was loaded
+let _pendingPlay = null;
 
 function vLoad(song) {
   // Stop any ongoing playback before loading new song
@@ -3884,6 +3921,11 @@ function vLoad(song) {
     const sl = document.getElementById('v-speed-slider');
     if (sl) sl.value = song.savedSpeed;
   }
+  // Fix 5: apply any play message that arrived before this load
+  if (_pendingPlay) {
+    const p = _pendingPlay; _pendingPlay = null;
+    vStartCD(p.wallStart, null, p.conductorOffset);
+  }
 }
 
 function vStartCD(wallStart, song, conductorOffset) {
@@ -3919,9 +3961,13 @@ function vSeek(wallStart, songTime, conductorOffset) {
 function vBegin(wallStart) {
   if (!V.song) return;
   V.playing = true;
-  // Use server-synced reference for accurate start
+  V.wallStart = wallStart; // Fix 2: store for visibilitychange resync
   // Use server-synced reference for accurate start
   V.startPN = performance.now() - (serverNow() - wallStart);
+  // Fix 1: prevent screen sleep during performance
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').then(lock => { V.wakeLock = lock; }).catch(() => {});
+  }
   const dur = V.song.duration;
   const tick = (now) => {
     if (!V.playing) return;
@@ -3944,9 +3990,22 @@ function vBegin(wallStart) {
 function vStop() {
   V.playing = false;
   if (V.raf) { cancelAnimationFrame(V.raf); V.raf = null; }
+  // Fix 1: release wake lock when song stops
+  if (V.wakeLock) { V.wakeLock.release().catch(() => {}); V.wakeLock = null; }
   document.getElementById('v-live-pill').style.display = 'none';
   document.getElementById('v-veil').classList.remove('open');
 }
+
+// Fix 2: resync playback position when tab returns from background (iOS Safari pauses performance.now())
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && V.playing && V.wallStart) {
+    V.startPN = performance.now() - (serverNow() - V.wallStart);
+  }
+  // Re-request wake lock after screen wakes (wake lock is released when screen sleeps)
+  if (!document.hidden && V.playing && 'wakeLock' in navigator && !V.wakeLock) {
+    navigator.wakeLock.request('screen').then(lock => { V.wakeLock = lock; }).catch(() => {});
+  }
+});
 
 function _vUpdateScrub(t, dur) {
   const pct = dur > 0 ? Math.min(100, (t / dur) * 100) : 0;
@@ -5845,6 +5904,8 @@ function transposeAll(delta){
   const d=document.getElementById('transpose-display');
   if(d)d.textContent=(_transposeSteps>0?'+':'')+_transposeSteps;
   if(APP.currentId){document.querySelectorAll('.chord-row').forEach(r=>{if(r.dataset.chords!==undefined)r.textContent=_getTransposedChords(_renderChordRow(r.dataset.chords,'')||r.dataset.chords)||'';});}
+  // Fix 4: broadcast transpose to all band members
+  emit({ type: 'transpose', steps: _transposeSteps });
 }
 function _rerenderTransposed(){
   document.querySelectorAll('.chord-row').forEach(r=>{if(r.dataset.chords!==undefined)r.textContent=_getTransposedChords(_renderChordRow(r.dataset.chords,'')||r.dataset.chords)||'';});
