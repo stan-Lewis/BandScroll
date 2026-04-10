@@ -1058,9 +1058,34 @@ html[data-theme="light"] {
 .lobby-member{
   font-family:'JetBrains Mono',monospace;font-size:0.75rem;
   background:var(--bg3);border:1px solid var(--lime);
-  color:var(--lime);padding:0.3rem 0.7rem;border-radius:100px;
+  color:var(--lime);padding:0.3rem 0.5rem 0.3rem 0.7rem;border-radius:100px;
   animation:fadeIn 0.32s cubic-bezier(0.34,1.56,0.64,1);
+  display:inline-flex;align-items:center;gap:0.3rem;
 }
+.kick-btn{
+  background:transparent;border:none;color:#ef4444;cursor:pointer;
+  font-size:0.65rem;padding:0;opacity:0.45;border-radius:3px;line-height:1;
+  transition:opacity 0.15s;
+}
+.kick-btn:hover{opacity:1;}
+/* Kicked overlay */
+.kicked-veil{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1.2rem;color:#fff;text-align:center;padding:2rem;
+}
+.kicked-veil h2{font-size:1.8rem;margin:0;}
+.kicked-veil p{color:#aaa;font-size:1rem;margin:0;}
+/* Chord AI generate button */
+.chord-ai-btn{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  background:linear-gradient(135deg,#6e3fa3,#3a86ff);
+  color:#fff;border:none;border-radius:8px;
+  padding:0.55rem 1.1rem;font-size:0.82rem;font-weight:600;
+  cursor:pointer;margin-top:0.6rem;transition:opacity 0.15s;
+}
+.chord-ai-btn:hover{opacity:0.85;}
+.chord-ai-btn:disabled{opacity:0.5;cursor:not-allowed;}
 @keyframes fadeIn{from{opacity:0;transform:scale(0.75) translateY(4px);}to{opacity:1;transform:scale(1) translateY(0);}}
 .lobby-empty{font-size:0.68rem;color:var(--text-dim);font-style:italic;}
 
@@ -2621,6 +2646,21 @@ function onBC(msg) {
     if (d) d.textContent = (_transposeSteps > 0 ? '+' : '') + _transposeSteps;
     _rerenderTransposed();
   }
+  else if (msg.type === 'kick') {
+    // Am I the one being kicked?
+    const myName = document.getElementById('v-name-pill')?.textContent || '';
+    if (msg.clientId === _myClientId || msg.name === myName) {
+      vStop();
+      // Show kicked overlay
+      const ov = document.createElement('div');
+      ov.className = 'kicked-veil';
+      ov.innerHTML = `<h2>🚫 Removed from Room</h2>
+        <p>The conductor has removed you from this session.</p>
+        <button class="btn btn-lime" onclick="this.parentElement.remove();show('s-vjoin');" style="margin-top:0.5rem;">Back to Join</button>`;
+      document.body.appendChild(ov);
+    }
+    return;
+  }
   else if (msg.type === 'arr-notes') {
     const _s = getSong(msg.songId); if (_s) _s.arrNotes = msg.notes;
     const _nb = document.getElementById('notes-banner');
@@ -2647,8 +2687,8 @@ function renderLobby() {
   if (!names.length) {
     el.innerHTML = '<span class="lobby-empty">No members yet</span>';
   } else {
-    el.innerHTML = names.map(n =>
-      `<span class="lobby-member">${esc(n)}</span>`
+    el.innerHTML = Object.entries(_lobbyMembers).map(([cid, n]) =>
+      `<span class="lobby-member">${esc(n)}<button class="kick-btn" title="Remove ${esc(n)}" onclick="kickMember('${esc(cid)}','${esc(n)}')">✕</button></span>`
     ).join('');
   }
   const countEl = document.getElementById('c-lobby-count');
@@ -2658,6 +2698,14 @@ function renderLobby() {
   if (roomChip && APP.roomCode) roomChip.textContent = APP.roomCode + (names.length ? ' · ' + names.length + '●' : '');
   // Broadcast updated lobby to all viewers
   emit({ type: 'lobby', members: names });
+}
+
+function kickMember(clientId, name) {
+  if (!confirm(`Remove "${name}" from the room?`)) return;
+  delete _lobbyMembers[clientId];
+  renderLobby();
+  emit({ type: 'kick', clientId, name });
+  toast('🚫 ' + name + ' removed');
 }
 
 function vUpdateLobby(members) {
@@ -2834,6 +2882,8 @@ async function pickResult(i) {
     addToBank(song, true);
     el.innerHTML = `<div class="search-status" style="color:var(--lime);">
       ✓ "${esc(song.title)}" added — ${song.syncType==='synced'?'🎯 millisecond-synced!':'📄 plain lyrics (evenly spaced).'}
+      <br><button class="chord-ai-btn" id="chord-ai-btn-${esc(song.id)}" onclick="generateChordsAI('${esc(song.id)}',this)">🎸 Generate Chords with AI</button>
+      <span id="chord-ai-status-${esc(song.id)}" style="display:none;font-size:0.75rem;color:#a3e635;margin-top:0.4rem;display:block;"></span>
     </div>`;
   } catch(e) {
     el.innerHTML = `<div class="search-status" style="color:var(--red);">❌ Failed. Try another result. (${e.message})</div>`;
@@ -2857,6 +2907,103 @@ function buildSong(data) {
   return { id, title: data.trackName, artist: data.artistName,
     album: data.albumName, duration, syncType, lines, rawLyrics, notes: '',
     savedOffset: 0, annotations: [], tabs: {} };
+}
+
+// ── AI CHORD GENERATION ──
+async function generateChordsAI(songId, btn) {
+  const song = getSong(songId);
+  if (!song) { toast('Song not found'); return; }
+
+  const apiKey = localStorage.getItem('bs_ai_key');
+  if (!apiKey) {
+    showAiKeyModal();
+    toast('Set your OpenAI API key first');
+    return;
+  }
+
+  const statusEl = document.getElementById('chord-ai-status-' + songId);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating chords…'; }
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = ''; }
+
+  // Build the lyric list for the prompt
+  const lineList = song.lines.map((l, i) => {
+    const label = l.type === 'lyric' ? l.text : l.type === 'section' ? `[${l.text}]` : '';
+    return `${i}: ${label || '(empty)'}`;
+  }).join('\n');
+
+  const prompt = `You are an expert guitarist. Provide guitar chord suggestions for each lyric line of this song.
+
+Song: "${song.title}" by ${song.artist || 'Unknown Artist'}
+
+Return ONLY valid JSON in exactly this format (no markdown, no explanation):
+{
+  "key": "G",
+  "capo": 0,
+  "lines": [
+    {"i": 0, "chords": "G  D  Em  C"},
+    {"i": 1, "chords": ""}
+  ]
+}
+
+Rules:
+- "key": the actual sounding key of the song
+- "capo": recommended capo fret (0 if not needed)
+- For each lyric line, "chords" = space-separated chord names (e.g. "G  D  Em  C")
+- Section headers and empty lines get "chords": ""
+- Common chord names only (G, Am, C, D, Em, F, Bm, etc.)
+- Include ALL ${song.lines.length} lines
+
+Lines:
+${lineList}`;
+
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 2000,
+      })
+    });
+    if (!resp.ok) throw new Error('OpenAI error ' + resp.status);
+    const json = await resp.json();
+    const raw = json.choices?.[0]?.message?.content || '';
+
+    // Parse JSON — strip any markdown fences
+    const cleaned = raw.replace(/```json?|```/g, '').trim();
+    const result = JSON.parse(cleaned);
+
+    // Apply chords to song lines
+    let applied = 0;
+    if (Array.isArray(result.lines)) {
+      result.lines.forEach(entry => {
+        const line = song.lines[entry.i];
+        if (line && entry.chords !== undefined) {
+          line.chords = entry.chords;
+          if (entry.chords) applied++;
+        }
+      });
+    }
+    if (result.key) song.key = result.key;
+    if (result.capo !== undefined) song.capo = result.capo;
+
+    saveBank();
+
+    // If this song is currently loaded on stage, re-render it
+    if (APP.currentId === songId) loadSong(songId);
+
+    const capoMsg = result.capo ? ` · Capo ${result.capo}` : '';
+    const keyMsg = result.key ? ` · Key: ${result.key}` : '';
+    if (statusEl) statusEl.textContent = `✓ ${applied} lines chorded${keyMsg}${capoMsg} — hit CHORDS to show them`;
+    if (btn) { btn.textContent = '✓ Chords Added'; btn.style.background = 'linear-gradient(135deg,#166534,#15803d)'; }
+
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '❌ ' + e.message;
+    if (btn) { btn.disabled = false; btn.textContent = '🎸 Retry'; }
+    toast('Chord generation failed: ' + e.message);
+  }
 }
 
 // Parse LRC — supports (backing vocal) marker AND [Label: words] backing vocal lines
