@@ -1493,31 +1493,31 @@ html[data-theme="light"] {
 .transpose-group{display:none!important;}
 .appbar{height:40px!important;padding:0 0.6rem!important;}
 .ab-right{gap:6px!important;}
-/* ── TIDY BAR — the row that holds SPEED / BPM / PLAY SETTINGS pills ── */
+/* ── TIDY BAR — holds SPEED / BPM / PLAY SETTINGS pills in one row ── */
 .tidy-bar{
-  display:flex;flex-direction:row;align-items:center;
-  gap:6px;padding:5px 10px;
+  display:flex;flex-direction:row;align-items:flex-start;
+  gap:8px;padding:6px 10px;
   background:var(--bg2);border-bottom:1px solid var(--border);
-  flex-shrink:0;position:relative;flex-wrap:wrap;
+  flex-shrink:0;flex-wrap:wrap;
 }
-.tidy-pill{position:relative;display:flex;align-items:center;flex-shrink:0;}
+/* Each pill is a column: button on top, panel expands below in normal flow */
+.tidy-pill{display:flex;flex-direction:column;align-items:flex-start;flex-shrink:0;}
 .tidy-pill-btn{display:flex;align-items:center;gap:4px;padding:5px 11px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:var(--text);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;user-select:none;}
 .tidy-pill-btn:hover,.tidy-pill-btn.open{background:rgba(167,139,250,0.15)!important;color:var(--lime);border-color:rgba(167,139,250,0.4)!important;}
 .tidy-chevron{display:inline-block;font-style:normal;font-size:0.5rem;transition:transform 0.2s;}
 .tidy-pill-btn.open .tidy-chevron{transform:rotate(180deg);}
-/* Panels drop from the bottom of the tidy-bar row, aligned to their button */
-.tidy-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:180px;gap:8px;flex-direction:column;backdrop-filter:blur(12px);}
+/* Panels are inline (static) — they expand the tidy-bar downward in flow,
+   never overlap siblings, never cover the scrub bar below */
+.tidy-panel{display:none;position:static;margin-top:6px;background:rgba(28,28,42,0.98);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,0.4);min-width:180px;gap:8px;flex-direction:column;}
 .tidy-panel.open{display:flex;}
 .tidy-panel-row{display:flex;align-items:center;gap:8px;white-space:nowrap;}
 .tidy-panel-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);opacity:0.5;min-width:52px;margin-bottom:3px;}
 .tidy-panel input[type=range]{width:100px;accent-color:var(--lime);}
 .tidy-panel .ctrl-val,.tidy-panel .bpm-display,.tidy-panel .nudge-val{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--lime);min-width:36px;}
-#tidy-key-panel{left:auto!important;right:0!important;min-width:140px;}
 #tidy-key-row{display:flex;align-items:center;gap:10px;justify-content:center;}
 .tidy-panel .transpose-btn{font-size:1.1rem!important;padding:4px 10px!important;background:var(--bg3)!important;border:1px solid var(--border2)!important;border-radius:4px!important;color:var(--text)!important;cursor:pointer!important;}
 .tidy-panel .transpose-btn:hover{background:var(--bg4,#2a2a3a)!important;}
 .tidy-panel .transpose-display{font-family:'JetBrains Mono',monospace!important;font-size:1rem!important;color:var(--lime)!important;min-width:24px;text-align:center;}
-#tidy-view-panel{left:auto!important;right:0!important;}
 #tidy-bpm-panel{min-width:200px;}
 
 </style>
@@ -6035,21 +6035,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     const tDisp=document.getElementById('transpose-display');
     if(tDisp)new MutationObserver(()=>{const l=document.getElementById('tidy-key-label');if(l)l.textContent=tDisp.textContent.trim();}).observe(tDisp,{childList:true,characterData:true,subtree:true});
   }
+  // Each pill toggles independently — all 3 can be open at once
   window.tidyToggle=function(id){
     const panel=document.getElementById('tidy-'+id+'-panel');
     const btn=document.getElementById('tidy-'+id+'-btn');
     if(!panel||!btn)return;
-    const isOpen=panel.classList.contains('open');
-    document.querySelectorAll('.tidy-panel.open').forEach(p=>p.classList.remove('open'));
-    document.querySelectorAll('.tidy-pill-btn.open').forEach(b=>b.classList.remove('open'));
-    if(!isOpen){panel.classList.add('open');btn.classList.add('open');}
+    panel.classList.toggle('open');
+    btn.classList.toggle('open');
   };
-  document.addEventListener('mousedown',function(e){
-    if(!e.target.closest('.tidy-pill')){
-      document.querySelectorAll('.tidy-panel.open').forEach(p=>p.classList.remove('open'));
-      document.querySelectorAll('.tidy-pill-btn.open').forEach(b=>b.classList.remove('open'));
-    }
-  },true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tidyInit);
   else tidyInit();
 })();
