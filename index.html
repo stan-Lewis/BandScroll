@@ -152,6 +152,9 @@ body{
 .pill-c{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;}
 .pill-v{background:var(--bg3);color:var(--text-mid);border:1px solid var(--border2);}
 .pill-live{background:var(--red);color:#fff;animation:blip 1.3s infinite;}
+.v-sync-dot{font-size:0.55rem;transition:color 0.4s;color:#4a5568;margin:0 1px;cursor:default;}
+.v-sync-dot.connected{color:#4ade80;}
+.v-sync-dot.disconnected{color:#f87171;animation:blip 1.3s infinite;}
 @keyframes blip{0%,100%{opacity:1;}50%{opacity:0.45;}}
 .room-chip{
   font-family:'JetBrains Mono',monospace;font-size:0.82rem;
@@ -189,8 +192,8 @@ body{
 .btn-red{background:var(--red);color:#fff;box-shadow:0 2px 12px rgba(244,63,94,0.2);}
 .btn-red:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(244,63,94,0.4);}
 .btn-purple{background:var(--purple);color:#000;}
-.btn-sm{font-size:0.7rem;padding:0.32rem 0.72rem;min-height:32px;border-radius:5px;}
-.btn-xs{font-size:0.65rem;padding:0.22rem 0.55rem;min-height:28px;border-radius:4px;}
+.btn-sm{font-size:0.78rem;padding:0.45rem 0.9rem;min-height:38px;border-radius:6px;}
+.btn-xs{font-size:0.72rem;padding:0.35rem 0.7rem;min-height:34px;border-radius:5px;}
 .btn:disabled{opacity:0.3;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
 
 .icon-btn{
@@ -275,6 +278,7 @@ textarea{resize:vertical;}
 .setlist-header{
   display:flex;align-items:center;gap:0.4rem;flex-shrink:0;flex-wrap:wrap;
 }
+.sl-total-dur{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--text-mid);letter-spacing:0.05em;white-space:nowrap;}
 .setlist-name{
   font-family:'Bebas Neue',sans-serif;font-size:1.1rem;
   letter-spacing:0.06em;color:var(--lime);flex:1;
@@ -297,7 +301,8 @@ textarea{resize:vertical;}
 .si-num{font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--text-dim);min-width:1.1rem;}
 .si-drag{color:var(--text-dim);cursor:grab;font-size:0.9rem;flex-shrink:0;}
 .si-info{flex:1;min-width:0;}
-.si-title{font-weight:600;font-size:0.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.si-title{font-weight:600;font-size:0.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;}
+.si-speed-badge{font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--amber);background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);border-radius:3px;padding:1px 4px;flex-shrink:0;}
 .si-meta{font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:var(--text-dim);margin-top:0.06rem;}
 .si-note{
   font-size:0.68rem;color:var(--amber);
@@ -476,8 +481,8 @@ textarea{resize:vertical;}
   letter-spacing:0.04em;
   line-height:1.3;
   padding:0.12rem 0;
-  color:var(--text-dim);
-  opacity:0.18;
+  color:#8888aa;
+  opacity:0.75;
   transition:color 0.22s, font-size 0.22s, opacity 0.22s, text-shadow 0.22s;
   user-select:none;
 }
@@ -495,7 +500,7 @@ textarea{resize:vertical;}
 .ll.empty{opacity:0;font-size:0.4rem !important;}
 
 /* LINE STATES */
-.ll.upcoming{opacity:0.4;color:var(--text-mid);}
+.ll.upcoming{opacity:0.85;color:#aaaacc;}
 .ll.active-lead{
   color:#ffffff;opacity:1;
   font-size:calc(clamp(1.65rem,4.5vw,2.6rem) * var(--lyric-scale));
@@ -515,7 +520,7 @@ textarea{resize:vertical;}
   opacity:0.38;color:var(--purple);
   font-size:calc(clamp(0.9rem,2vw,1.2rem) * var(--lyric-scale));
 }
-.ll.past{opacity:0.08;color:var(--text-dim);}
+.ll.past{opacity:0.35;color:#6666aa;}
 
 /* BV indicator dot */
 /* SETTINGS POPOVER */
@@ -1364,6 +1369,18 @@ html[data-theme="light"] {
   font-family:'JetBrains Mono',monospace;font-size:0.55rem;
   letter-spacing:0.1em;text-transform:uppercase;color:#2a2a4a;
 }
+.cm-transport{
+  position:absolute;bottom:3rem;left:0;right:0;
+  display:flex;justify-content:center;gap:1.5rem;
+}
+.cm-transport button{
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+  color:#fff;font-size:1.4rem;border-radius:50%;
+  width:3rem;height:3rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 0.15s;
+}
+.cm-transport button:hover{background:rgba(167,139,250,0.25);}
 
 /* AUTH v13 */
 #s-auth{flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:2rem 1.5rem;gap:1.5rem}
@@ -1493,23 +1510,43 @@ html[data-theme="light"] {
 .transpose-group{display:none!important;}
 .appbar{height:40px!important;padding:0 0.6rem!important;}
 .ab-right{gap:6px!important;}
-.tidy-pill{position:relative;display:flex;align-items:center;flex-shrink:0;}
-.tidy-pill-btn{display:flex;align-items:center;gap:4px;padding:3px 9px;font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:var(--text-dim);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;user-select:none;}
-.tidy-pill-btn:hover,.tidy-pill-btn.open{background:rgba(255,255,255,0.12)!important;color:var(--text);border-color:rgba(255,255,255,0.25)!important;}
+/* ── TIDY BAR ── */
+/* The bar itself is fixed-height — just the buttons row */
+.tidy-bar{
+  position:relative;
+  display:flex;flex-direction:column;
+  flex-shrink:0;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+}
+/* Buttons row: fixed height, never grows */
+.tidy-pills-row{display:flex;flex-direction:row;align-items:center;gap:6px;padding:5px 10px;flex-shrink:0;}
+.tidy-pill{display:flex;align-items:center;flex-shrink:0;}
+.tidy-pill-btn{display:flex;align-items:center;gap:4px;padding:5px 11px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:var(--text);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;user-select:none;}
+.tidy-pill-btn:hover,.tidy-pill-btn.open{background:rgba(167,139,250,0.15)!important;color:var(--lime);border-color:rgba(167,139,250,0.4)!important;}
 .tidy-chevron{display:inline-block;font-style:normal;font-size:0.5rem;transition:transform 0.2s;}
 .tidy-pill-btn.open .tidy-chevron{transform:rotate(180deg);}
-.tidy-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:9999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:180px;gap:8px;flex-direction:column;backdrop-filter:blur(12px);}
+/* Panels container: absolute, floats over lyrics, never pushes content down */
+.tidy-panels-container{
+  display:flex;flex-direction:row;align-items:stretch;gap:6px;
+  position:absolute;top:100%;left:0;z-index:9999;
+  padding:6px 10px;pointer-events:none;
+}
+/* Individual panels: side-by-side, equal height via align-items:stretch */
+.tidy-panel{display:none;flex-direction:column;gap:8px;
+  background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.14);
+  border-radius:8px;padding:9px 13px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.55);min-width:170px;
+  backdrop-filter:blur(12px);pointer-events:auto;}
 .tidy-panel.open{display:flex;}
 .tidy-panel-row{display:flex;align-items:center;gap:8px;white-space:nowrap;}
-.tidy-panel-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);opacity:0.5;min-width:52px;margin-bottom:3px;}
-.tidy-panel input[type=range]{width:100px;accent-color:var(--lime);}
+.tidy-panel-label{font-family:'JetBrains Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);opacity:0.5;min-width:52px;margin-bottom:2px;}
+.tidy-panel input[type=range]{width:90px;accent-color:var(--lime);}
 .tidy-panel .ctrl-val,.tidy-panel .bpm-display,.tidy-panel .nudge-val{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--lime);min-width:36px;}
 #tidy-key-panel{left:auto!important;right:0!important;min-width:140px;}
 #tidy-key-row{display:flex;align-items:center;gap:10px;justify-content:center;}
 .tidy-panel .transpose-btn{font-size:1.1rem!important;padding:4px 10px!important;background:var(--bg3)!important;border:1px solid var(--border2)!important;border-radius:4px!important;color:var(--text)!important;cursor:pointer!important;}
 .tidy-panel .transpose-btn:hover{background:var(--bg4,#2a2a3a)!important;}
 .tidy-panel .transpose-display{font-family:'JetBrains Mono',monospace!important;font-size:1rem!important;color:var(--lime)!important;min-width:24px;text-align:center;}
-#tidy-view-panel{left:auto!important;right:0!important;}
 #tidy-bpm-panel{min-width:200px;}
 
 </style>
@@ -1625,7 +1662,7 @@ html[data-theme="light"] {
     <div class="appbar-brand">Band<span>Scroll</span></div>
     <span class="pill pill-c">Conductor</span>
     <div class="ab-right">
-      <div class="room-chip" id="c-room" onclick="copyRoom()">------</div>
+      <div class="room-chip" id="c-room" onclick="updateShareUrl();openModal('share-modal')" title="Click to share / show QR code">------</div>
       <button class="btn btn-ghost btn-sm" onclick="openModal('overview-modal')" title="Setlist Overview">☰</button>
       <div class="settings-popover-wrap" id="settings-wrap">
         <button class="btn btn-ghost btn-sm" id="settings-btn" onclick="toggleSettings()" title="Settings">⚙</button>
@@ -1707,6 +1744,7 @@ html[data-theme="light"] {
       <div class="tab-pane" id="t-setlist">
         <div class="setlist-header">
           <div class="setlist-name" id="sl-name-display">No Setlist</div>
+          <span class="sl-total-dur" id="sl-total-dur"></span>
           <button class="btn btn-ghost btn-xs" onclick="openModal('sets-modal')">⚙</button>
           <button class="show-mode-btn" onclick="openShowMode()" title="Setlist Show Mode">▶ SHOW</button>
         </div>
@@ -1791,25 +1829,32 @@ html[data-theme="light"] {
           <button class="nudge-btn nudge-reset" onclick="resetOffset()" title="Reset timing to zero">↺</button>
         </div>
       </div>
-      <!-- SPEED PILL -->
-      <div class="tidy-pill" id="tidy-speed-pill">
-        <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
-        <div class="tidy-panel" id="tidy-speed-panel"><div class="tidy-panel-row" id="tidy-speed-row"></div></div>
-      </div>
-      <!-- BPM PILL -->
-      <div class="tidy-pill" id="tidy-bpm-pill">
-        <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
-        <div class="tidy-panel" id="tidy-bpm-panel" style="min-width:220px"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div></div>
-      </div>
-      <!-- VIEW PILL -->
-      <div class="tidy-pill" id="tidy-view-pill">
-        <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">VIEW <i class="tidy-chevron">&#9662;</i></button>
-        <div class="tidy-panel" id="tidy-view-panel" style="min-width:240px">
-          <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:10px">
-            <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
-            <div><div class="tidy-panel-label">Display</div><div id="tidy-chord-tab-wrap" style="display:flex;gap:4px"></div></div>
-            <div><div class="tidy-panel-label">Timing</div><div id="tidy-nudge-wrap" style="display:flex;align-items:center;gap:6px"></div></div>
-            <div><div class="tidy-panel-label">A-B Loop</div><div id="tidy-ab-wrap" style="display:flex;align-items:center;gap:4px"></div></div>
+      <!-- TIDY BAR: all three pill-buttons in one consistent row -->
+      <!-- TIDY BAR: buttons row (fixed height) + floating panels container -->
+      <div class="tidy-bar">
+        <!-- Buttons row — fixed height, never grows -->
+        <div class="tidy-pills-row">
+          <div class="tidy-pill" id="tidy-speed-pill">
+            <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
+          </div>
+          <div class="tidy-pill" id="tidy-bpm-pill">
+            <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
+          </div>
+          <div class="tidy-pill" id="tidy-view-pill">
+            <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">PLAY SETTINGS <i class="tidy-chevron">&#9662;</i></button>
+          </div>
+        </div>
+        <!-- Panels float below the bar row, overlay the lyrics, equal height -->
+        <div class="tidy-panels-container" id="tidy-panels-container">
+          <div class="tidy-panel" id="tidy-speed-panel"><div class="tidy-panel-row" id="tidy-speed-row"></div></div>
+          <div class="tidy-panel" id="tidy-bpm-panel"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div></div>
+          <div class="tidy-panel" id="tidy-view-panel">
+            <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+              <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
+              <div><div class="tidy-panel-label">Display</div><div id="tidy-chord-tab-wrap" style="display:flex;gap:4px"></div></div>
+              <div><div class="tidy-panel-label">Timing</div><div id="tidy-nudge-wrap" style="display:flex;align-items:center;gap:6px"></div></div>
+              <div><div class="tidy-panel-label">A-B Loop</div><div id="tidy-ab-wrap" style="display:flex;align-items:center;gap:4px"></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1908,6 +1953,7 @@ html[data-theme="light"] {
         <button class="view-toggle-btn" onclick="setView(_userInstrument,'v')" id="v-vt-tab">Tab</button>
       </div>
       <span class="pill pill-v" id="v-room-pill">------</span>
+      <span class="v-sync-dot" id="v-sync-dot" title="Sync status">●</span>
       <span class="pill pill-live" id="v-live-pill" style="display:none;">● LIVE</span>
     </div>
   </div>
@@ -1954,12 +2000,18 @@ html[data-theme="light"] {
         <textarea id="viewer-notes-input" placeholder="My notes for this song…" style="width:100%;min-height:3rem;background:transparent;color:#eee;border:1px solid var(--bg4);border-radius:4px;font-size:0.8rem;padding:0.3rem;resize:vertical;" oninput="saveViewerNote(this.value)"></textarea>
       </div>
       <button id="viewer-notes-btn" onclick="toggleViewerNotes()" title="My personal notes" style="position:absolute;bottom:0.5rem;right:0.5rem;z-index:11;background:var(--bg3);border:1px solid var(--bg4);border-radius:50%;width:2rem;height:2rem;font-size:0.9rem;cursor:pointer;opacity:0.7;">📝</button>
+      <div class="notes-banner" id="v-notes-banner">
+        <div class="notes-banner-label">📝 Song Notes</div>
+        <div class="notes-banner-text" id="v-notes-banner-text"></div>
+      </div>
       <div class="wait-veil" id="v-wait">
         <div class="wv-icon">🎵</div>
-        <div class="wv-t">Waiting for conductor</div>
-        <div class="wv-s">Lyrics appear when the song starts</div>
+        <div class="wv-t" id="v-wait-text">Waiting for conductor</div>
+        <div class="wv-s" id="v-wait-sub">Lyrics appear when the song starts</div>
+        <button class="btn btn-ghost btn-sm" id="v-wait-retry" style="display:none;margin-top:1rem;" onclick="doJoin()">↺ Retry</button>
       </div>
       <div class="belt" id="v-belt" style="display:none;"></div>
+      <button id="v-resync-btn" onclick="vResync()" title="Snap back to conductor position" style="display:none;position:absolute;bottom:1.2rem;left:50%;transform:translateX(-50%);z-index:50;background:#f59e0b;color:#000;border:none;border-radius:2rem;padding:0.75rem 1.8rem;font-size:1.1rem;font-weight:700;letter-spacing:0.02em;box-shadow:0 4px 18px rgba(0,0,0,0.5);cursor:pointer;white-space:nowrap;">⟳ Resync</button>
     </div>
     <div class="veil" id="v-veil">
       <div class="veil-num" id="v-veil-num">5</div>
@@ -1982,8 +2034,8 @@ html[data-theme="light"] {
   <div class="v-settings">
     <div class="v-set-group">
       <span class="v-set-label">Size</span>
-      <input type="range" min="0.6" max="2" step="0.05" value="1"
-        oninput="setLyricScale(this.value)" style="width:70px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
+      <input type="range" min="0.5" max="2.5" step="0.05" value="1" id="v-scale-slider"
+        oninput="setLyricScale(this.value)" style="width:80px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
       <span class="v-set-val" id="v-scale-val">1.0×</span>
     </div>
     <div class="v-set-group">
@@ -2167,14 +2219,20 @@ html[data-theme="light"] {
 </div>
 
 <!-- ══════════ CONFIDENCE MONITOR OVERLAY ══════════ -->
-<div id="confidence-overlay" onclick="toggleConfidenceMonitor()">
+<div id="confidence-overlay">
   <div class="cm-song-title" id="cm-song-title"></div>
   <div class="cm-current" id="cm-current">—</div>
   <div class="cm-next" id="cm-next"></div>
   <div class="cm-indicator">
     <span class="cm-status" id="cm-status">waiting…</span>
   </div>
-  <div class="cm-exit-hint">tap to close · M · esc</div>
+  <!-- Fix 6: transport controls in CM so conductor doesn't have to close it -->
+  <div class="cm-transport" onclick="event.stopPropagation()">
+    <button onclick="prevSong()" title="Previous song">⏮</button>
+    <button id="cm-play-btn" onclick="togglePlay()" title="Play / Pause">▶</button>
+    <button onclick="nextSong()" title="Next song">⏭</button>
+  </div>
+  <div class="cm-exit-hint" onclick="toggleConfidenceMonitor()">tap here to close · M · esc</div>
 </div>
 
 <!-- ══════════ TOAST ══════════ -->
@@ -2447,15 +2505,47 @@ function initAbly(code) {
     });
     _ablyChannel = _ablyClient.channels.get('bandscroll_' + code);
 
+    // Fix 7: periodically resync server clock to prevent drift on mobile network changes
+    if (!_ablyClient._resyncInterval) {
+      _ablyClient._resyncInterval = setInterval(() => {
+        if (_ablyClient && _ablyClient.connection.state === 'connected') {
+          _syncServerTime(_ablyClient);
+        }
+      }, 30000);
+    }
+
     _ablyClient.connection.on('connected', async () => {
       await _syncServerTime(_ablyClient);
       if (APP.role === 'conductor') {
         toast('🟢 Connected — band can now join');
-        // Announce conductor presence
         emit({ type: 'presence', role: 'conductor', name: 'Conductor' });
+        // Fix 6: re-send current song state so viewers who lost connection catch up
+        const _reconnectSong = getSong(APP.currentId);
+        if (_reconnectSong) {
+          setTimeout(() => {
+            emit({ type: 'load', song: serializeSong(_reconnectSong) });
+            if (APP.isPlaying) {
+              const _rt = (performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj;
+              const _rw = serverNow() - (_rt - APP.offsetAdj) * 1000;
+              emit({ type: 'seek', wallStart: _rw, songTime: _rt, conductorOffset: APP.offsetAdj });
+            }
+          }, 800);
+        }
       }
     });
-    _ablyClient.connection.on('failed', () => toast('❌ Ably connection failed — check your API key'));
+    _ablyClient.connection.on('failed', () => { toast('❌ Ably connection failed — check your API key'); _setSyncDot('disconnected'); });
+    _ablyClient.connection.on('disconnected', () => _setSyncDot('disconnected'));
+    _ablyClient.connection.on('suspended', () => _setSyncDot('disconnected'));
+    _ablyClient.connection.on('connecting', () => _setSyncDot(''));
+    function _setSyncDot(state) {
+      const d = document.getElementById('v-sync-dot');
+      if (!d) return;
+      d.classList.remove('connected','disconnected');
+      if (state) d.classList.add(state);
+      d.title = state === 'connected' ? 'Synced ✓' : state === 'disconnected' ? 'Lost connection — retrying…' : 'Connecting…';
+    }
+    // Hook into connected to also update dot for viewer
+    _ablyClient.connection.on('connected', () => { if (APP.role === 'viewer') _setSyncDot('connected'); });
 
     _ablyChannel.subscribe(msg => {
       if (msg.clientId === _myClientId) return; // ignore own messages
@@ -2510,22 +2600,50 @@ function onBC(msg) {
   }
   if (APP.role !== 'viewer') return;
   if (msg.type === 'load') vLoad(msg.song);
-  else if (msg.type === 'play') vStartCD(msg.wallStart, msg.song, msg.conductorOffset);
+  else if (msg.type === 'play') {
+    // Fix 5: queue if song not yet loaded (Ably doesn't guarantee message order)
+    if (!V.song) { _pendingPlay = msg; }
+    else { vStartCD(msg.wallStart, msg.song, msg.conductorOffset); }
+  }
   else if (msg.type === 'stop') vStop();
   else if (msg.type === 'seek') vSeek(msg.wallStart, msg.songTime, msg.conductorOffset);
+  else if (msg.type === 'speed') {
+    _speedMult.v = msg.speed;
+    const el = document.getElementById('v-speed-val');
+    if (el) el.textContent = msg.speed.toFixed(2) + '×';
+    const sl = document.getElementById('v-speed-slider');
+    if (sl) sl.value = msg.speed;
+  }
+  else if (msg.type === 'transpose') {
+    // Fix 4: apply conductor's transpose to viewer
+    _transposeSteps = msg.steps;
+    const d = document.getElementById('transpose-display');
+    if (d) d.textContent = (_transposeSteps > 0 ? '+' : '') + _transposeSteps;
+    _rerenderTransposed();
+  }
   else if (msg.type === 'arr-notes') {
     const _s = getSong(msg.songId); if (_s) _s.arrNotes = msg.notes;
     const _nb = document.getElementById('notes-banner');
     const _nbt = document.getElementById('notes-banner-text');
     if (_nb && _nbt) { _nbt.textContent = msg.notes||''; _nb.classList.toggle('visible', !!(msg.notes&&msg.notes.trim())); }
+    // Also update viewer notes banner
+    const _vnb = document.getElementById('v-notes-banner');
+    const _vnbt = document.getElementById('v-notes-banner-text');
+    if (_vnb && _vnbt) { _vnbt.textContent = msg.notes||''; _vnb.classList.toggle('visible', !!(msg.notes&&msg.notes.trim())); }
   }
 }
 
 // ── Lobby ──
+let _prevLobbyNames = [];
 function renderLobby() {
   const el = document.getElementById('c-lobby-members');
   if (!el) return;
   const names = Object.values(_lobbyMembers);
+  // Fix 5: toast when a member disappears during playback
+  if (_prevLobbyNames.length > 0) {
+    _prevLobbyNames.forEach(n => { if (!names.includes(n)) toast('🔴 ' + n + ' disconnected'); });
+  }
+  _prevLobbyNames = [...names];
   if (!names.length) {
     el.innerHTML = '<span class="lobby-empty">No members yet</span>';
   } else {
@@ -2535,6 +2653,9 @@ function renderLobby() {
   }
   const countEl = document.getElementById('c-lobby-count');
   if (countEl) countEl.textContent = names.length;
+  // Update room chip with member count (Fix 7)
+  const roomChip = document.getElementById('c-room');
+  if (roomChip && APP.roomCode) roomChip.textContent = APP.roomCode + (names.length ? ' · ' + names.length + '●' : '');
   // Broadcast updated lobby to all viewers
   emit({ type: 'lobby', members: names });
 }
@@ -2606,6 +2727,9 @@ function showVJoin() {
     }
   } catch(e) {}
 }
+// Fix 3: module-level interval handle so rejoins don't stack up multiple intervals
+let _lsInterval = null;
+
 function doJoin() {
   const code = document.getElementById('v-code').value.trim().toUpperCase();
   const name = document.getElementById('v-name').value.trim() || 'Band Member';
@@ -2615,9 +2739,10 @@ function doJoin() {
   document.getElementById('v-name-pill').textContent = name;
   document.getElementById('v-room-pill').textContent = code;
   initAbly(code);
-  // localStorage fallback for same-device use
+  // localStorage fallback for same-device use — clear any previous interval first
   let _lastBCt = 0;
-  setInterval(() => {
+  if (_lsInterval) clearInterval(_lsInterval);
+  _lsInterval = setInterval(() => {
     try {
       const raw = localStorage.getItem('bs4_live_' + code);
       if (!raw) return;
@@ -2631,6 +2756,20 @@ function doJoin() {
   }, 1200);
   show('s-viewer');
   toast('Joined ' + code);
+  // Fix 3: if no song loaded within 30s, show retry prompt
+  const _waitTimer = setTimeout(() => {
+    if (!V.song) {
+      const wt = document.getElementById('v-wait-text');
+      const ws = document.getElementById('v-wait-sub');
+      const wr = document.getElementById('v-wait-retry');
+      if (wt) wt.textContent = 'No song received';
+      if (ws) ws.textContent = 'Check the room code or ask the conductor to reload the song.';
+      if (wr) wr.style.display = '';
+    }
+  }, 30000);
+  // Clear timer if song arrives
+  const _origVLoad = vLoad;
+  window._vWaitTimer = _waitTimer;
 }
 
 // ── LRCLIB + CORS PROXY ──
@@ -2831,8 +2970,8 @@ function deleteFromBank(id) {
   persist(); renderAll();
   // Show undo toast for 6 s
   if (_undoTimer) clearTimeout(_undoTimer);
-  toast('🗑 Deleted "' + esc(_deletedSong?_deletedSong.title:'song') + '"  <a href="#" onclick="undoDelete();return false;" style="color:#facc15;margin-left:8px;">Undo</a>', 6000);
-  _undoTimer = setTimeout(() => { _deletedSong = null; _deletedSetIds = null; }, 6500);
+  toast('🗑 Deleted "' + esc(_deletedSong?_deletedSong.title:'song') + '"  <a href="#" onclick="undoDelete();return false;" style="color:#facc15;margin-left:8px;">Undo</a>', 20000);
+  _undoTimer = setTimeout(() => { _deletedSong = null; _deletedSetIds = null; }, 20500);
 }
 function undoDelete() {
   if (!_deletedSong) return;
@@ -2905,7 +3044,11 @@ function updateSetlistName() {
 function renderSetlist() {
   const el = document.getElementById('setlist-list');
   const ids = getSetlistSongIds();
-  if (!ids.length) { el.innerHTML='<div class="empty-msg">No songs.<br>Search to add.</div>'; renderOverview(); return; }
+  if (!ids.length) { el.innerHTML='<div class="empty-msg">No songs.<br>Search to add.</div>'; const _td=document.getElementById('sl-total-dur');if(_td)_td.textContent=''; renderOverview(); return; }
+  // Fix 4: show total setlist duration
+  const _totalSec = ids.reduce((sum,id)=>{ const s=getSong(id); return sum+(s?s.duration||0:0); },0);
+  const _td = document.getElementById('sl-total-dur');
+  if (_td) _td.textContent = ids.length + ' songs · ' + fmtTime(_totalSec);
   el.innerHTML = ids.map((id,i) => {
     const s = getSong(id); if(!s) return '';
     const active = id===APP.currentId;
@@ -2916,7 +3059,7 @@ function renderSetlist() {
       <div class="si-drag">⠿</div>
       <div class="si-num">${i+1}</div>
       <div class="si-info">
-        <div class="si-title">${esc(s.title)}</div>
+        <div class="si-title">${esc(s.title)}${(s.savedSpeed&&s.savedSpeed!==1)?`<span class="si-speed-badge">${s.savedSpeed.toFixed(2)}×</span>`:''}</div>
         <div class="si-meta">${esc(s.artist||'—')} · ${fmtTime(s.duration)}</div>
         ${s.notes?`<div class="si-note">📝 ${esc(s.notes)}</div>`:''}
       </div>
@@ -3202,7 +3345,7 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 
   if (!isManual) {
     const wrapH = wrap.clientHeight;
-    const cursorY = Math.round(wrapH * 0.28);
+    const cursorY = Math.round(wrapH * 0.5);
     if (cursor) { cursor.style.top = cursorY + 'px'; cursor.classList.add('show'); }
 
     // Find active lyric index
@@ -3222,15 +3365,10 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     let ni = ai + 1;
 
     belt.style.paddingTop = cursorY + 'px';
-    belt.style.paddingBottom = (wrapH-cursorY) + 'px';
+    belt.style.paddingBottom = cursorY + 'px';
   const els = belt.querySelectorAll('.ll');
-  const _measuredH = (els.length > 0 && els[0].offsetHeight > 0) ? els[0].offsetHeight : 0;
-  if (_measuredH > 0) APP._cachedLineH = _measuredH;
-  const lineH = APP._cachedLineH || LINE_H;
-    belt.style.transform = `translateY(${cursorY - ai*lineH}px)`;
 
-
-  // Apply state classes (ai/ni from above)
+  // Apply state classes FIRST so active-lead enlargement is reflected in DOM before measurement
     els.forEach((el,i) => {
     const line = lines[i];
     if (!line) return;
@@ -3284,6 +3422,18 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       }
     }
   });
+
+  // Measure actual DOM position of active element AFTER classes are applied
+  // (active-lead class makes the active line larger, so offsetTop must be read after styling)
+  const activeEl = els[ai];
+  if (activeEl && activeEl.offsetHeight > 0) {
+    const centerOfActive = activeEl.offsetTop + activeEl.offsetHeight / 2;
+    belt.style.transform = `translateY(${cursorY - centerOfActive}px)`;
+  } else {
+    // Fallback for first frame before layout is ready
+    const lineH = APP._cachedLineH || LINE_H;
+    belt.style.transform = `translateY(${cursorY - ai * lineH}px)`;
+  }
 
     // ── Confidence Monitor: update big-text overlay in real time ──
     if (beltId === 'c-belt' && _cmOpen) {
@@ -3384,6 +3534,9 @@ function _setDetached(val) {
         // dy > 0 = finger moved up = advance display (show later lyrics)
         // ~25px swipe = 1 second shift
         V.localOffset = (V.localOffset || 0) + dy * 0.04;
+        // Show resync button whenever viewer has drifted from conductor
+        const btn = document.getElementById('v-resync-btn');
+        if (btn && Math.abs(V.localOffset) > 0.05) btn.style.display = '';
       }
     }, { passive: true });
     bw.addEventListener('touchend', () => { _vTouchY = null; }, { passive: true });
@@ -3564,6 +3717,7 @@ function beginPlay(song, wallStart) {
   APP.playStartPN = performance.now() - (serverNow() - wallStart);
   document.getElementById('play-btn').textContent='⏹ Stop';
   document.getElementById('play-btn').className='btn btn-red';
+  const _cmPb=document.getElementById('cm-play-btn'); if(_cmPb) _cmPb.textContent='⏹';
   // Update confidence monitor song title and status
   if (_cmOpen) {
     const st = document.getElementById('cm-song-title');
@@ -3611,6 +3765,7 @@ function stopPlay() {
   if(APP.raf){cancelAnimationFrame(APP.raf);APP.raf=null;}
   document.getElementById('play-btn').textContent='▶ Play';
   document.getElementById('play-btn').className='btn btn-lime';
+  const _cmPb2=document.getElementById('cm-play-btn'); if(_cmPb2) _cmPb2.textContent='▶';
   // Update confidence monitor status
   if (_cmOpen) {
     const cs = document.getElementById('cm-status');
@@ -3830,9 +3985,17 @@ function _updateOffsetDisplay() {
 }
 
 // ── VIEWER ──
-const V = { song:null, raf:null, playing:false, startPN:null, offsetAdj:0, conductorOffset:0, localOffset:0 };
+const V = { song:null, raf:null, playing:false, startPN:null, wallStart:null, offsetAdj:0, conductorOffset:0, localOffset:0, wakeLock:null };
+// Fix 5: queue a play/seek message that arrived before the song was loaded
+let _pendingPlay = null;
 
 function vLoad(song) {
+  // Clear the waiting-screen timeout if set
+  if (window._vWaitTimer) { clearTimeout(window._vWaitTimer); window._vWaitTimer = null; }
+  // Reset wait screen text in case it showed the retry prompt
+  const _wt = document.getElementById('v-wait-text'); if (_wt) _wt.textContent = 'Waiting for conductor';
+  const _ws = document.getElementById('v-wait-sub'); if (_ws) _ws.textContent = 'Lyrics appear when the song starts';
+  const _wr = document.getElementById('v-wait-retry'); if (_wr) _wr.style.display = 'none';
   // Stop any ongoing playback before loading new song
   if (V.playing) vStop();
   // If the received song has annotations, re-merge them into lines
@@ -3868,6 +4031,26 @@ function vLoad(song) {
   const vp = document.getElementById('v-section-pin');
   if (vp) vp.classList.add('hidden');
   V.localOffset = 0;
+  const _rb = document.getElementById('v-resync-btn');
+  if (_rb) _rb.style.display = 'none';
+  // Show arrangement notes to viewer
+  const _vnb = document.getElementById('v-notes-banner');
+  const _vnbt = document.getElementById('v-notes-banner-text');
+  if (_vnb && _vnbt) { _vnbt.textContent = song.arrNotes || ''; _vnb.classList.toggle('visible', !!(song.arrNotes && song.arrNotes.trim())); }
+  // Apply conductor's per-song settings so band members match without waiting for play
+  if (song.savedOffset !== undefined) V.conductorOffset = song.savedOffset;
+  if (song.savedSpeed && song.savedSpeed !== 1) {
+    _speedMult.v = song.savedSpeed;
+    const el = document.getElementById('v-speed-val');
+    if (el) el.textContent = song.savedSpeed.toFixed(2) + '×';
+    const sl = document.getElementById('v-speed-slider');
+    if (sl) sl.value = song.savedSpeed;
+  }
+  // Fix 5: apply any play message that arrived before this load
+  if (_pendingPlay) {
+    const p = _pendingPlay; _pendingPlay = null;
+    vStartCD(p.wallStart, null, p.conductorOffset);
+  }
 }
 
 function vStartCD(wallStart, song, conductorOffset) {
@@ -3903,9 +4086,13 @@ function vSeek(wallStart, songTime, conductorOffset) {
 function vBegin(wallStart) {
   if (!V.song) return;
   V.playing = true;
-  // Use server-synced reference for accurate start
+  V.wallStart = wallStart; // Fix 2: store for visibilitychange resync
   // Use server-synced reference for accurate start
   V.startPN = performance.now() - (serverNow() - wallStart);
+  // Fix 1: prevent screen sleep during performance
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').then(lock => { V.wakeLock = lock; }).catch(() => {});
+  }
   const dur = V.song.duration;
   const tick = (now) => {
     if (!V.playing) return;
@@ -3928,9 +4115,28 @@ function vBegin(wallStart) {
 function vStop() {
   V.playing = false;
   if (V.raf) { cancelAnimationFrame(V.raf); V.raf = null; }
+  // Fix 1: release wake lock when song stops
+  if (V.wakeLock) { V.wakeLock.release().catch(() => {}); V.wakeLock = null; }
   document.getElementById('v-live-pill').style.display = 'none';
   document.getElementById('v-veil').classList.remove('open');
 }
+
+function vResync() {
+  V.localOffset = 0;
+  const btn = document.getElementById('v-resync-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+// Fix 2: resync playback position when tab returns from background (iOS Safari pauses performance.now())
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && V.playing && V.wallStart) {
+    V.startPN = performance.now() - (serverNow() - V.wallStart);
+  }
+  // Re-request wake lock after screen wakes (wake lock is released when screen sleeps)
+  if (!document.hidden && V.playing && 'wakeLock' in navigator && !V.wakeLock) {
+    navigator.wakeLock.request('screen').then(lock => { V.wakeLock = lock; }).catch(() => {});
+  }
+});
 
 function _vUpdateScrub(t, dur) {
   const pct = dur > 0 ? Math.min(100, (t / dur) * 100) : 0;
@@ -4793,7 +4999,10 @@ function serializeSong(s){
     lines: mergedLines,
     rawLyrics: s.rawLyrics || '',
     annotations: s.annotations || [],
-    tabs
+    tabs,
+    savedOffset: s.savedOffset || 0,
+    savedSpeed: s.savedSpeed || 1,
+    arrNotes: s.arrNotes || s.notes || ''
   };
 }
 
@@ -4849,6 +5058,8 @@ function setSpeed(val, role) {
   if (role === 'c') {
     const el = document.getElementById('c-speed-val');
     if (el) el.textContent = display;
+    // Broadcast speed change to band members in real-time
+    emit({ type: 'speed', speed: val });
   } else {
     const el = document.getElementById('v-speed-val');
     if (el) el.textContent = display;
@@ -5825,6 +6036,8 @@ function transposeAll(delta){
   const d=document.getElementById('transpose-display');
   if(d)d.textContent=(_transposeSteps>0?'+':'')+_transposeSteps;
   if(APP.currentId){document.querySelectorAll('.chord-row').forEach(r=>{if(r.dataset.chords!==undefined)r.textContent=_getTransposedChords(_renderChordRow(r.dataset.chords,'')||r.dataset.chords)||'';});}
+  // Fix 4: broadcast transpose to all band members
+  emit({ type: 'transpose', steps: _transposeSteps });
 }
 function _rerenderTransposed(){
   document.querySelectorAll('.chord-row').forEach(r=>{if(r.dataset.chords!==undefined)r.textContent=_getTransposedChords(_renderChordRow(r.dataset.chords,'')||r.dataset.chords)||'';});
@@ -5943,21 +6156,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     const tDisp=document.getElementById('transpose-display');
     if(tDisp)new MutationObserver(()=>{const l=document.getElementById('tidy-key-label');if(l)l.textContent=tDisp.textContent.trim();}).observe(tDisp,{childList:true,characterData:true,subtree:true});
   }
+  // Each pill toggles independently — all 3 can be open at once
   window.tidyToggle=function(id){
     const panel=document.getElementById('tidy-'+id+'-panel');
     const btn=document.getElementById('tidy-'+id+'-btn');
     if(!panel||!btn)return;
-    const isOpen=panel.classList.contains('open');
-    document.querySelectorAll('.tidy-panel.open').forEach(p=>p.classList.remove('open'));
-    document.querySelectorAll('.tidy-pill-btn.open').forEach(b=>b.classList.remove('open'));
-    if(!isOpen){panel.classList.add('open');btn.classList.add('open');}
+    panel.classList.toggle('open');
+    btn.classList.toggle('open');
   };
-  document.addEventListener('mousedown',function(e){
-    if(!e.target.closest('.tidy-pill')){
-      document.querySelectorAll('.tidy-panel.open').forEach(p=>p.classList.remove('open'));
-      document.querySelectorAll('.tidy-pill-btn.open').forEach(b=>b.classList.remove('open'));
-    }
-  },true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tidyInit);
   else tidyInit();
 })();

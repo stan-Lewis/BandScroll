@@ -2011,6 +2011,7 @@ html[data-theme="light"] {
         <button class="btn btn-ghost btn-sm" id="v-wait-retry" style="display:none;margin-top:1rem;" onclick="doJoin()">↺ Retry</button>
       </div>
       <div class="belt" id="v-belt" style="display:none;"></div>
+      <button id="v-resync-btn" onclick="vResync()" title="Snap back to conductor position" style="display:none;position:absolute;bottom:1.2rem;left:50%;transform:translateX(-50%);z-index:50;background:#f59e0b;color:#000;border:none;border-radius:2rem;padding:0.75rem 1.8rem;font-size:1.1rem;font-weight:700;letter-spacing:0.02em;box-shadow:0 4px 18px rgba(0,0,0,0.5);cursor:pointer;white-space:nowrap;">⟳ Resync</button>
     </div>
     <div class="veil" id="v-veil">
       <div class="veil-num" id="v-veil-num">5</div>
@@ -3344,7 +3345,7 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 
   if (!isManual) {
     const wrapH = wrap.clientHeight;
-    const cursorY = Math.round(wrapH * 0.28);
+    const cursorY = Math.round(wrapH * 0.5);
     if (cursor) { cursor.style.top = cursorY + 'px'; cursor.classList.add('show'); }
 
     // Find active lyric index
@@ -3364,15 +3365,10 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     let ni = ai + 1;
 
     belt.style.paddingTop = cursorY + 'px';
-    belt.style.paddingBottom = (wrapH-cursorY) + 'px';
+    belt.style.paddingBottom = cursorY + 'px';
   const els = belt.querySelectorAll('.ll');
-  const _measuredH = (els.length > 0 && els[0].offsetHeight > 0) ? els[0].offsetHeight : 0;
-  if (_measuredH > 0) APP._cachedLineH = _measuredH;
-  const lineH = APP._cachedLineH || LINE_H;
-    belt.style.transform = `translateY(${cursorY - ai*lineH}px)`;
 
-
-  // Apply state classes (ai/ni from above)
+  // Apply state classes FIRST so active-lead enlargement is reflected in DOM before measurement
     els.forEach((el,i) => {
     const line = lines[i];
     if (!line) return;
@@ -3426,6 +3422,18 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       }
     }
   });
+
+  // Measure actual DOM position of active element AFTER classes are applied
+  // (active-lead class makes the active line larger, so offsetTop must be read after styling)
+  const activeEl = els[ai];
+  if (activeEl && activeEl.offsetHeight > 0) {
+    const centerOfActive = activeEl.offsetTop + activeEl.offsetHeight / 2;
+    belt.style.transform = `translateY(${cursorY - centerOfActive}px)`;
+  } else {
+    // Fallback for first frame before layout is ready
+    const lineH = APP._cachedLineH || LINE_H;
+    belt.style.transform = `translateY(${cursorY - ai * lineH}px)`;
+  }
 
     // ── Confidence Monitor: update big-text overlay in real time ──
     if (beltId === 'c-belt' && _cmOpen) {
@@ -3526,6 +3534,9 @@ function _setDetached(val) {
         // dy > 0 = finger moved up = advance display (show later lyrics)
         // ~25px swipe = 1 second shift
         V.localOffset = (V.localOffset || 0) + dy * 0.04;
+        // Show resync button whenever viewer has drifted from conductor
+        const btn = document.getElementById('v-resync-btn');
+        if (btn && Math.abs(V.localOffset) > 0.05) btn.style.display = '';
       }
     }, { passive: true });
     bw.addEventListener('touchend', () => { _vTouchY = null; }, { passive: true });
@@ -4020,6 +4031,8 @@ function vLoad(song) {
   const vp = document.getElementById('v-section-pin');
   if (vp) vp.classList.add('hidden');
   V.localOffset = 0;
+  const _rb = document.getElementById('v-resync-btn');
+  if (_rb) _rb.style.display = 'none';
   // Show arrangement notes to viewer
   const _vnb = document.getElementById('v-notes-banner');
   const _vnbt = document.getElementById('v-notes-banner-text');
@@ -4106,6 +4119,12 @@ function vStop() {
   if (V.wakeLock) { V.wakeLock.release().catch(() => {}); V.wakeLock = null; }
   document.getElementById('v-live-pill').style.display = 'none';
   document.getElementById('v-veil').classList.remove('open');
+}
+
+function vResync() {
+  V.localOffset = 0;
+  const btn = document.getElementById('v-resync-btn');
+  if (btn) btn.style.display = 'none';
 }
 
 // Fix 2: resync playback position when tab returns from background (iOS Safari pauses performance.now())
