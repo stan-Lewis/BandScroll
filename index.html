@@ -523,6 +523,7 @@ textarea{resize:vertical;}
   color:#a3e635;
   text-shadow:0 0 18px rgba(163,230,53,0.45);
 }
+/* Final section state handled by .final-section rule above */
 .ll.section.sect-upcoming{
   opacity:0.55;
 }
@@ -905,6 +906,18 @@ html[data-theme="light"] {
   border-top-color:rgba(163,230,53,0.45);border-bottom-color:rgba(163,230,53,0.45);
   color:#a3e635;
   text-shadow:0 0 18px rgba(163,230,53,0.45);
+}
+/* Final section — amber pulse to signal song is ending */
+.ll.ann-section.final-section.active-ann,
+.ll.section.sect-active.final-section {
+  background:linear-gradient(90deg,rgba(245,158,11,0.08) 0%,rgba(245,158,11,0.24) 50%,rgba(245,158,11,0.08) 100%);
+  border-top-color:rgba(245,158,11,0.5);border-bottom-color:rgba(245,158,11,0.5);
+  color:#f59e0b;text-shadow:0 0 20px rgba(245,158,11,0.5);
+  animation:final-section-pulse 1.6s ease-in-out infinite;
+}
+@keyframes final-section-pulse{
+  0%,100%{border-top-color:rgba(245,158,11,0.3);border-bottom-color:rgba(245,158,11,0.3);}
+  50%{border-top-color:rgba(245,158,11,0.75);border-bottom-color:rgba(245,158,11,0.75);background:linear-gradient(90deg,rgba(245,158,11,0.1) 0%,rgba(245,158,11,0.32) 50%,rgba(245,158,11,0.1) 100%);}
 }
 .ll.ann.active-ann{opacity:1;text-shadow:0 0 22px rgba(245,158,11,0.35);}
 .ll.ann{
@@ -3638,8 +3651,20 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
               isActive = false; break;
             }
           }
-          if (isActive) { el.classList.remove('past'); el.classList.add('active-ann'); }
-          else { el.classList.add('past'); }
+          if (isActive) {
+            el.classList.remove('past'); el.classList.add('active-ann');
+            // Is this the very last section in the song? → final-section pulse
+            let isFinal = true;
+            for (let k = i+1; k < lines.length; k++) {
+              if ((lines[k].type === 'annotation' && lines[k].annType === 'section' && lines[k].t != null)
+                  || (lines[k].type === 'section' && lines[k].t != null)) {
+                isFinal = false; break;
+              }
+            }
+            el.classList.toggle('final-section', isFinal);
+          } else {
+            el.classList.add('past'); el.classList.remove('final-section');
+          }
         }
       } else {
         // Non-section annotations: active window of 6 seconds
@@ -3661,7 +3686,20 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
             isActive = false; break;
           }
         }
-        el.classList.add(isActive ? 'sect-active' : 'sect-past');
+        if (isActive) {
+          el.classList.add('sect-active');
+          // Final section detection
+          let isFinal = true;
+          for (let k = i+1; k < lines.length; k++) {
+            if ((lines[k].type === 'section' && lines[k].t != null)
+                || (lines[k].type === 'annotation' && lines[k].annType === 'section' && lines[k].t != null)) {
+              isFinal = false; break;
+            }
+          }
+          el.classList.toggle('final-section', isFinal);
+        } else {
+          el.classList.add('sect-past'); el.classList.remove('final-section');
+        }
       } else {
         el.classList.add('sect-upcoming');
       }
