@@ -3709,13 +3709,24 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
   // Measure actual DOM position of active element AFTER classes are applied
   // (active-lead class makes the active line larger, so offsetTop must be read after styling)
   const activeEl = els[ai];
+
+  // After the last lyric, keep drifting downward so it's clear the song is still playing
+  // (without this the belt freezes on the last line for potentially minutes)
+  let _postLyricDrift = 0;
+  const _lastTimedLyric = [...lines].reverse().find(l => l.type === 'lyric' && l.t != null);
+  if (_lastTimedLyric && songTime > _lastTimedLyric.t + 1) {
+    const _lineH = APP._cachedLineH || LINE_H;
+    // Drift at ~0.4 line-heights per second after the last lyric fires
+    _postLyricDrift = Math.min((songTime - _lastTimedLyric.t - 1) * _lineH * 0.4, wrapH * 0.45);
+  }
+
   if (activeEl && activeEl.offsetHeight > 0) {
     const centerOfActive = activeEl.offsetTop + activeEl.offsetHeight / 2;
-    belt.style.transform = `translateY(${cursorY - centerOfActive}px)`;
+    belt.style.transform = `translateY(${cursorY - centerOfActive - _postLyricDrift}px)`;
   } else {
     // Fallback for first frame before layout is ready
     const lineH = APP._cachedLineH || LINE_H;
-    belt.style.transform = `translateY(${cursorY - ai * lineH}px)`;
+    belt.style.transform = `translateY(${cursorY - ai * lineH - _postLyricDrift}px)`;
   }
 
     // ── Confidence Monitor: update big-text overlay in real time ──
