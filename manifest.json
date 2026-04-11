@@ -1,0 +1,19 @@
+{
+  "name": "BandScroll",
+  "short_name": "BandScroll",
+  "description": "Live lyric teleprompter for bands — scroll lyrics in sync across all devices",
+  "start_url": "/BandScroll/",
+  "scope": "/BandScroll/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

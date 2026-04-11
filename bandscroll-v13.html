@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <title>BandScroll v13</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+<link rel="apple-touch-icon" href="icon.svg">
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -1574,6 +1577,36 @@ html[data-theme="light"] {
 .tidy-panel .transpose-display{font-family:'JetBrains Mono',monospace!important;font-size:1rem!important;color:var(--lime)!important;min-width:24px;text-align:center;}
 #tidy-bpm-panel{min-width:200px;}
 
+/* ── Key / Capo stage badges ── */
+.stage-badge{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-weight:700;border-radius:4px;white-space:nowrap;vertical-align:middle;letter-spacing:0.05em;}
+.key-badge{font-size:0.6rem;padding:0.08rem 0.38rem;background:rgba(163,230,53,0.12);border:1px solid rgba(163,230,53,0.3);color:#a3e635;margin-left:5px;}
+.capo-badge{font-size:0.6rem;padding:0.08rem 0.38rem;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;margin-left:4px;}
+.v-song-hdr .key-badge,.v-song-hdr .capo-badge{font-size:clamp(0.65rem,3vw,1rem);padding:0.15rem 0.5rem;margin-left:6px;}
+/* ── Countdown veil meta (key/capo) ── */
+.veil-meta{display:flex;gap:0.5rem;justify-content:center;margin-top:0.7rem;flex-wrap:wrap;}
+.veil-meta span{font-family:'JetBrains Mono',monospace;font-size:clamp(0.9rem,3vw,1.2rem);padding:0.2rem 0.7rem;border-radius:5px;letter-spacing:0.06em;}
+.veil-meta .key-m{background:rgba(163,230,53,0.18);color:#a3e635;border:1px solid rgba(163,230,53,0.35);}
+.veil-meta .capo-m{background:rgba(251,191,36,0.18);color:#fbbf24;border:1px solid rgba(251,191,36,0.35);}
+/* ── Setlist summary print table ── */
+.pf-sl-table{width:100%;border-collapse:collapse;margin-top:1rem;}
+.pf-sl-table th{text-align:left;padding:0.4rem 0.6rem;border-bottom:2px solid #333;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#444;}
+.pf-sl-table td{padding:0.35rem 0.6rem;border-bottom:1px solid #e0e0e0;font-size:0.88rem;}
+.pf-sl-table tr:nth-child(even) td{background:#f9f9f9;}
+.pf-sl-num{color:#999;font-size:0.75rem;font-family:monospace;}
+.pf-k{display:inline-block;padding:0.1rem 0.4rem;border-radius:3px;font-family:monospace;font-size:0.72rem;background:#e8f5d0;color:#2d6a00;font-weight:700;}
+.pf-c{display:inline-block;padding:0.1rem 0.4rem;border-radius:3px;font-family:monospace;font-size:0.72rem;background:#fff3cd;color:#856404;font-weight:700;}
+/* ── Landscape mobile optimisation ── */
+@media(orientation:landscape)and(max-height:500px){
+  .v-appbar{height:30px!important;padding:0 0.4rem!important;}
+  .v-lobby{padding:0.15rem 0.8rem!important;}
+  .v-lobby-label{display:none!important;}
+  .v-lobby-members{font-size:0.48rem!important;}
+  .v-song-hdr{font-size:clamp(0.6rem,3.5vw,0.9rem)!important;padding:0.1rem 0.5rem 0!important;}
+  .v-scrub-bar{padding:0.15rem 0.5rem!important;}
+  #v-stage{flex:1!important;}
+  .v-song-hdr .key-badge,.v-song-hdr .capo-badge{font-size:0.62rem!important;padding:0.08rem 0.3rem!important;}
+}
+
 </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -1695,7 +1728,8 @@ html[data-theme="light"] {
           <div class="sp-section">Song</div>
           <div class="sp-row"><button onclick="openModal('share-modal');toggleSettings()">🔗 Share room</button></div>
           <div class="sp-row"><button onclick="openModal('data-modal');toggleSettings()">💾 Backup / Import</button></div>
-          <div class="sp-row"><button onclick="exportSongPdf();toggleSettings()">📄 Export song PDF</button></div>
+          <div class="sp-row"><button onclick="exportSongPdf();toggleSettings()">📄 Export chord sheet</button></div>
+          <div class="sp-row"><button onclick="printSetlistSummary();toggleSettings()">🗒 Print setlist</button></div>
           <div class="sp-divider"></div>
           <div class="sp-section">Display</div>
           <div class="sp-row"><button onclick="toggleFullscreen()">⧆ Fullscreen <span style="opacity:0.4;font-size:0.7em;">(F)</span></button></div>
@@ -1807,7 +1841,7 @@ html[data-theme="light"] {
     <div class="main-area">
       <div class="transport">
         <div class="t-info">
-          <div class="t-title" id="t-title">No song loaded</div><span class="c-section-label" id="c-section-label"></span>
+          <div class="t-title" id="t-title">No song loaded</div><span class="c-section-label" id="c-section-label"></span><span id="t-key-badge" class="stage-badge key-badge" style="display:none;"></span><span id="t-capo-badge" class="stage-badge capo-badge" style="display:none;"></span>
           <div class="t-next" id="t-next"></div>
           <button id="auto-play-btn" class="btn btn-ghost btn-sm" onclick="toggleAutoPlay()" title="Auto-play next song" style="font-size:0.6rem;padding:0.15rem 0.4rem;opacity:0.5;margin-top:0.1rem;">▶▶ AUTO</button>
         </div>
@@ -1953,6 +1987,7 @@ html[data-theme="light"] {
         <div class="veil" id="c-veil">
           <div class="veil-num" id="c-veil-num">5</div>
           <div class="veil-song" id="c-veil-song"></div>
+          <div class="veil-meta" id="c-veil-meta"></div>
         </div>
       </div>
       <!-- TAB STAGE (conductor) -->
@@ -2017,7 +2052,7 @@ html[data-theme="light"] {
     </div>
     <div class="prog-track"><div class="prog-fill" id="v-prog-fill"></div></div>
   </div>
-  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span></div>
+  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span><span id="v-key-badge" class="stage-badge key-badge" style="display:none;"></span><span id="v-capo-badge" class="stage-badge capo-badge" style="display:none;"></span></div>
   <div class="stage" id="v-stage" style="flex:1;">
     <div class="cursor" id="v-cursor"></div>
     <div class="belt-wrap" id="v-belt-wrap">
@@ -2041,6 +2076,7 @@ html[data-theme="light"] {
     <div class="veil" id="v-veil">
       <div class="veil-num" id="v-veil-num">5</div>
       <div class="veil-song" id="v-veil-song"></div>
+      <div class="veil-meta" id="v-veil-meta"></div>
     </div>
   </div>
   <!-- TAB STAGE (viewer) -->
@@ -2570,7 +2606,20 @@ function initAbly(code) {
       d.title = state === 'connected' ? 'Synced ✓' : state === 'disconnected' ? 'Lost connection — retrying…' : 'Connecting…';
     }
     // Hook into connected to also update dot for viewer
-    _ablyClient.connection.on('connected', () => { if (APP.role === 'viewer') _setSyncDot('connected'); });
+    _ablyClient.connection.on('connected', () => {
+      if (APP.role === 'viewer') {
+        _setSyncDot('connected');
+        // On reconnection (V.song set means we've been connected before), re-announce presence
+        if (APP.roomCode) {
+          const _vn = document.getElementById('v-name-pill')?.textContent || 'Band Member';
+          // Small delay to ensure channel is re-subscribed before emitting
+          setTimeout(() => {
+            emit({ type: 'presence', role: 'viewer', name: _vn, clientId: _myClientId });
+          }, 600);
+          if (V.song) toast('🔄 Back online');
+        }
+      }
+    });
 
     _ablyChannel.subscribe(msg => {
       if (msg.clientId === _myClientId) return; // ignore own messages
@@ -3357,6 +3406,11 @@ function loadSong(id) {
   if (_spdSlider) _spdSlider.value = _savedSpd;
 
   document.getElementById('t-title').textContent = song.title;
+  // Key/capo badges on conductor stage
+  const _tkb = document.getElementById('t-key-badge');
+  const _tcb = document.getElementById('t-capo-badge');
+  if (_tkb) { _tkb.textContent = song.key || ''; _tkb.style.display = song.key ? '' : 'none'; }
+  if (_tcb) { _tcb.textContent = song.capo ? 'CAPO\u00a0' + song.capo : ''; _tcb.style.display = song.capo ? '' : 'none'; }
 
   // Next song preview
   const ids = getSetlistSongIds();
@@ -3844,6 +3898,9 @@ function startCountdown() {
   const veil = document.getElementById('c-veil');
   const numEl = document.getElementById('c-veil-num');
   document.getElementById('c-veil-song').textContent = song.title.toUpperCase();
+  // Show key/capo in countdown veil
+  const _cvm = document.getElementById('c-veil-meta');
+  if (_cvm) { const _mp=[]; if(song.key)_mp.push(`<span class="key-m">${esc(song.key)}</span>`); if(song.capo)_mp.push(`<span class="capo-m">CAPO ${song.capo}</span>`); _cvm.innerHTML=_mp.join(''); }
   veil.classList.add('open');
   let count=5; numEl.textContent=count; bumpEl(numEl);
   // Use server-synced time so all devices count from the same reference
@@ -3930,11 +3987,15 @@ function autoAdvance() {
   const ids=getSetlistSongIds();
   const i=ids.indexOf(APP.currentId);
   if(i>=0&&i<ids.length-1) {
+    const _nextSong = getSong(ids[i+1]);
+    if (_nextSong) toast('⏭ Next up: ' + _nextSong.title + (_nextSong.key ? '  · ' + _nextSong.key : '') + (_nextSong.capo ? '  · CAPO ' + _nextSong.capo : ''));
     _autoAdvanceTimer = setTimeout(()=>{
       _autoAdvanceTimer=null;
       loadSong(ids[i+1]);
       if (_autoPlayNext) { setTimeout(() => togglePlay(), 400); }
     },1200);
+  } else if (i === ids.length - 1) {
+    toast('✓ End of setlist');
   }
 }
 
@@ -4158,6 +4219,11 @@ function vLoad(song) {
   }
   document.getElementById('v-song-title').textContent =
     `${song.title}${song.artist?' — '+song.artist:''}`;
+  // Key/capo badges on viewer stage
+  const _vkb = document.getElementById('v-key-badge');
+  const _vcb = document.getElementById('v-capo-badge');
+  if (_vkb) { _vkb.textContent = song.key || ''; _vkb.style.display = song.key ? '' : 'none'; }
+  if (_vcb) { _vcb.textContent = song.capo ? 'CAPO\u00a0' + song.capo : ''; _vcb.style.display = song.capo ? '' : 'none'; }
   document.getElementById('v-song-hdr').classList.add('show');
   const belt = document.getElementById('v-belt');
   belt.style.display = '';
@@ -4207,6 +4273,9 @@ function vStartCD(wallStart, song, conductorOffset) {
   const delay = wallStart - serverNow();
   document.getElementById('v-live-pill').style.display = '';
   document.getElementById('v-veil-song').textContent = (V.song.title || '').toUpperCase();
+  // Show key/capo in viewer countdown veil
+  const _vvm = document.getElementById('v-veil-meta');
+  if (_vvm) { const _vmp=[]; if(V.song.key)_vmp.push(`<span class="key-m">${esc(V.song.key)}</span>`); if(V.song.capo)_vmp.push(`<span class="capo-m">CAPO ${V.song.capo}</span>`); _vvm.innerHTML=_vmp.join(''); }
   const veil = document.getElementById('v-veil');
   const numEl = document.getElementById('v-veil-num');
   if (delay > 300) {
@@ -6131,13 +6200,29 @@ function _watchBpmDisplay(){
 }
 
 /* ═══════════ F5 PDF EXPORT ═══════════ */
+function printSetlistSummary(){
+  const ids=getSetlistSongIds();
+  const songs=ids.map(id=>getSong(id)).filter(Boolean);
+  if(!songs.length){toast('No songs in setlist');return;}
+  const frame=document.getElementById('print-frame');if(!frame)return;
+  const totalDur=songs.reduce((s,sg)=>s+(sg.duration||0),0);
+  let html=`<div class="pf-title">Setlist</div><div class="pf-artist">${songs.length} songs · Total: ${fmtTime(Math.round(totalDur))}</div>`;
+  html+=`<table class="pf-sl-table"><thead><tr><th>#</th><th>Title</th><th>Artist</th><th>Key</th><th>Capo</th><th>Duration</th></tr></thead><tbody>`;
+  songs.forEach((s,i)=>{
+    html+=`<tr><td class="pf-sl-num">${i+1}</td><td><strong>${esc(s.title||'Untitled')}</strong></td><td>${esc(s.artist||'—')}</td><td>${s.key?`<span class="pf-k">${esc(s.key)}</span>`:'—'}</td><td>${s.capo?`<span class="pf-c">Capo ${s.capo}</span>`:'—'}</td><td>${s.duration?fmtTime(Math.round(s.duration)):'—'}</td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  frame.innerHTML=html;frame.style.display='block';
+  setTimeout(()=>{window.print();frame.style.display='none';},80);
+}
 function exportSongPdf(){
   const song=getSong(APP.currentId);if(!song){toast('Load a song first');return;}
   const frame=document.getElementById('print-frame');if(!frame)return;
-  let html=`<div class="pf-title">${esc(song.title||'Untitled')}</div><div class="pf-artist">${esc(song.artist||'')}${song.duration?' · '+fmtTime(song.duration):''}</div>`;
+  const _meta=[song.artist||'',song.key?'Key: '+song.key:'',song.capo?'Capo '+song.capo:'',song.duration?fmtTime(song.duration):''].filter(Boolean).join(' · ');
+  let html=`<div class="pf-title">${esc(song.title||'Untitled')}</div><div class="pf-artist">${esc(_meta)}</div>`;
   (song.lines||[]).forEach(l=>{
     if(l.type==='section')html+=`<div class="pf-section">${esc(l.text)}</div>`;
-    else if(l.type==='lyric'){if(l.chords)html+=`<div class="pf-chords">${esc(_getTransposedChords(l.chords))}</div>`;html+=`<div class="pf-lyric">${esc(l.text||'')}</div>`;if(l.tabNote)html+=`<pre class="pf-tab">${esc(l.tabNote)}</pre>`;}
+    else if(l.type==='lyric'){if(l.chords)html+=`<div class="pf-chords">${esc(_getTransposedChords(_renderChordRow(l.chords,l.text||'')))}</div>`;html+=`<div class="pf-lyric">${esc(l.text||'')}</div>`;if(l.tabNote)html+=`<pre class="pf-tab">${esc(l.tabNote)}</pre>`;}
   });
   if(song.arrNotes)html+=`<div style="margin-top:1rem;color:#777;font-size:0.82rem">📝 ${esc(song.arrNotes)}</div>`;
   frame.innerHTML=html;frame.style.display='block';
@@ -6314,6 +6399,46 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tidyInit);
   else tidyInit();
 })();
+
+// ── Pinch-to-zoom for viewer lyrics ──
+;(function(){
+  let _pd=null,_vz=1;
+  const MIN=0.55,MAX=2.8;
+  function applyZoom(z){
+    const b=document.getElementById('v-belt');
+    if(b)b.style.fontSize=z===1?'':Math.round(z*100)+'%';
+  }
+  function setup(){
+    const bw=document.getElementById('v-belt-wrap');if(!bw)return;
+    bw.addEventListener('touchstart',e=>{
+      if(e.touches.length===2)
+        _pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    },{passive:true});
+    bw.addEventListener('touchmove',e=>{
+      if(e.touches.length!==2||_pd===null)return;
+      const nd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _vz=Math.min(MAX,Math.max(MIN,_vz*(nd/_pd)));
+      _pd=nd;
+      applyZoom(_vz);
+      try{localStorage.setItem('bs_v_zoom',_vz);}catch(e){}
+    },{passive:true});
+    bw.addEventListener('touchend',()=>{_pd=null;},{passive:true});
+  }
+  // Restore saved zoom level
+  try{
+    const s=parseFloat(localStorage.getItem('bs_v_zoom')||'1');
+    if(s>0.5&&s<3){_vz=s;}
+  }catch(e){}
+  document.addEventListener('DOMContentLoaded',()=>{setup();applyZoom(_vz);});
+})();
+
+// ── Service Worker (PWA/offline) ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js')
+      .catch(()=>{}); // Silently fail if not on HTTPS/same origin
+  });
+}
 </script>
 </body>
 </html>
