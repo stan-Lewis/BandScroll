@@ -3529,7 +3529,7 @@ function buildBelt(beltEl, lines) {
   lines.forEach((line,i) => {
     const div = document.createElement('div');
     let cls = 'll';
-    if (line.type==='section') cls+=' sect';
+    if (line.type==='section') cls+=' section';
     else if (line.type==='empty') cls+=' empty';
     else if (line.type==='annotation') cls+=' ann' + (line.annType ? ' ann-'+line.annType : '');
     div.className = cls;
