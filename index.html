@@ -490,17 +490,42 @@ textarea{resize:vertical;}
   transition:color 0.22s, font-size 0.22s, opacity 0.22s, text-shadow 0.22s;
   user-select:none;
 }
-/* SECTION HEADER */
+/* SECTION HEADER — full-width banner */
 .ll.section{
   font-family:'JetBrains Mono',monospace;
-  font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;
-  color:var(--lime-dim);opacity:0.65;margin-top:0.35rem;
-  transition:opacity 0.3s, color 0.3s;
+  font-size:0.62rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:700;
+  text-align:center;
+  /* Break out of belt's horizontal padding for full bleed */
+  margin-left:clamp(-5rem,-6vw,-1rem);
+  margin-right:clamp(-5rem,-6vw,-1rem);
+  padding:0.55rem clamp(1rem,6vw,5rem);
+  margin-top:0.7rem;margin-bottom:0.2rem;
+  /* Orange banner — upcoming / default */
+  background:linear-gradient(90deg,rgba(251,146,60,0.06) 0%,rgba(251,146,60,0.16) 50%,rgba(251,146,60,0.06) 100%);
+  border-top:1px solid rgba(251,146,60,0.3);
+  border-bottom:1px solid rgba(251,146,60,0.3);
+  color:#fb923c;
+  transition:opacity 0.3s,color 0.3s,background 0.3s,border-color 0.3s,text-shadow 0.3s;
 }
 /* Section belt states during play */
-.ll.section.sect-past{opacity:0.18;color:var(--lime-dim);}
-.ll.section.sect-active{opacity:1;color:var(--lime);text-shadow:0 0 12px rgba(163,230,53,0.5);}
-.ll.section.sect-upcoming{opacity:0.45;color:var(--lime-dim);}
+.ll.section.sect-past{
+  opacity:0.18;
+  background:linear-gradient(90deg,rgba(251,146,60,0.02) 0%,rgba(251,146,60,0.06) 50%,rgba(251,146,60,0.02) 100%);
+  border-top-color:rgba(251,146,60,0.1);
+  border-bottom-color:rgba(251,146,60,0.1);
+  color:#fb923c;
+}
+.ll.section.sect-active{
+  opacity:1;
+  background:linear-gradient(90deg,rgba(163,230,53,0.06) 0%,rgba(163,230,53,0.2) 50%,rgba(163,230,53,0.06) 100%);
+  border-top-color:rgba(163,230,53,0.45);
+  border-bottom-color:rgba(163,230,53,0.45);
+  color:#a3e635;
+  text-shadow:0 0 18px rgba(163,230,53,0.45);
+}
+.ll.section.sect-upcoming{
+  opacity:0.55;
+}
 .ll.empty{opacity:0;font-size:0.4rem !important;}
 
 /* LINE STATES */
