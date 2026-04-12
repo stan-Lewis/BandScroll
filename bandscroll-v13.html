@@ -2506,7 +2506,7 @@ function _persistNow() {
       if (t.pdfData && !t.pdfData.startsWith('__idb:')) {
         // Save PDF to IDB and use placeholder
         const key = song.id + '_' + inst;
-        idbPut(key, t.pdfData).catch(()=>{});
+        idbPut(key, t.pdfData).catch(()=>{ toast('PDF tab could not be saved'); });
         tabs[inst] = Object.assign({}, t, { pdfData: '__idb:' + key });
       } else {
         tabs[inst] = t;
@@ -2732,22 +2732,28 @@ function onBC(msg) {
   if (APP.role !== 'viewer') return;
   if (msg.type === 'load') vLoad(msg.song);
   else if (msg.type === 'play') {
+    if (typeof msg.wallStart !== 'number' || !isFinite(msg.wallStart)) return;
     // Fix 5: queue if song not yet loaded (Ably doesn't guarantee message order)
     if (!V.song) { _pendingPlay = msg; }
     else { vStartCD(msg.wallStart, msg.song, msg.conductorOffset); }
   }
   else if (msg.type === 'stop') vStop();
-  else if (msg.type === 'seek') vSeek(msg.wallStart, msg.songTime, msg.conductorOffset);
+  else if (msg.type === 'seek') {
+    if (typeof msg.wallStart !== 'number' || !isFinite(msg.wallStart)) return;
+    vSeek(msg.wallStart, msg.songTime, msg.conductorOffset);
+  }
   else if (msg.type === 'speed') {
-    _speedMult.v = msg.speed;
+    const spd = Number(msg.speed); if (!isFinite(spd) || spd <= 0) return;
+    _speedMult.v = spd;
     const el = document.getElementById('v-speed-val');
-    if (el) el.textContent = msg.speed.toFixed(2) + '×';
+    if (el) el.textContent = spd.toFixed(2) + '×';
     const sl = document.getElementById('v-speed-slider');
-    if (sl) sl.value = msg.speed;
+    if (sl) sl.value = spd;
   }
   else if (msg.type === 'transpose') {
+    const steps = Number(msg.steps); if (!isFinite(steps)) return;
     // Fix 4: apply conductor's transpose to viewer
-    _transposeSteps = msg.steps;
+    _transposeSteps = steps;
     const d = document.getElementById('transpose-display');
     if (d) d.textContent = (_transposeSteps > 0 ? '+' : '') + _transposeSteps;
     _rerenderTransposed();
@@ -2887,7 +2893,7 @@ let _lsInterval = null;
 function doJoin() {
   const code = document.getElementById('v-code').value.trim().toUpperCase();
   const name = document.getElementById('v-name').value.trim() || 'Band Member';
-  if (code.length < 4) { toast('Enter a valid code'); return; }
+  if (code.length < 4 || code.length > 12 || !/^[A-Z0-9]+$/.test(code)) { toast('Enter a valid room code'); return; }
   APP.role = 'viewer';
   APP.roomCode = code;
   document.getElementById('v-name-pill').textContent = name;
@@ -2992,7 +2998,7 @@ async function pickResult(i) {
       <span id="chord-ai-status-${esc(song.id)}" style="display:none;font-size:0.75rem;color:#a3e635;margin-top:0.4rem;display:block;"></span>
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div class="search-status" style="color:var(--red);">❌ Failed. Try another result. (${e.message})</div>`;
+    el.innerHTML = `<div class="search-status" style="color:var(--red);">❌ Failed. Try another result. (${esc(e.message)})</div>`;
   }
 }
 
@@ -3450,6 +3456,7 @@ function _migrateIntroSections() { /* intentionally empty */ }
 function loadSong(id) {
   if (_autoAdvanceTimer) { clearTimeout(_autoAdvanceTimer); _autoAdvanceTimer = null; }
   stopPlay();
+  clearLoop();
   APP.currentId = id;
   const song = getSong(id);
   if (!song) return;
@@ -3626,6 +3633,18 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
     belt.style.paddingBottom = cursorY + 'px';
   const els = belt.querySelectorAll('.ll');
 
+  // Pre-compute active section and last section indices in O(n) — avoids O(n²) inner loops
+  let _activeSectIdx = -1, _lastSectIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    const isSect = (l.type === 'section' && l.t != null)
+      || (l.type === 'annotation' && l.annType === 'section' && l.t != null);
+    if (isSect) {
+      _lastSectIdx = i;
+      if (songTime >= l.t) _activeSectIdx = i;
+    }
+  }
+
   // Apply state classes FIRST so active-lead enlargement is reflected in DOM before measurement
     els.forEach((el,i) => {
     const line = lines[i];
@@ -3639,32 +3658,12 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
       else el.classList.add('upcoming');
 
     } else if (line.type==='annotation') {
-      el.classList.remove('past','active-ann');
+      el.classList.remove('past','active-ann','final-section');
       if (line.t!=null && songTime >= line.t) el.classList.add('past');
       if (line.annType === 'section') {
-        // Section annotations: stay active from when they fire until the NEXT section fires
-        if (line.t != null && songTime >= line.t) {
-          let isActive = true;
-          for (let k = i+1; k < lines.length; k++) {
-            if (lines[k].type === 'annotation' && lines[k].annType === 'section'
-                && lines[k].t != null && songTime >= lines[k].t) {
-              isActive = false; break;
-            }
-          }
-          if (isActive) {
-            el.classList.remove('past'); el.classList.add('active-ann');
-            // Is this the very last section in the song? → final-section pulse
-            let isFinal = true;
-            for (let k = i+1; k < lines.length; k++) {
-              if ((lines[k].type === 'annotation' && lines[k].annType === 'section' && lines[k].t != null)
-                  || (lines[k].type === 'section' && lines[k].t != null)) {
-                isFinal = false; break;
-              }
-            }
-            el.classList.toggle('final-section', isFinal);
-          } else {
-            el.classList.add('past'); el.classList.remove('final-section');
-          }
+        if (i === _activeSectIdx) {
+          el.classList.remove('past'); el.classList.add('active-ann');
+          el.classList.toggle('final-section', i === _lastSectIdx);
         }
       } else {
         // Non-section annotations: active window of 6 seconds
@@ -3674,32 +3673,14 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
         }
       }
     } else if (line.type==='section') {
-      el.classList.remove('sect-past','sect-active','sect-upcoming');
+      el.classList.remove('sect-past','sect-active','sect-upcoming','final-section');
       if (line.t == null) {
         el.classList.add('sect-upcoming');
+      } else if (i === _activeSectIdx) {
+        el.classList.add('sect-active');
+        el.classList.toggle('final-section', i === _lastSectIdx);
       } else if (songTime >= line.t) {
-        // Check if a later section has started — if so, this one is past
-        let isActive = true;
-        for (let k = i+1; k < lines.length; k++) {
-          if ((lines[k].type==='section' || (lines[k].type==='annotation' && lines[k].annType==='section'))
-              && lines[k].t != null && songTime >= lines[k].t) {
-            isActive = false; break;
-          }
-        }
-        if (isActive) {
-          el.classList.add('sect-active');
-          // Final section detection
-          let isFinal = true;
-          for (let k = i+1; k < lines.length; k++) {
-            if ((lines[k].type === 'section' && lines[k].t != null)
-                || (lines[k].type === 'annotation' && lines[k].annType === 'section' && lines[k].t != null)) {
-              isFinal = false; break;
-            }
-          }
-          el.classList.toggle('final-section', isFinal);
-        } else {
-          el.classList.add('sect-past'); el.classList.remove('final-section');
-        }
+        el.classList.add('sect-past');
       } else {
         el.classList.add('sect-upcoming');
       }
@@ -3750,10 +3731,16 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 //  Returns song.lines with annotation objects interspersed
 // ══════════════════════════════════════════════════════════
 function mergeAnnotations(song) {
+  // Memoize: annotations don't change during playback
+  const linesLen = (song.lines || []).length;
+  const annsLen = (song.annotations || []).length;
+  const cacheKey = song.id + '|' + linesLen + '|' + annsLen;
+  if (song._mergedKey === cacheKey && song._mergedLines) return song._mergedLines;
+
   // Strip annotation lines already in lines[] — idempotent for band members
   const base = (song.lines || []).filter(l => l.type !== 'annotation');
   const anns = (song.annotations || []).filter(a => a.text && a.text.trim());
-  if (!anns.length) return base;
+  if (!anns.length) { song._mergedKey = cacheKey; song._mergedLines = base; return base; }
 
   // Build combined list sorted by time
   const combined = [
@@ -3769,6 +3756,7 @@ function mergeAnnotations(song) {
     const bIsAnn = b.type === 'annotation' ? 0 : 1;
     return aIsAnn - bIsAnn;
   });
+  song._mergedKey = cacheKey; song._mergedLines = combined;
   return combined;
 }
 
@@ -3814,9 +3802,12 @@ function _setDetached(val) {
 // ── Viewer belt touch-scroll (mobile) ──
 (function() {
   let _vTouchY = null;
+  let _vTouchBound = false;
   function setupViewerTouch() {
+    if (_vTouchBound) return;
     const bw = document.getElementById('v-belt-wrap');
     if (!bw) return;
+    _vTouchBound = true;
     bw.addEventListener('touchstart', e => {
       _vTouchY = e.touches[0].clientY;
     }, { passive: true });
@@ -3980,6 +3971,7 @@ function _seekTo(t) {
 }
 
 // ── PLAYBACK ──
+let _countdownIv = null;
 function togglePlay() {
   if (APP.isPlaying) stopPlay();
   else startCountdown();
@@ -3999,9 +3991,10 @@ function startCountdown() {
   // Use server-synced time so all devices count from the same reference
   const wallStart = serverNow() + 5000;
   emit({ type:'play', wallStart, song: serializeSong(song), conductorOffset: APP.offsetAdj });
-  const iv = setInterval(()=>{
+  if (_countdownIv) clearInterval(_countdownIv);
+  _countdownIv = setInterval(()=>{
     count--;
-    if(count<=0){ clearInterval(iv); veil.classList.remove('open'); beginPlay(song,wallStart); }
+    if(count<=0){ clearInterval(_countdownIv); _countdownIv=null; veil.classList.remove('open'); beginPlay(song,wallStart); }
     else { numEl.textContent=count; bumpEl(numEl); }
   },1000);
 }
@@ -4031,26 +4024,29 @@ function beginPlay(song, wallStart) {
   const lines = mergeAnnotations(song);
   const tick=(now)=>{
     if(!APP.isPlaying) return;
-    const t = (now-APP.playStartPN)/1000 + APP.offsetAdj;
-    const cl = Math.max(0,Math.min(t,dur));
-    if (!APP.scrubbing) _updateScrub(cl, dur);
-    updateSectionPin('c', lines, cl);
-    _updateLyricLineProg('c', lines, cl);
-    // Update tab view and lyric overlay if in tab mode
-    if (_currentView.c !== 'lyrics') {
-      updateTabView('c', cl * _speedMult.c);
-      updateTabLyricOverlay('c', lines, cl);
-    }
-          positionBelt('c-belt','c-belt-wrap','c-cursor', lines, cl);
-    // A-B loop
-    if(_loopB>0 && cl>=_loopB && _loopA>=0){ APP.offsetAdj=_loopA; APP.playStartPN=performance.now(); }
-    if(t * _speedMult.c > dur + 1){ stopPlay(); autoAdvance(); return; }
+    try {
+      const t = (now-APP.playStartPN)/1000 + APP.offsetAdj;
+      const cl = Math.max(0,Math.min(t,dur));
+      if (!APP.scrubbing) _updateScrub(cl, dur);
+      updateSectionPin('c', lines, cl);
+      _updateLyricLineProg('c', lines, cl);
+      // Update tab view and lyric overlay if in tab mode
+      if (_currentView.c !== 'lyrics') {
+        updateTabView('c', cl * _speedMult.c);
+        updateTabLyricOverlay('c', lines, cl);
+      }
+      positionBelt('c-belt','c-belt-wrap','c-cursor', lines, cl);
+      // A-B loop
+      if(_loopB>0 && cl>=_loopB && _loopA>=0){ APP.offsetAdj=_loopA; APP.playStartPN=performance.now(); }
+      if(t * _speedMult.c > dur + 1){ stopPlay(); autoAdvance(); return; }
+    } catch(err) { console.error('Conductor tick error:', err); }
     APP.raf = requestAnimationFrame(tick);
   };
   APP.raf = requestAnimationFrame(tick);
 }
 
 function stopPlay() {
+  if (_countdownIv) { clearInterval(_countdownIv); _countdownIv = null; }
   // Save timing offset back to song so it's restored next time
   const song = getSong(APP.currentId);
   if (song) {
@@ -4103,15 +4099,17 @@ function toggleAutoPlay() {
 }
 
 function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  const el = document.documentElement;
+  if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
     const b = document.getElementById('fs-btn'); if(b) b.textContent = '⧆ Exit';
   } else {
-    document.exitFullscreen && document.exitFullscreen();
+    (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
     const b = document.getElementById('fs-btn'); if(b) b.textContent = '⧆ Full';
   }
-  document.addEventListener('fullscreenchange', ()=>{
-    if(!document.fullscreenElement){const b=document.getElementById('fs-btn');if(b)b.textContent='⧆ Full';}
+  const fsEvent = 'onfullscreenchange' in document ? 'fullscreenchange' : 'webkitfullscreenchange';
+  document.addEventListener(fsEvent, ()=>{
+    if(!(document.fullscreenElement||document.webkitFullscreenElement)){const b=document.getElementById('fs-btn');if(b)b.textContent='⧆ Full';}
   }, {once:true});
 }
 
@@ -4122,19 +4120,26 @@ function toggleTheme() {
   const b = document.getElementById('theme-btn'); if(b) b.textContent = light ? '🌓' : '☀️';
 }
 
+let _settingsOutsideHandler = null;
+let _settingsTimeout = null;
 function toggleSettings(forceClose) {
   const pop = document.getElementById('settings-popover');
   if (!pop) return;
   const isOpen = pop.classList.contains('open');
   if (forceClose || isOpen) {
     pop.classList.remove('open');
-    document.removeEventListener('click', _settingsOutsideHandler);
+    if (_settingsTimeout) { clearTimeout(_settingsTimeout); _settingsTimeout = null; }
+    if (_settingsOutsideHandler) { document.removeEventListener('click', _settingsOutsideHandler); _settingsOutsideHandler = null; }
   } else {
     pop.classList.add('open');
     const d = document.getElementById('sp-fontsize-display');
     const src = document.getElementById('fontsize-display');
     if (d && src) d.textContent = src.textContent;
-    setTimeout(() => {
+    // Remove any stale handler before adding new one
+    if (_settingsOutsideHandler) { document.removeEventListener('click', _settingsOutsideHandler); _settingsOutsideHandler = null; }
+    if (_settingsTimeout) clearTimeout(_settingsTimeout);
+    _settingsTimeout = setTimeout(() => {
+      _settingsTimeout = null;
       _settingsOutsideHandler = (e) => {
         const w = document.getElementById('settings-wrap');
         if (w && !w.contains(e.target)) toggleSettings(true);
@@ -4143,7 +4148,6 @@ function toggleSettings(forceClose) {
     }, 0);
   }
 }
-let _settingsOutsideHandler = null;
 
 function filterBank(q) {
   const term = q.toLowerCase().trim();
@@ -4201,13 +4205,13 @@ function clearLoop(){
 // Viewer personal notes (localStorage)
 function saveViewerNote(text){
   const id=APP.currentId; if(!id) return;
-  const notes=JSON.parse(localStorage.getItem('bs_vnotes')||'{}');
+  let notes={}; try { notes=JSON.parse(localStorage.getItem('bs_vnotes')||'{}'); } catch(e) {}
   if(text.trim()) notes[id]=text; else delete notes[id];
   localStorage.setItem('bs_vnotes',JSON.stringify(notes));
 }
 function loadViewerNote(){
   const id=APP.currentId; if(!id) return;
-  const notes=JSON.parse(localStorage.getItem('bs_vnotes')||'{}');
+  let notes={}; try { notes=JSON.parse(localStorage.getItem('bs_vnotes')||'{}'); } catch(e) {}
   const ta=document.getElementById('viewer-notes-input');
   if(ta) ta.value=notes[id]||'';
 }
@@ -4299,6 +4303,9 @@ function vLoad(song) {
   const _wr = document.getElementById('v-wait-retry'); if (_wr) _wr.style.display = 'none';
   // Stop any ongoing playback before loading new song
   if (V.playing) vStop();
+  // Reset viewer offset from previous song
+  V.localOffset = 0;
+  const _rb = document.getElementById('v-resync-btn'); if (_rb) _rb.style.display = 'none';
   // If the received song has annotations, re-merge them into lines
   // to guarantee nothing is lost in transit
   song.lines = mergeAnnotations(song);
@@ -4405,17 +4412,19 @@ function vBegin(wallStart) {
   const dur = V.song.duration;
   const tick = (now) => {
     if (!V.playing) return;
-    const t = (now - V.startPN) / 1000 + V.conductorOffset + V.localOffset;
-    const cl = Math.max(0, Math.min(t, dur));
-    positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, cl);
-    _vUpdateScrub(cl, dur);
-    updateSectionPin('v', V.song.lines, cl);
-    _updateLyricLineProg('v', V.song.lines, cl);
-    if (_currentView.v !== 'lyrics') {
-      updateTabView('v', cl * _speedMult.v);
-      updateTabLyricOverlay('v', V.song.lines, cl);
-    }
-    if (t > dur + 1) { vStop(); return; }
+    try {
+      const t = (now - V.startPN) / 1000 + V.conductorOffset + V.localOffset;
+      const cl = Math.max(0, Math.min(t, dur));
+      positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, cl);
+      _vUpdateScrub(cl, dur);
+      updateSectionPin('v', V.song.lines, cl);
+      _updateLyricLineProg('v', V.song.lines, cl);
+      if (_currentView.v !== 'lyrics') {
+        updateTabView('v', cl * _speedMult.v);
+        updateTabLyricOverlay('v', V.song.lines, cl);
+      }
+      if (t > dur + 1) { vStop(); return; }
+    } catch(err) { console.error('Viewer tick error:', err); }
     V.raf = requestAnimationFrame(tick);
   };
   V.raf = requestAnimationFrame(tick);
@@ -4936,6 +4945,8 @@ function saveEdit() {
       capo:parseInt((document.getElementById('e-capo')||{value:0}).value)||0,
       tags:(document.getElementById('e-tags')||{value:''}).value.split(',').map(t=>t.trim()).filter(Boolean),
       color:(document.getElementById('e-color')||{value:'#6366f1'}).value});
+    // Invalidate mergeAnnotations cache after editing
+    delete s._mergedKey; delete s._mergedLines;
     // Preserve chords/tabNote from existing lines before rebuilding
     const _oldLines = s.lines || [];
     const _chordMap = {};
@@ -5246,7 +5257,7 @@ function importBank(inp) {
       const data = JSON.parse(e.target.result);
       if (!data.bank||!Array.isArray(data.bank)) throw new Error('Invalid format');
       let added=0;
-      data.bank.forEach(s=>{ if(!APP.bank.find(b=>b.id===s.id)){APP.bank.push(s);added++;} });
+      data.bank.forEach(s=>{ if(!s||!s.id||!s.title||!Array.isArray(s.lines)) return; if(!APP.bank.find(b=>b.id===s.id)){APP.bank.push(s);added++;} });
       if (data.setlists?.length) {
         data.setlists.forEach(sl=>{
           if(!APP.setlists.find(x=>x.id===sl.id)) APP.setlists.push(sl);
@@ -5284,10 +5295,10 @@ function updateShareUrl(){
   const qrImg = document.getElementById('sm-qr-img');
   if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?data='+encodeURIComponent(url)+'&size=156x156&margin=2';
 }
-function copyRoom(){navigator.clipboard.writeText(APP.roomCode).then(()=>toast('Code copied!'));}
+function copyRoom(){navigator.clipboard.writeText(APP.roomCode).then(()=>toast('Code copied!')).catch(()=>toast('Copy failed'));}
 function copyShareUrl(){
   const url=location.origin+location.pathname+'?room='+APP.roomCode;
-  navigator.clipboard.writeText(url).then(()=>toast('Link copied!'));
+  navigator.clipboard.writeText(url).then(()=>toast('Link copied!')).catch(()=>toast('Copy failed'));
 }
 function serializeSong(s){
   const mergedLines = mergeAnnotations(s);
@@ -5690,7 +5701,8 @@ function parseTime(str){
 function esc(str){
   return String(str||'')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 function toast(msg, dur){
   const t=document.getElementById('toast');
