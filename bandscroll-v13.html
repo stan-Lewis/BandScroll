@@ -6640,6 +6640,22 @@ async function _loadGroupData() {
       localStorage.setItem('bs4_group_mydata', JSON.stringify(_myGroupData));
     } catch(e) {}
     _groupLoaded = true;
+
+    // If a song is already on the belt, refresh it now to include member annotations
+    if (APP.currentId) {
+      const _beltSong = getSong(APP.currentId) || _groupSongs.find(s => s.id === APP.currentId);
+      if (_beltSong) {
+        _activeMemberAnns = _getMemberAnnsForSong(APP.currentId);
+        if (_activeMemberAnns.length > 0) {
+          delete _beltSong._mergedKey; delete _beltSong._mergedLines;
+          const _beltLines = mergeAnnotations(_beltSong);
+          buildBelt(document.getElementById('c-belt'), _beltLines);
+          const _beltT = APP.isPlaying && APP.playStartPN != null
+            ? Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj) : 0;
+          positionBelt('c-belt','c-belt-wrap','c-cursor', _beltLines, _beltT);
+        }
+      }
+    }
   } catch(e) {
     console.error('_loadGroupData:', e);
     // Try loading from cache
