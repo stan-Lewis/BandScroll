@@ -1681,6 +1681,14 @@ html[data-theme="light"] {
 .bg-song-note-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);flex-shrink:0;}
 .bg-member-row{display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border);margin-bottom:0.2rem;font-size:0.75rem;}
 .bg-member-name{flex:1;color:var(--text);}
+/* Member-private annotations — purple left border, subtle tint */
+.ll.ann.ann-member,.ll.ann-chord.ann-member,.ll.ann-note.ann-member,.ll.ann-section.ann-member{border-left:2px solid rgba(167,139,250,0.55);padding-left:0.55rem;background:rgba(139,92,246,0.045);}
+.ll.ann.ann-member::after,.ll.ann-chord.ann-member::after,.ll.ann-note.ann-member::after{content:'mine';font-size:0.45rem;letter-spacing:0.09em;opacity:0.42;margin-left:0.45rem;vertical-align:0.1em;font-style:normal;font-family:'JetBrains Mono',monospace;}
+/* When conductor is viewing a member's annotations */
+.ll.ann.ann-member.conductor-view::after{content:'member';}
+.bg-viewing-banner{font-size:0.62rem;font-family:'JetBrains Mono',monospace;color:#a78bfa;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.22);border-radius:6px;padding:0.3rem 0.6rem;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:space-between;gap:0.4rem;cursor:pointer;}
+.bg-ann-dot{width:6px;height:6px;border-radius:50%;background:#a78bfa;flex-shrink:0;}
+.btn-viewing{background:rgba(139,92,246,0.15)!important;border-color:rgba(167,139,250,0.5)!important;color:#a78bfa!important;}
 .bg-member-instr{font-size:0.62rem;color:var(--text-mid);font-family:'JetBrains Mono';}
 .bg-empty{font-size:0.78rem;color:var(--text-mid);padding:1.5rem 0;text-align:center;line-height:1.8;}
 .bg-pill{display:inline-flex;align-items:center;gap:0.3rem;background:var(--lime-glow);border:1px solid var(--lime-dim);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.62rem;color:var(--lime);font-family:'JetBrains Mono';margin-bottom:0.5rem;}
@@ -2474,6 +2482,29 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   </div>
 </div>
 
+<!-- ══════════ BAND GROUP — MEMBER ANNOTATION EDITOR ══════════ -->
+<div class="modal-bg" id="mbr-ann-modal">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="mbr-ann-modal-title">My Annotations</h3>
+    <div style="margin-bottom:0.5rem;font-size:0.7rem;color:var(--text-mid);line-height:1.6;">
+      Add chords, cues &amp; personal notes between lyrics. Only you (and optionally your conductor) can see these.
+    </div>
+    <div style="display:flex;gap:0.4rem;margin-bottom:0.6rem;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" onclick="addMbrAnn('chord')">＋ Chord / Key</button>
+      <button class="btn btn-ghost btn-sm" onclick="addMbrAnn('note')">＋ Cue / Note</button>
+      <button class="btn btn-ghost btn-sm" onclick="addMbrAnn('section')">＋ Section</button>
+    </div>
+    <div id="mbr-ann-list" class="ann-list" style="max-height:300px;overflow-y:auto;margin-bottom:0.5rem;"></div>
+    <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:0.5rem;">
+      Drag ⠿ to reorder · Click type badge to cycle: SECTION → CHORD → NOTE
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mbr-ann-modal')">Cancel</button>
+      <button class="btn btn-lime" onclick="saveMemberAnnotations()">Save Annotations</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ BAND GROUP — SONG VIEW MODAL ══════════ -->
 <div class="modal-bg" id="bg-song-modal">
   <div class="modal">
@@ -2551,6 +2582,9 @@ let _groupSetlists = [];        // setlists from Firestore bandGroups/{id}/setli
 let _myGroupData = null;        // { instrument, songNotes:{songId:text} }
 let _isGroupConductor = false;
 let _groupLoaded = false;
+let _activeMemberAnns = null;    // member annotations overlaid on belt (member's own or conductor viewing a member)
+let _viewingMemberUid = null;    // conductor: uid of member being viewed on belt
+let _viewingMemberData = null;   // conductor: loaded memberData for viewed member
 
 // ── MIDI state ──
 let _midiOut = null;
@@ -3659,7 +3693,11 @@ function loadSong(id) {
   document.getElementById('scrub-dur').textContent = fmtTime(song.duration);
   _updateScrub(0, song.duration);
 
-  // Build merged lines (lyrics + annotations)
+  // Set member annotation overlay (member's own annotations or conductor viewing a member)
+  _activeMemberAnns = _getMemberAnnsForSong(song.id);
+  delete song._mergedKey; delete song._mergedLines; // invalidate cache
+
+  // Build merged lines (lyrics + annotations + member annotations)
   const lines = mergeAnnotations(song);
 
   // Reset manual scroll state
@@ -3732,7 +3770,7 @@ function buildBelt(beltEl, lines) {
     let cls = 'll';
     if (line.type==='section') cls+=' section';
     else if (line.type==='empty') cls+=' empty';
-    else if (line.type==='annotation') cls+=' ann' + (line.annType ? ' ann-'+line.annType : '');
+    else if (line.type==='annotation') cls+=' ann' + (line.annType ? ' ann-'+line.annType : '') + (line.isMember ? ' ann-member' : '') + (line.conductorView ? ' conductor-view' : '');
     div.className = cls;
     div.dataset.i = i;
     // Chord row (above text, lyric/section lines only)
@@ -3893,20 +3931,25 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 // ══════════════════════════════════════════════════════════
 function mergeAnnotations(song) {
   // Memoize: annotations don't change during playback
+  const extraAnns = _activeMemberAnns || [];
   const linesLen = (song.lines || []).length;
   const annsLen = (song.annotations || []).length;
-  const cacheKey = song.id + '|' + linesLen + '|' + annsLen;
+  const extraLen = extraAnns.length;
+  const cacheKey = song.id + '|' + linesLen + '|' + annsLen + '|' + extraLen;
   if (song._mergedKey === cacheKey && song._mergedLines) return song._mergedLines;
 
   // Strip annotation lines already in lines[] — idempotent for band members
   const base = (song.lines || []).filter(l => l.type !== 'annotation');
   const anns = (song.annotations || []).filter(a => a.text && a.text.trim());
-  if (!anns.length) { song._mergedKey = cacheKey; song._mergedLines = base; return base; }
+  const memberAnns = extraAnns.filter(a => a.text && a.text.trim());
+  if (!anns.length && !memberAnns.length) { song._mergedKey = cacheKey; song._mergedLines = base; return base; }
 
   // Build combined list sorted by time
+  const isConductorViewing = _isGroupConductor && !!_viewingMemberUid;
   const combined = [
     ...base,
-    ...anns.map(a => ({ type:'annotation', annType: a.annType, text: a.text, t: a.t, bv:false }))
+    ...anns.map(a => ({ type:'annotation', annType: a.annType, text: a.text, t: a.t, bv:false })),
+    ...memberAnns.map(a => ({ type:'annotation', annType: a.annType, text: a.text, t: a.t, bv:false, isMember:true, conductorView:isConductorViewing }))
   ];
   combined.sort((a,b) => {
     const ta = a.t ?? -1;
@@ -4468,7 +4511,9 @@ function vLoad(song) {
   V.localOffset = 0;
   const _rbEarly = document.getElementById('v-resync-btn'); if (_rbEarly) _rbEarly.style.display = 'none';
   // If the received song has annotations, re-merge them into lines
-  // to guarantee nothing is lost in transit
+  // to guarantee nothing is lost in transit. Also overlay member's personal annotations.
+  _activeMemberAnns = _getMemberAnnsForSong(song.id);
+  delete song._mergedKey; delete song._mergedLines;
   song.lines = mergeAnnotations(song);
   V.song = song;
   // Merge tabs from local bank if member doesn't have PDF data in received song
@@ -6506,7 +6551,7 @@ async function createBandGroup() {
     _bandGroup = { id: groupId, name, conductorUid: uid, conductorName: displayName,
       inviteCode: code, memberUids: [uid], memberNames: { [uid]: displayName } };
     _groupSongs = []; _groupSetlists = [];
-    _myGroupData = { instrument: 'all', songNotes: {} };
+    _myGroupData = { instrument: 'all', songNotes: {}, songAnnotations: {} };
     _isGroupConductor = true; _groupLoaded = true;
     localStorage.setItem('bs4_group_id', groupId);
     closeModal('bg-create-modal');
@@ -6584,8 +6629,9 @@ async function _loadGroupData() {
 
     // Load my member data
     const myDoc = await _fbDb.doc('bandGroups/'+groupId+'/memberData/'+uid).get();
-    _myGroupData = myDoc.exists ? myDoc.data() : { instrument: 'all', songNotes: {} };
+    _myGroupData = myDoc.exists ? myDoc.data() : { instrument: 'all', songNotes: {}, songAnnotations: {} };
     if (!_myGroupData.songNotes) _myGroupData.songNotes = {};
+    if (!_myGroupData.songAnnotations) _myGroupData.songAnnotations = {};
 
     // Cache locally
     try {
@@ -6675,7 +6721,7 @@ async function saveMyGroupData() {
 
 // ── Pick instrument ──
 function bgPickInstr(instr) {
-  if (!_myGroupData) _myGroupData = { instrument: 'all', songNotes: {} };
+  if (!_myGroupData) _myGroupData = { instrument: 'all', songNotes: {}, songAnnotations: {} };
   _myGroupData.instrument = instr;
   // Update grid UI
   document.querySelectorAll('.bg-instr-btn').forEach(b => {
@@ -6838,7 +6884,8 @@ function openGroupSong(songId) {
       (song.arrNotes ? '<div style="margin-bottom:0.4rem;"><strong>Arrangement Notes:</strong> ' + esc(song.arrNotes) + '</div>' : '') +
       (note ? '<div style="margin-top:0.5rem;background:var(--bg3);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.75rem;">' +
         '<strong>My Notes:</strong> ' + esc(note) + '</div>' : '') +
-      '<div style="margin-top:0.6rem;">' +
+      '<div style="margin-top:0.6rem;display:flex;flex-direction:column;gap:0.3rem;">' +
+      '<button class="btn btn-ghost btn-sm" style="width:100%;" onclick="openMemberAnnEditor(\''+esc(songId)+'\');closeModal(\'bg-song-modal\')">✍ My Annotations (chords, cues, sections)</button>' +
       '<button class="btn btn-ghost btn-sm" style="width:100%;" onclick="openMyParts(\''+esc(songId)+'\');closeModal(\'bg-song-modal\')">✏️ Edit My Parts & Notes</button>' +
       '</div>';
   }
@@ -6905,10 +6952,186 @@ async function disbandGroup() {
 function _clearGroupState() {
   _bandGroup = null; _groupSongs = []; _groupSetlists = [];
   _myGroupData = null; _isGroupConductor = false; _groupLoaded = false;
+  _activeMemberAnns = null; _viewingMemberUid = null; _viewingMemberData = null;
   localStorage.removeItem('bs4_group_id');
   localStorage.removeItem('bs4_group_songs');
   localStorage.removeItem('bs4_group_setlists');
   localStorage.removeItem('bs4_group_mydata');
+}
+
+// ── Get member annotations to overlay on the belt for a given song ──
+function _getMemberAnnsForSong(songId) {
+  if (!songId) return [];
+  // Conductor viewing a member's annotations
+  if (_isGroupConductor && _viewingMemberData) {
+    return (_viewingMemberData.songAnnotations || {})[songId] || [];
+  }
+  // Member viewing their own annotations
+  if (!_isGroupConductor && _myGroupData) {
+    return (_myGroupData.songAnnotations || {})[songId] || [];
+  }
+  return [];
+}
+
+// ── Conductor: toggle viewing a specific member's annotations on the belt ──
+async function conductorViewMember(uid) {
+  if (!_bandGroup || !_isGroupConductor) return;
+  if (_viewingMemberUid === uid) {
+    // Toggle off
+    _viewingMemberUid = null; _viewingMemberData = null; _activeMemberAnns = null;
+    toast('Stopped viewing member annotations');
+  } else {
+    _viewingMemberUid = uid;
+    try {
+      const doc = await _fbDb.doc('bandGroups/'+_bandGroup.id+'/memberData/'+uid).get();
+      _viewingMemberData = doc.exists ? doc.data() : { instrument:'all', songNotes:{}, songAnnotations:{} };
+      if (!_viewingMemberData.songAnnotations) _viewingMemberData.songAnnotations = {};
+      _activeMemberAnns = _getMemberAnnsForSong(APP.currentId);
+      const nm = (_bandGroup.memberNames && _bandGroup.memberNames[uid]) || 'member';
+      toast('Viewing ' + nm + '\'s annotations');
+    } catch(e) {
+      console.error('conductorViewMember:', e);
+      _viewingMemberData = { instrument:'all', songNotes:{}, songAnnotations:{} };
+      _activeMemberAnns = [];
+      toast('Could not load member data: ' + e.message);
+    }
+  }
+  // Reload belt if a song is currently loaded
+  if (APP.currentId) {
+    const song = getSong(APP.currentId);
+    if (song) {
+      delete song._mergedKey; delete song._mergedLines;
+      _activeMemberAnns = _getMemberAnnsForSong(APP.currentId);
+      const lines = mergeAnnotations(song);
+      buildBelt(document.getElementById('c-belt'), lines);
+      const t = APP.isPlaying && APP.playStartPN != null
+        ? Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj) : 0;
+      positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t);
+    }
+  }
+  renderGroupUI();
+}
+
+// ─────────────────────────────────────────────────────────────
+// MEMBER ANNOTATION EDITOR (separate from conductor's ann editor)
+// ─────────────────────────────────────────────────────────────
+let _mbrAnnRows = [];
+let _mbrAnnSongId = null;
+
+function _renderMbrAnnList() {
+  const list = document.getElementById('mbr-ann-list');
+  if (!list) return;
+  if (!_mbrAnnRows.length) {
+    list.innerHTML = '<div style="font-size:0.72rem;color:var(--text-dim);text-align:center;padding:1rem 0;">No annotations yet — add one above</div>';
+    return;
+  }
+  list.innerHTML = _mbrAnnRows.map((a,i) => `
+    <div class="ann-row" draggable="true"
+      ondragstart="_mbrAnnDragStart(${i})" ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')" ondrop="_mbrAnnDrop(event,${i})">
+      <span class="ann-drag-handle">⠿</span>
+      <span class="ann-colour-dot type-${esc(a.annType)}"></span>
+      <input class="ann-text-input" type="text" placeholder="Type annotation…"
+        value="${esc(a.text)}" data-idx="${i}"
+        oninput="_mbrAnnRows[${i}].text=this.value">
+      <input class="ann-time-input" type="text" placeholder="0:00"
+        value="${fmtTimeMs(a.t)}" data-idx="${i}"
+        oninput="_mbrAnnRows[${i}].t=parseTime(this.value)"
+        title="Timestamp (m:ss) when this appears">
+      <span class="ann-type-badge type-${esc(a.annType)}" onclick="_mbrAnnCycleType(${i})"
+        title="Click to change type">${esc(a.annType.toUpperCase())}</span>
+      <button class="icon-btn del" onclick="_mbrAnnRows.splice(${i},1);_renderMbrAnnList()" style="flex-shrink:0;">✕</button>
+    </div>`).join('');
+}
+
+let _mbrAnnDragIdx = null;
+function _mbrAnnDragStart(i) { _mbrAnnDragIdx = i; }
+function _mbrAnnDrop(e, i) {
+  e.preventDefault();
+  document.querySelectorAll('#mbr-ann-list .ann-row').forEach(r => r.classList.remove('drag-over'));
+  if (_mbrAnnDragIdx === null || _mbrAnnDragIdx === i) return;
+  const moved = _mbrAnnRows.splice(_mbrAnnDragIdx, 1)[0];
+  _mbrAnnRows.splice(i, 0, moved);
+  _mbrAnnDragIdx = null;
+  _renderMbrAnnList();
+}
+function _mbrAnnCycleType(i) {
+  const types = ['section','chord','note'];
+  _mbrAnnRows[i].annType = types[(types.indexOf(_mbrAnnRows[i].annType)+1) % types.length];
+  _renderMbrAnnList();
+}
+function addMbrAnn(type) {
+  let t = 0;
+  if (APP.isPlaying && APP.playStartPN != null) {
+    t = Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj);
+  } else if (_mbrAnnRows.length) {
+    t = Math.max(..._mbrAnnRows.map(a => a.t||0)) + 10;
+  }
+  _mbrAnnRows.push({ annType: type||'note', text: '', t });
+  _renderMbrAnnList();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#mbr-ann-list .ann-text-input');
+    if (inputs.length) inputs[inputs.length-1].focus();
+  }, 50);
+}
+
+// ── Open member annotation editor for a group song ──
+function openMemberAnnEditor(songId) {
+  const song = _groupSongs.find(s => s.id === songId);
+  if (!song) return;
+  _mbrAnnSongId = songId;
+  // If conductor is viewing a member, edit that member's annotations; otherwise edit own
+  const targetData = (_isGroupConductor && _viewingMemberData) ? _viewingMemberData : _myGroupData;
+  const existing = (targetData && targetData.songAnnotations && targetData.songAnnotations[songId]) || [];
+  _mbrAnnRows = existing.map(a => ({...a}));
+  const titleEl = document.getElementById('mbr-ann-modal-title');
+  if (titleEl) {
+    const who = (_isGroupConductor && _viewingMemberUid && _bandGroup && _bandGroup.memberNames)
+      ? (_bandGroup.memberNames[_viewingMemberUid] + '\'s') : 'My';
+    titleEl.textContent = who + ' Annotations — ' + esc(song.title || 'Song');
+  }
+  _renderMbrAnnList();
+  openModal('mbr-ann-modal');
+}
+
+// ── Save member annotations to Firestore + update belt ──
+async function saveMemberAnnotations() {
+  if (!_mbrAnnSongId) return;
+  const anns = _mbrAnnRows
+    .filter(a => a.text && a.text.trim())
+    .map(a => ({ annType: a.annType, text: a.text.trim(), t: a.t || 0 }));
+  try {
+    if (_isGroupConductor && _viewingMemberUid && _viewingMemberData && _bandGroup) {
+      // Conductor saving annotations for a member
+      if (!_viewingMemberData.songAnnotations) _viewingMemberData.songAnnotations = {};
+      _viewingMemberData.songAnnotations[_mbrAnnSongId] = anns;
+      await _fbDb.doc('bandGroups/'+_bandGroup.id+'/memberData/'+_viewingMemberUid)
+        .set(_viewingMemberData, { merge: true });
+      const nm = (_bandGroup.memberNames && _bandGroup.memberNames[_viewingMemberUid]) || 'member';
+      toast('Saved annotations for ' + nm);
+    } else {
+      // Member saving their own annotations
+      if (!_myGroupData) { toast('Not in a band group'); return; }
+      if (!_myGroupData.songAnnotations) _myGroupData.songAnnotations = {};
+      _myGroupData.songAnnotations[_mbrAnnSongId] = anns;
+      await saveMyGroupData();
+      toast('My annotations saved ✓');
+    }
+  } catch(e) { console.error('saveMemberAnnotations:', e); toast('Error saving: '+e.message); return; }
+  // Reload belt overlay for this song if currently loaded
+  _activeMemberAnns = _getMemberAnnsForSong(APP.currentId);
+  if (APP.currentId) {
+    const song = getSong(APP.currentId) || _groupSongs.find(s => s.id === APP.currentId);
+    if (song) {
+      delete song._mergedKey; delete song._mergedLines;
+      const lines = mergeAnnotations(song);
+      buildBelt(document.getElementById('c-belt'), lines);
+      const t = APP.isPlaying && APP.playStartPN != null
+        ? Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj) : 0;
+      positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t);
+    }
+  }
+  closeModal('mbr-ann-modal');
 }
 
 // ── Render the Band tab pane ──
@@ -6958,6 +7181,13 @@ function _renderConductorView(el) {
     '<div class="bg-invite" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(g.inviteCode)+'\').then(()=>toast(\'Code copied!\'))" title="Tap to copy">'+ esc(g.inviteCode) +'</div></div>' +
     '</div>';
 
+  // Viewing banner (if conductor is viewing a member's annotations)
+  if (_viewingMemberUid && memberNames[_viewingMemberUid]) {
+    html += '<div class="bg-viewing-banner" onclick="conductorViewMember(\''+esc(_viewingMemberUid)+'\')" title="Click to stop viewing">' +
+      '👁 Viewing <strong style="color:#c4b5fd;">' + esc(memberNames[_viewingMemberUid]) + '</strong>\'s annotations on the belt &nbsp;·&nbsp; tap to stop' +
+      '</div>';
+  }
+
   // Members
   html += '<div class="bg-section-head">Members (' + members.length + ')</div>';
   if (members.length === 0) {
@@ -6965,7 +7195,21 @@ function _renderConductorView(el) {
   } else {
     members.forEach(uid => {
       const nm = memberNames[uid] || uid;
-      html += '<div class="bg-member-row"><span class="bg-member-name">' + esc(nm) + '</span></div>';
+      const isViewing = _viewingMemberUid === uid;
+      html += '<div class="bg-member-row">' +
+        '<span class="bg-member-name">' + esc(nm) + '</span>' +
+        '<div style="display:flex;gap:0.25rem;">' +
+        '<button class="btn btn-ghost btn-sm' + (isViewing ? ' btn-viewing' : '') + '" style="font-size:0.6rem;padding:0.2rem 0.45rem;" onclick="conductorViewMember(\''+esc(uid)+'\')" title="'+(isViewing?'Stop viewing':'View their annotations on the belt')+'">' +
+        (isViewing ? '👁 Viewing' : '👁 View') + '</button>';
+      // If viewing this member, show edit button for each song
+      if (isViewing && _groupSetlists.length > 0) {
+        // Show ann editor for the currently loaded song or first song
+        const editSongId = APP.currentId && _groupSongs.find(s=>s.id===APP.currentId) ? APP.currentId : ((_groupSetlists[0].songIds||[])[0]||null);
+        if (editSongId) {
+          html += '<button class="btn btn-ghost btn-sm" style="font-size:0.6rem;padding:0.2rem 0.45rem;" onclick="openMemberAnnEditor(\''+esc(editSongId)+'\')" title="Edit their annotations for current song">✍ Edit</button>';
+        }
+      }
+      html += '</div></div>';
     });
   }
 
@@ -6980,9 +7224,13 @@ function _renderConductorView(el) {
     (sl.songIds || []).forEach(id => {
       const s = _groupSongs.find(x => x.id === id);
       if (!s) return;
+      const hasViewingAnns = _viewingMemberUid && _viewingMemberData &&
+        (_viewingMemberData.songAnnotations || {})[id]?.length > 0;
       html += '<div class="bg-song-row" onclick="openGroupSong(\''+esc(id)+'\')">' +
+        (hasViewingAnns ? '<div class="bg-ann-dot" title="This member has annotations for this song"></div>' : '') +
         '<div style="flex:1;"><div class="bg-song-title">'+esc(s.title||'Untitled')+'</div>' +
         '<div class="bg-song-artist">'+esc(s.artist||'')+'</div></div>' +
+        (_viewingMemberUid ? '<button class="btn btn-ghost btn-sm" style="font-size:0.6rem;padding:0.2rem 0.4rem;" onclick="event.stopPropagation();openMemberAnnEditor(\''+esc(id)+'\')">✍ Edit Anns</button>' : '') +
         '</div>';
     });
   }
@@ -7021,11 +7269,16 @@ function _renderMemberView(el) {
       const s = _groupSongs.find(x => x.id === id);
       if (!s) return;
       const hasNote = _myGroupData && _myGroupData.songNotes && _myGroupData.songNotes[id];
+      const hasAnns = _myGroupData && _myGroupData.songAnnotations && (_myGroupData.songAnnotations[id]||[]).length > 0;
       html += '<div class="bg-song-row" onclick="openGroupSong(\''+esc(id)+'\')">' +
         (hasNote ? '<div class="bg-song-note-dot" title="You have notes for this song"></div>' : '') +
+        (hasAnns ? '<div class="bg-ann-dot" title="You have personal annotations for this song"></div>' : '') +
         '<div style="flex:1;"><div class="bg-song-title">'+esc(s.title||'Untitled')+'</div>' +
         '<div class="bg-song-artist">'+esc(s.artist||'')+'</div></div>' +
-        '<button class="btn btn-ghost btn-sm" style="font-size:0.62rem;padding:0.2rem 0.5rem;" onclick="event.stopPropagation();openMyParts(\''+esc(id)+'\')">✏️ My Parts</button>' +
+        '<div style="display:flex;gap:0.25rem;">' +
+        '<button class="btn btn-ghost btn-sm" style="font-size:0.6rem;padding:0.2rem 0.4rem;" onclick="event.stopPropagation();openMemberAnnEditor(\''+esc(id)+'\')">✍ Annotate</button>' +
+        '<button class="btn btn-ghost btn-sm" style="font-size:0.6rem;padding:0.2rem 0.4rem;" onclick="event.stopPropagation();openMyParts(\''+esc(id)+'\')">✏️ Parts</button>' +
+        '</div>' +
         '</div>';
     });
   }
