@@ -4466,7 +4466,7 @@ function vLoad(song) {
   if (V.playing) vStop();
   // Reset viewer offset from previous song
   V.localOffset = 0;
-  const _rb = document.getElementById('v-resync-btn'); if (_rb) _rb.style.display = 'none';
+  const _rbEarly = document.getElementById('v-resync-btn'); if (_rbEarly) _rbEarly.style.display = 'none';
   // If the received song has annotations, re-merge them into lines
   // to guarantee nothing is lost in transit
   song.lines = mergeAnnotations(song);
