@@ -1664,6 +1664,33 @@ html[data-theme="light"] {
   .v-song-hdr .key-badge,.v-song-hdr .capo-badge{font-size:0.62rem!important;padding:0.08rem 0.3rem!important;}
 }
 
+/* ══════════════════════════════════════
+   BAND GROUP UI
+══════════════════════════════════════ */
+.bg-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;}
+.bg-title{font-family:'Bebas Neue';font-size:1.05rem;letter-spacing:0.06em;color:var(--lime);}
+.bg-subtitle{font-size:0.62rem;color:var(--text-mid);margin-top:0.1rem;}
+.bg-invite{display:inline-block;font-family:'JetBrains Mono';font-size:1rem;font-weight:700;letter-spacing:0.18em;color:var(--amber);background:var(--bg3);padding:0.25rem 0.7rem;border-radius:6px;border:1px solid var(--border2);}
+.bg-invite-label{font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.15rem;}
+.bg-section-head{font-family:'JetBrains Mono';font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin:0.7rem 0 0.3rem;}
+.bg-song-row{display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.6rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border);margin-bottom:0.25rem;cursor:pointer;}
+.bg-song-row:hover{background:var(--bg3);border-color:var(--border2);}
+.bg-song-title{font-weight:600;font-size:0.8rem;color:var(--text);flex:1;}
+.bg-song-artist{font-size:0.65rem;color:var(--text-mid);}
+.bg-song-note-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);flex-shrink:0;}
+.bg-member-row{display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;background:var(--bg2);border-radius:6px;border:1px solid var(--border);margin-bottom:0.2rem;font-size:0.75rem;}
+.bg-member-name{flex:1;color:var(--text);}
+.bg-member-instr{font-size:0.62rem;color:var(--text-mid);font-family:'JetBrains Mono';}
+.bg-empty{font-size:0.78rem;color:var(--text-mid);padding:1.5rem 0;text-align:center;line-height:1.8;}
+.bg-pill{display:inline-flex;align-items:center;gap:0.3rem;background:var(--lime-glow);border:1px solid var(--lime-dim);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.62rem;color:var(--lime);font-family:'JetBrains Mono';margin-bottom:0.5rem;}
+.bg-instr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;margin-top:0.5rem;}
+.bg-instr-btn{padding:0.5rem 0.2rem;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text-mid);font-size:0.7rem;cursor:pointer;text-align:center;}
+.bg-instr-btn.on{background:var(--lime-glow);border-color:var(--lime);color:var(--lime);}
+.bg-note-area{width:100%;min-height:5rem;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:0.5rem 0.7rem;color:var(--text);font-size:0.78rem;font-family:'Instrument Sans',sans-serif;resize:vertical;}
+.bg-tab-pane{display:flex;flex-direction:column;flex:1;overflow-y:auto;padding:0.75rem;gap:0.4rem;}
+.bg-action-row{display:flex;gap:0.4rem;margin-top:0.5rem;}
+.bg-setlist-row{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:var(--bg2);border-radius:7px;border:1px solid var(--border);margin-bottom:0.2rem;font-size:0.78rem;color:var(--text);}
+
 </style>
   <script>/* lz-string 1.5.0 — embedded for offline setlist sharing */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();</script>
@@ -1834,6 +1861,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         <button class="tab-btn" onclick="switchTab('setlist')">Setlist</button>
         <button class="tab-btn" onclick="switchTab('bank')">Bank</button>
         <button class="tab-btn" onclick="switchTab('sets')">Sets</button>
+        <button class="tab-btn" id="tab-btn-band" onclick="switchTab('band')">Band</button>
       </div>
 
       <!-- SEARCH -->
@@ -1889,6 +1917,14 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <button class="btn btn-lime btn-sm" onclick="createSetlist()">＋</button>
         </div>
       </div>
+      <!-- BAND GROUP -->
+      <div class="tab-pane" id="t-band" style="padding:0;">
+        <div id="bg-pane-content" class="bg-tab-pane">
+          <!-- Filled by renderGroupUI() -->
+          <div class="bg-empty">Loading…</div>
+        </div>
+      </div>
+
       <!-- LOBBY PANEL -->
       <div class="lobby-panel">
         <div class="lobby-title">🎸 In the room <span class="lobby-count" id="c-lobby-count">0</span></div>
@@ -2361,6 +2397,94 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   </div>
 </div>
 
+<!-- ══════════ BAND GROUP — CREATE MODAL ══════════ -->
+<div class="modal-bg" id="bg-create-modal">
+  <div class="modal">
+    <h3>🎸 Create Band Group</h3>
+    <p style="font-size:0.8rem;color:var(--text-mid);margin-bottom:1rem;line-height:1.6;">Create a shared group. Band members join with the invite code. You are the conductor.</p>
+    <div class="field">
+      <label>Band / Group Name</label>
+      <input id="bg-create-name" type="text" placeholder="e.g. The Rolling Tones" maxlength="40">
+    </div>
+    <div id="bg-create-err" style="font-size:0.75rem;color:var(--red);min-height:1.1em;margin-bottom:0.3rem;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('bg-create-modal')">Cancel</button>
+      <button class="btn btn-lime" onclick="createBandGroup()">Create Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BAND GROUP — JOIN MODAL ══════════ -->
+<div class="modal-bg" id="bg-join-modal">
+  <div class="modal">
+    <h3>🎸 Join Band Group</h3>
+    <p style="font-size:0.8rem;color:var(--text-mid);margin-bottom:1rem;line-height:1.6;">Enter the invite code your conductor shared with you.</p>
+    <div class="field">
+      <label>Invite Code</label>
+      <input id="bg-join-code" type="text" placeholder="e.g. ABC123" maxlength="12"
+        style="font-family:'JetBrains Mono';font-size:1rem;letter-spacing:0.15em;text-transform:uppercase;"
+        oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div id="bg-join-err" style="font-size:0.75rem;color:var(--red);min-height:1.1em;margin-bottom:0.3rem;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('bg-join-modal')">Cancel</button>
+      <button class="btn btn-lime" onclick="joinBandGroup()">Join Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BAND GROUP — PUSH SETLIST MODAL ══════════ -->
+<div class="modal-bg" id="bg-push-modal">
+  <div class="modal">
+    <h3>📤 Push to Band Group</h3>
+    <p style="font-size:0.8rem;color:var(--text-mid);margin-bottom:1rem;line-height:1.6;">This will copy your current setlist and all its songs to the band group, replacing what's there. Members will see the update immediately.</p>
+    <div id="bg-push-info" style="font-size:0.78rem;color:var(--text);background:var(--bg3);padding:0.5rem 0.7rem;border-radius:6px;border:1px solid var(--border2);margin-bottom:0.5rem;"></div>
+    <div id="bg-push-err" style="font-size:0.75rem;color:var(--red);min-height:1.1em;margin-bottom:0.3rem;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('bg-push-modal')">Cancel</button>
+      <button class="btn btn-lime" onclick="pushSetlistToGroup()">Push Setlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BAND GROUP — MY PARTS MODAL ══════════ -->
+<div class="modal-bg" id="bg-parts-modal">
+  <div class="modal">
+    <h3 id="bg-parts-title">My Parts</h3>
+    <div style="margin-bottom:0.6rem;">
+      <div class="bg-section-head">My Instrument</div>
+      <div class="bg-instr-grid" id="bg-instr-grid"></div>
+    </div>
+    <div style="margin-bottom:0.6rem;">
+      <div class="bg-section-head">My Notes for This Song</div>
+      <textarea id="bg-parts-notes" class="bg-note-area" placeholder="Chord charts, stage directions, personal notes…" oninput="bgAutoSaveNote(this)"></textarea>
+    </div>
+    <div style="margin-bottom:0.6rem;">
+      <div class="bg-section-head">My Tab PDF</div>
+      <div id="bg-parts-pdf-status" style="font-size:0.72rem;color:var(--text-mid);margin-bottom:0.4rem;"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;width:100%;justify-content:center;">
+        📄 Upload Tab PDF <input type="file" accept=".pdf,application/pdf" onchange="bgUploadTabPdf(this)" style="display:none;">
+      </label>
+      <button class="btn btn-ghost btn-sm" id="bg-view-pdf-btn" style="width:100%;margin-top:0.3rem;display:none;" onclick="bgViewMyPdf()">👁 View My PDF</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="bgClosePartsModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BAND GROUP — SONG VIEW MODAL ══════════ -->
+<div class="modal-bg" id="bg-song-modal">
+  <div class="modal">
+    <h3 id="bg-song-modal-title">Song Details</h3>
+    <div id="bg-song-modal-body" style="font-size:0.82rem;color:var(--text);line-height:1.8;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('bg-song-modal')">Close</button>
+      <button class="btn btn-lime" id="bg-song-modal-load" onclick="">Load Song</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ CONFIDENCE MONITOR OVERLAY ══════════ -->
 <div id="confidence-overlay">
   <div class="cm-song-title" id="cm-song-title"></div>
@@ -2418,6 +2542,14 @@ const APP = {
 
 // ── Confidence Monitor state ──
 let _cmOpen = false;
+
+// ── Band Group state ──
+let _bandGroup = null;          // { id, name, conductorUid, inviteCode, memberUids, memberNames }
+let _groupSongs = [];           // songs from Firestore bandGroups/{id}/songs
+let _groupSetlists = [];        // setlists from Firestore bandGroups/{id}/setlists
+let _myGroupData = null;        // { instrument, songNotes:{songId:text} }
+let _isGroupConductor = false;
+let _groupLoaded = false;
 
 // ── MIDI state ──
 let _midiOut = null;
@@ -3318,6 +3450,9 @@ function deleteSetlist(id) {
 // ── RENDER ALL ──
 function renderAll() {
   renderSetlist(); renderBank(); renderSets(); renderSetsModal(); updateSetlistName();
+  // Re-render band pane only if it's visible (perf)
+  const bp = document.getElementById('t-band');
+  if (bp && bp.classList.contains('on')) renderGroupUI();
 }
 
 function updateSetlistName() {
@@ -5299,11 +5434,12 @@ function importBank(inp) {
 
 // ── TABS / MODALS / SHARE ──
 function switchTab(name) {
-  const order=['search','setlist','bank','sets'];
+  const order=['search','setlist','bank','sets','band'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('on',order[i]===name));
-  ['t-search','t-setlist','t-bank','t-sets'].forEach((id,i)=>{
-    document.getElementById(id).classList.toggle('on',order[i]===name);
+  ['t-search','t-setlist','t-bank','t-sets','t-band'].forEach((id,i)=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('on',order[i]===name);
   });
+  if(name==='band') renderGroupUI();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -6312,13 +6448,594 @@ async function authLogin(){const em=document.getElementById('auth-email-login').
 async function authSignup(){const nm=document.getElementById('auth-name-signup').value.trim(),em=document.getElementById('auth-email-signup').value.trim(),pw=document.getElementById('auth-pass-signup').value,er=document.getElementById('auth-err-signup'),bt=document.getElementById('auth-btn-signup');er.textContent='';er.style.color='var(--red)';if(!nm){er.textContent='Please enter your name.';return;}if(!em){er.textContent='Please enter your email.';return;}if(pw.length<6){er.textContent='Password must be at least 6 characters.';return;}bt.disabled=true;bt.textContent='Creating account…';try{const cr=await _fbAuth.createUserWithEmailAndPassword(em,pw);await cr.user.updateProfile({displayName:nm});await _fbDb.doc('users/'+cr.user.uid+'/profile/info').set({email:em,displayName:nm,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Create Account';}}
 async function authForgotPassword(){const em=document.getElementById('auth-email-login').value.trim(),er=document.getElementById('auth-err-login');if(!em){er.style.color='var(--amber)';er.textContent='Enter your email above first.';return;}try{await _fbAuth.sendPasswordResetEmail(em);er.style.color='var(--green)';er.textContent='Password reset email sent!';}catch(e){er.style.color='var(--red)';er.textContent=_authErrMsg(e.code);}}
 function authGuest(){_fbUser=null;_cloudSyncEnabled=false;show('s-conductor');startConductor();toast('Guest mode — data saved locally only');}
-async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopPlay();await _fbAuth.signOut();APP.bank=[];APP.setlists=[{id:'main',name:'Main Set',songIds:[]}];APP.activeSetlistId='main';_fbUser=null;_cloudSyncEnabled=false;show('s-land');toast('Signed out');}
+async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopPlay();await _fbAuth.signOut();APP.bank=[];APP.setlists=[{id:'main',name:'Main Set',songIds:[]}];APP.activeSetlistId='main';_fbUser=null;_cloudSyncEnabled=false;_clearGroupState();show('s-land');toast('Signed out');}
 function _authErrMsg(c){return({'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account found with that email.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'An account with this email already exists.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'Network error. Check your connection.'})[c]||('Error: '+c);}
 _fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;await _loadCloudData();_renderAccountPill();if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}}});
-async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>cb.push(Object.assign({id:d.id},d.data())));APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;if(p.ablyKey)APP.ablyKey=p.ablyKey;}}catch(e){console.error('Cloud load:',e);toast('Could not load cloud data');}
+async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>cb.push(Object.assign({id:d.id},d.data())));APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;if(p.ablyKey)APP.ablyKey=p.ablyKey;
+  // ── Restore band group membership ──
+  if(p.groupId){
+    try{
+      const gDoc=await _fbDb.doc('bandGroups/'+p.groupId).get();
+      if(gDoc.exists){
+        _bandGroup=Object.assign({id:p.groupId},gDoc.data());
+        _isGroupConductor=(_bandGroup.conductorUid===uid);
+        localStorage.setItem('bs4_group_id',p.groupId);
+        // Load group data in background — don't block login
+        _loadGroupData().catch(()=>_loadGroupDataFromCache());
+      }
+    }catch(ge){_loadGroupDataFromCache();}
+  }
+}}catch(e){console.error('Cloud load:',e);toast('Could not load cloud data');}
 }
 async function _saveCloudData(){if(!_fbUser||!_cloudSyncEnabled)return;const uid=_fbUser.uid;try{const b=_fbDb.batch();APP.bank.forEach(s=>{const d=Object.assign({},s);delete d.tabs;b.set(_fbDb.doc('users/'+uid+'/bank/'+s.id),d);});APP.setlists.forEach((sl,i)=>{b.set(_fbDb.doc('users/'+uid+'/setlists/'+sl.id),{id:sl.id,name:sl.name,songIds:sl.songIds||[],order:i});});b.set(_fbDb.doc('users/'+uid+'/settings/prefs'),{activeSetlistId:APP.activeSetlistId,ablyKey:APP.ablyKey||''});await b.commit();}catch(e){console.error('Cloud save:',e);}}
 function _renderAccountPill(){const ab=document.querySelector('#s-conductor .ab-right');if(!ab)return;const ex=ab.querySelector('.acct-pill');if(ex)ex.remove();if(!_fbUser)return;const nm=_fbUser.displayName||_fbUser.email.split('@')[0];const p=document.createElement('div');p.className='acct-pill';p.innerHTML='<span class="acct-pill-name" title="'+esc(_fbUser.email)+'">&#128100; '+esc(nm)+'</span><button class="acct-signout" onclick="authSignOut()">Sign out</button>';ab.insertBefore(p,ab.firstChild);}
+
+/* ══════════════════════════════════════════════════════
+   BAND GROUP FUNCTIONS
+══════════════════════════════════════════════════════ */
+
+// ── Helper: generate a short invite code ──
+function _genInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+// ── Create a new band group (conductor only) ──
+async function createBandGroup() {
+  if (!_fbUser) { toast('Sign in first'); return; }
+  const nameEl = document.getElementById('bg-create-name');
+  const errEl = document.getElementById('bg-create-err');
+  const name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { if(errEl) errEl.textContent='Please enter a group name.'; return; }
+  if(errEl) errEl.textContent='';
+  try {
+    const code = _genInviteCode();
+    const uid = _fbUser.uid;
+    const displayName = _fbUser.displayName || _fbUser.email.split('@')[0];
+    const docRef = _fbDb.collection('bandGroups').doc();
+    const groupId = docRef.id;
+    await docRef.set({
+      name, conductorUid: uid, conductorName: displayName,
+      inviteCode: code, memberUids: [uid],
+      memberNames: { [uid]: displayName },
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Store group id in user prefs
+    await _fbDb.doc('users/'+uid+'/settings/prefs').set({ groupId }, { merge: true });
+    _bandGroup = { id: groupId, name, conductorUid: uid, conductorName: displayName,
+      inviteCode: code, memberUids: [uid], memberNames: { [uid]: displayName } };
+    _groupSongs = []; _groupSetlists = [];
+    _myGroupData = { instrument: 'all', songNotes: {} };
+    _isGroupConductor = true; _groupLoaded = true;
+    localStorage.setItem('bs4_group_id', groupId);
+    closeModal('bg-create-modal');
+    renderGroupUI();
+    toast('Band group "'+name+'" created! Code: '+code);
+  } catch(e) {
+    console.error('createBandGroup:', e);
+    const errEl2 = document.getElementById('bg-create-err');
+    if(errEl2) errEl2.textContent='Error: '+e.message;
+  }
+}
+
+// ── Join an existing band group (member) ──
+async function joinBandGroup() {
+  if (!_fbUser) { toast('Sign in first'); return; }
+  const codeEl = document.getElementById('bg-join-code');
+  const errEl = document.getElementById('bg-join-err');
+  const code = codeEl ? codeEl.value.trim().toUpperCase() : '';
+  if (!code || !/^[A-Z0-9]{4,12}$/.test(code)) {
+    if(errEl) errEl.textContent='Enter a valid invite code.'; return;
+  }
+  if(errEl) errEl.textContent='';
+  try {
+    const snap = await _fbDb.collection('bandGroups').where('inviteCode','==',code).limit(1).get();
+    if (snap.empty) { if(errEl) errEl.textContent='No group found with that code.'; return; }
+    const doc = snap.docs[0];
+    const groupId = doc.id;
+    const data = doc.data();
+    const uid = _fbUser.uid;
+    const displayName = _fbUser.displayName || _fbUser.email.split('@')[0];
+    // Add member to group
+    await _fbDb.doc('bandGroups/'+groupId).update({
+      memberUids: firebase.firestore.FieldValue.arrayUnion(uid),
+      ['memberNames.'+uid]: displayName
+    });
+    // Save groupId in user prefs
+    await _fbDb.doc('users/'+uid+'/settings/prefs').set({ groupId }, { merge: true });
+    _bandGroup = Object.assign({ id: groupId }, data);
+    _isGroupConductor = (data.conductorUid === uid);
+    _groupLoaded = false;
+    localStorage.setItem('bs4_group_id', groupId);
+    closeModal('bg-join-modal');
+    await _loadGroupData();
+    renderGroupUI();
+    toast('Joined "'+data.name+'"!');
+  } catch(e) {
+    console.error('joinBandGroup:', e);
+    const errEl2 = document.getElementById('bg-join-err');
+    if(errEl2) errEl2.textContent='Error: '+e.message;
+  }
+}
+
+// ── Load group data from Firestore ──
+async function _loadGroupData() {
+  if (!_fbUser || !_bandGroup) return;
+  const groupId = _bandGroup.id;
+  const uid = _fbUser.uid;
+  try {
+    // Refresh group doc
+    const gDoc = await _fbDb.doc('bandGroups/'+groupId).get();
+    if (!gDoc.exists) { _clearGroupState(); toast('Band group no longer exists.'); return; }
+    _bandGroup = Object.assign({ id: groupId }, gDoc.data());
+    _isGroupConductor = (_bandGroup.conductorUid === uid);
+
+    // Load songs
+    const songsSnap = await _fbDb.collection('bandGroups/'+groupId+'/songs').get();
+    _groupSongs = [];
+    songsSnap.forEach(d => _groupSongs.push(Object.assign({ id: d.id }, d.data())));
+
+    // Load setlists
+    const slSnap = await _fbDb.collection('bandGroups/'+groupId+'/setlists').get();
+    _groupSetlists = [];
+    slSnap.forEach(d => _groupSetlists.push(Object.assign({ id: d.id }, d.data())));
+    _groupSetlists.sort((a,b)=>(a.order||0)-(b.order||0));
+
+    // Load my member data
+    const myDoc = await _fbDb.doc('bandGroups/'+groupId+'/memberData/'+uid).get();
+    _myGroupData = myDoc.exists ? myDoc.data() : { instrument: 'all', songNotes: {} };
+    if (!_myGroupData.songNotes) _myGroupData.songNotes = {};
+
+    // Cache locally
+    try {
+      localStorage.setItem('bs4_group_songs', JSON.stringify(_groupSongs));
+      localStorage.setItem('bs4_group_setlists', JSON.stringify(_groupSetlists));
+      localStorage.setItem('bs4_group_mydata', JSON.stringify(_myGroupData));
+    } catch(e) {}
+    _groupLoaded = true;
+  } catch(e) {
+    console.error('_loadGroupData:', e);
+    // Try loading from cache
+    _loadGroupDataFromCache();
+  }
+}
+
+// ── Load group data from localStorage cache ──
+function _loadGroupDataFromCache() {
+  try {
+    const gs = localStorage.getItem('bs4_group_songs');
+    const gsl = localStorage.getItem('bs4_group_setlists');
+    const gmd = localStorage.getItem('bs4_group_mydata');
+    if (gs) _groupSongs = JSON.parse(gs);
+    if (gsl) _groupSetlists = JSON.parse(gsl);
+    if (gmd) _myGroupData = JSON.parse(gmd);
+    if (!_myGroupData) _myGroupData = { instrument: 'all', songNotes: {} };
+    if (!_myGroupData.songNotes) _myGroupData.songNotes = {};
+    _groupLoaded = true;
+  } catch(e) {}
+}
+
+// ── Push current setlist + songs to group (conductor) ──
+async function pushSetlistToGroup() {
+  if (!_fbUser || !_bandGroup || !_isGroupConductor) return;
+  const ids = getSetlistSongIds();
+  const sl = getActiveSetlist();
+  if (!ids.length) { toast('No songs in setlist'); return; }
+  const btn = document.querySelector('#bg-push-modal .btn-lime');
+  if (btn) { btn.disabled = true; btn.textContent = 'Pushing…'; }
+  try {
+    const groupId = _bandGroup.id;
+    const batch = _fbDb.batch();
+    const songs = ids.map(id => getSong(id)).filter(Boolean);
+
+    // Write songs
+    songs.forEach(s => {
+      const d = Object.assign({}, s);
+      delete d.tabs; // tabs are personal/IDB only
+      batch.set(_fbDb.doc('bandGroups/'+groupId+'/songs/'+s.id), d);
+    });
+
+    // Write setlist
+    const slId = 'main';
+    batch.set(_fbDb.doc('bandGroups/'+groupId+'/setlists/'+slId), {
+      id: slId, name: sl ? sl.name : 'Setlist',
+      songIds: ids, order: 0,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    await batch.commit();
+    _groupSongs = songs.slice();
+    _groupSetlists = [{ id: slId, name: sl ? sl.name : 'Setlist', songIds: ids, order: 0 }];
+    try {
+      localStorage.setItem('bs4_group_songs', JSON.stringify(_groupSongs));
+      localStorage.setItem('bs4_group_setlists', JSON.stringify(_groupSetlists));
+    } catch(e) {}
+    closeModal('bg-push-modal');
+    renderGroupUI();
+    toast('Setlist pushed to band group ✓');
+  } catch(e) {
+    console.error('pushSetlistToGroup:', e);
+    const errEl = document.getElementById('bg-push-err');
+    if(errEl) errEl.textContent='Error: '+e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Push Setlist'; }
+  }
+}
+
+// ── Save my member data (instrument + notes) ──
+async function saveMyGroupData() {
+  if (!_fbUser || !_bandGroup || !_myGroupData) return;
+  const groupId = _bandGroup.id;
+  try {
+    await _fbDb.doc('bandGroups/'+groupId+'/memberData/'+_fbUser.uid).set(_myGroupData, { merge: true });
+    localStorage.setItem('bs4_group_mydata', JSON.stringify(_myGroupData));
+  } catch(e) { console.error('saveMyGroupData:', e); }
+}
+
+// ── Pick instrument ──
+function bgPickInstr(instr) {
+  if (!_myGroupData) _myGroupData = { instrument: 'all', songNotes: {} };
+  _myGroupData.instrument = instr;
+  // Update grid UI
+  document.querySelectorAll('.bg-instr-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.instr === instr);
+  });
+  saveMyGroupData();
+}
+
+// ── Auto-save note on input ──
+let _bgNoteSaveTimer = null;
+function bgAutoSaveNote(textarea) {
+  if (_bgNoteSaveTimer) clearTimeout(_bgNoteSaveTimer);
+  _bgNoteSaveTimer = setTimeout(() => {
+    if (!_myGroupData || !_bgCurrentSongId) return;
+    if (!_myGroupData.songNotes) _myGroupData.songNotes = {};
+    _myGroupData.songNotes[_bgCurrentSongId] = textarea.value;
+    saveMyGroupData();
+  }, 800);
+}
+
+// ── Track which song the parts modal is open for ──
+let _bgCurrentSongId = null;
+
+// ── Open parts modal for a song ──
+function openMyParts(songId) {
+  const song = _groupSongs.find(s => s.id === songId);
+  if (!song) return;
+  _bgCurrentSongId = songId;
+  const titleEl = document.getElementById('bg-parts-title');
+  if (titleEl) titleEl.textContent = 'My Parts — ' + (song.title || 'Song');
+
+  // Build instrument grid
+  const grid = document.getElementById('bg-instr-grid');
+  if (grid) {
+    const instrs = [
+      { key:'vocalist', label:'🎤 Vocals' },
+      { key:'guitarist', label:'🎸 Guitar' },
+      { key:'bassist', label:'🎵 Bass' },
+      { key:'keys', label:'🎹 Keys' },
+      { key:'drums', label:'🥁 Drums' },
+      { key:'all', label:'👁 All' }
+    ];
+    const cur = (_myGroupData && _myGroupData.instrument) || 'all';
+    grid.innerHTML = instrs.map(i =>
+      `<button class="bg-instr-btn${i.key===cur?' on':''}" data-instr="${i.key}" onclick="bgPickInstr('${i.key}')">${i.label}</button>`
+    ).join('');
+  }
+
+  // Load existing note
+  const notesEl = document.getElementById('bg-parts-notes');
+  if (notesEl) {
+    const note = (_myGroupData && _myGroupData.songNotes && _myGroupData.songNotes[songId]) || '';
+    notesEl.value = note;
+  }
+
+  // Check for PDF
+  _bgCheckPdfStatus(songId);
+
+  openModal('bg-parts-modal');
+}
+
+function bgClosePartsModal() {
+  // Save any unsaved note immediately
+  if (_bgNoteSaveTimer) { clearTimeout(_bgNoteSaveTimer); _bgNoteSaveTimer = null; }
+  const notesEl = document.getElementById('bg-parts-notes');
+  if (notesEl && _myGroupData && _bgCurrentSongId) {
+    if (!_myGroupData.songNotes) _myGroupData.songNotes = {};
+    _myGroupData.songNotes[_bgCurrentSongId] = notesEl.value;
+    saveMyGroupData();
+  }
+  closeModal('bg-parts-modal');
+}
+
+// ── Check/display PDF status for a song ──
+async function _bgCheckPdfStatus(songId) {
+  const statusEl = document.getElementById('bg-parts-pdf-status');
+  const viewBtn = document.getElementById('bg-view-pdf-btn');
+  if (!_bandGroup) return;
+  const idbKey = 'group_' + _bandGroup.id + '_' + songId + '_' + ((_myGroupData && _myGroupData.instrument) || 'all');
+  try {
+    const existing = await idbGet(idbKey);
+    if (existing) {
+      if (statusEl) statusEl.textContent = '✓ PDF saved';
+      if (viewBtn) viewBtn.style.display = '';
+    } else {
+      if (statusEl) statusEl.textContent = 'No PDF uploaded yet.';
+      if (viewBtn) viewBtn.style.display = 'none';
+    }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'No PDF uploaded yet.';
+    if (viewBtn) viewBtn.style.display = 'none';
+  }
+}
+
+// ── Upload tab PDF for a song ──
+async function bgUploadTabPdf(input) {
+  const file = input.files[0];
+  if (!file || !_bgCurrentSongId || !_bandGroup) return;
+  if (file.size > 10 * 1024 * 1024) { toast('PDF too large (max 10 MB)'); return; }
+  const statusEl = document.getElementById('bg-parts-pdf-status');
+  if (statusEl) statusEl.textContent = 'Saving…';
+  try {
+    const ab = await file.arrayBuffer();
+    const idbKey = 'group_' + _bandGroup.id + '_' + _bgCurrentSongId + '_' + ((_myGroupData && _myGroupData.instrument) || 'all');
+    await idbPut(idbKey, ab);
+    if (statusEl) statusEl.textContent = '✓ PDF saved';
+    const viewBtn = document.getElementById('bg-view-pdf-btn');
+    if (viewBtn) viewBtn.style.display = '';
+    toast('Tab PDF saved');
+  } catch(e) {
+    console.error('bgUploadTabPdf:', e);
+    toast('PDF tab could not be saved');
+  }
+  input.value = '';
+}
+
+// ── View saved PDF ──
+async function bgViewMyPdf() {
+  if (!_bgCurrentSongId || !_bandGroup) return;
+  const idbKey = 'group_' + _bandGroup.id + '_' + _bgCurrentSongId + '_' + ((_myGroupData && _myGroupData.instrument) || 'all');
+  try {
+    const ab = await idbGet(idbKey);
+    if (!ab) { toast('No PDF found'); return; }
+    const blob = new Blob([ab], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  } catch(e) { toast('Could not open PDF'); }
+}
+
+// ── Open push modal ──
+function _openPushModal() {
+  const sl = getActiveSetlist();
+  const ids = getSetlistSongIds();
+  const infoEl = document.getElementById('bg-push-info');
+  if (infoEl) {
+    infoEl.textContent = ids.length + ' songs from "' + (sl ? esc(sl.name) : 'Setlist') + '" will be pushed to the group.';
+  }
+  const errEl = document.getElementById('bg-push-err');
+  if (errEl) errEl.textContent = '';
+  openModal('bg-push-modal');
+}
+
+// ── Open group song detail modal ──
+function openGroupSong(songId) {
+  const song = _groupSongs.find(s => s.id === songId);
+  if (!song) return;
+  const titleEl = document.getElementById('bg-song-modal-title');
+  const bodyEl = document.getElementById('bg-song-modal-body');
+  const loadBtn = document.getElementById('bg-song-modal-load');
+  if (titleEl) titleEl.textContent = song.title || 'Song';
+  if (bodyEl) {
+    const note = (_myGroupData && _myGroupData.songNotes && _myGroupData.songNotes[songId]) || '';
+    const instr = (_myGroupData && _myGroupData.instrument) || 'all';
+    bodyEl.innerHTML =
+      '<div style="margin-bottom:0.4rem;"><strong>Artist:</strong> ' + esc(song.artist || '—') + '</div>' +
+      '<div style="margin-bottom:0.4rem;"><strong>Key:</strong> ' + esc(song.key || '—') +
+        (song.capo ? ' &nbsp;|&nbsp; <strong>Capo:</strong> ' + song.capo : '') + '</div>' +
+      (song.notes ? '<div style="margin-bottom:0.4rem;"><strong>Conductor Notes:</strong> ' + esc(song.notes) + '</div>' : '') +
+      (song.arrNotes ? '<div style="margin-bottom:0.4rem;"><strong>Arrangement Notes:</strong> ' + esc(song.arrNotes) + '</div>' : '') +
+      (note ? '<div style="margin-top:0.5rem;background:var(--bg3);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.75rem;">' +
+        '<strong>My Notes:</strong> ' + esc(note) + '</div>' : '') +
+      '<div style="margin-top:0.6rem;">' +
+      '<button class="btn btn-ghost btn-sm" style="width:100%;" onclick="openMyParts(\''+esc(songId)+'\');closeModal(\'bg-song-modal\')">✏️ Edit My Parts & Notes</button>' +
+      '</div>';
+  }
+  if (loadBtn) {
+    loadBtn.onclick = () => {
+      // Add song to personal bank if not present, then load
+      if (!getSong(songId)) {
+        const s = _groupSongs.find(x => x.id === songId);
+        if (s) APP.bank.push(Object.assign({}, s));
+        persist();
+      }
+      loadSong(songId);
+      closeModal('bg-song-modal');
+      switchTab('setlist');
+    };
+  }
+  openModal('bg-song-modal');
+}
+
+// ── Leave group (member) ──
+async function leaveGroup() {
+  if (!_fbUser || !_bandGroup) return;
+  if (_isGroupConductor) { toast('Conductors cannot leave — disband the group instead.'); return; }
+  if (!confirm('Leave "' + _bandGroup.name + '"? Your personal notes will be removed.')) return;
+  try {
+    const uid = _fbUser.uid;
+    const groupId = _bandGroup.id;
+    await _fbDb.doc('bandGroups/'+groupId).update({
+      memberUids: firebase.firestore.FieldValue.arrayRemove(uid),
+      ['memberNames.'+uid]: firebase.firestore.FieldValue.delete()
+    });
+    await _fbDb.doc('users/'+uid+'/settings/prefs').set({ groupId: null }, { merge: true });
+    _clearGroupState();
+    renderGroupUI();
+    toast('Left the group.');
+  } catch(e) { console.error('leaveGroup:', e); toast('Error leaving group: '+e.message); }
+}
+
+// ── Disband group (conductor only) ──
+async function disbandGroup() {
+  if (!_fbUser || !_bandGroup || !_isGroupConductor) return;
+  if (!confirm('Disband "' + _bandGroup.name + '"? This cannot be undone. All members will lose access.')) return;
+  try {
+    const groupId = _bandGroup.id;
+    // Remove groupId from all members' prefs
+    const gDoc = await _fbDb.doc('bandGroups/'+groupId).get();
+    if (gDoc.exists) {
+      const memberUids = gDoc.data().memberUids || [];
+      const batch = _fbDb.batch();
+      memberUids.forEach(uid => {
+        batch.set(_fbDb.doc('users/'+uid+'/settings/prefs'), { groupId: null }, { merge: true });
+      });
+      // Note: subcollection deletion not done client-side for safety — group doc deletion is enough
+      batch.delete(_fbDb.doc('bandGroups/'+groupId));
+      await batch.commit();
+    }
+    _clearGroupState();
+    renderGroupUI();
+    toast('Band group disbanded.');
+  } catch(e) { console.error('disbandGroup:', e); toast('Error disbanding: '+e.message); }
+}
+
+// ── Clear all group state ──
+function _clearGroupState() {
+  _bandGroup = null; _groupSongs = []; _groupSetlists = [];
+  _myGroupData = null; _isGroupConductor = false; _groupLoaded = false;
+  localStorage.removeItem('bs4_group_id');
+  localStorage.removeItem('bs4_group_songs');
+  localStorage.removeItem('bs4_group_setlists');
+  localStorage.removeItem('bs4_group_mydata');
+}
+
+// ── Render the Band tab pane ──
+function renderGroupUI() {
+  const el = document.getElementById('bg-pane-content');
+  if (!el) return;
+
+  if (!_fbUser) {
+    el.innerHTML = '<div class="bg-empty">Sign in to use Band Groups.<br><br>' +
+      '<button class="btn btn-lime" onclick="show(\'s-auth\')">Sign In / Create Account</button></div>';
+    return;
+  }
+
+  if (!_bandGroup) {
+    el.innerHTML =
+      '<div class="bg-empty">No band group yet.<br>Create one (conductor) or join with an invite code.</div>' +
+      '<div class="bg-action-row" style="flex-direction:column;gap:0.5rem;">' +
+      '<button class="btn btn-lime" onclick="openModal(\'bg-create-modal\')">＋ Create Band Group</button>' +
+      '<button class="btn btn-ghost" onclick="openModal(\'bg-join-modal\')">🔑 Join with Invite Code</button>' +
+      '</div>';
+    return;
+  }
+
+  if (!_groupLoaded) {
+    el.innerHTML = '<div class="bg-empty">Loading band group…</div>';
+    _loadGroupData().then(() => renderGroupUI());
+    return;
+  }
+
+  if (_isGroupConductor) {
+    _renderConductorView(el);
+  } else {
+    _renderMemberView(el);
+  }
+}
+
+// ── Conductor view ──
+function _renderConductorView(el) {
+  const g = _bandGroup;
+  const members = (g.memberUids || []).filter(uid => uid !== g.conductorUid);
+  const memberNames = g.memberNames || {};
+
+  let html = '<div class="bg-header">' +
+    '<div><div class="bg-title">🎸 ' + esc(g.name) + '</div>' +
+    '<div class="bg-subtitle">You are the conductor</div></div>' +
+    '<div style="text-align:right;"><div class="bg-invite-label">Invite Code</div>' +
+    '<div class="bg-invite" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(g.inviteCode)+'\').then(()=>toast(\'Code copied!\'))" title="Tap to copy">'+ esc(g.inviteCode) +'</div></div>' +
+    '</div>';
+
+  // Members
+  html += '<div class="bg-section-head">Members (' + members.length + ')</div>';
+  if (members.length === 0) {
+    html += '<div style="font-size:0.72rem;color:var(--text-mid);margin-bottom:0.5rem;">No members yet — share the invite code.</div>';
+  } else {
+    members.forEach(uid => {
+      const nm = memberNames[uid] || uid;
+      html += '<div class="bg-member-row"><span class="bg-member-name">' + esc(nm) + '</span></div>';
+    });
+  }
+
+  // Setlist in group
+  html += '<div class="bg-section-head">Group Setlist</div>';
+  if (_groupSetlists.length === 0) {
+    html += '<div style="font-size:0.72rem;color:var(--text-mid);margin-bottom:0.5rem;">No setlist pushed yet.</div>';
+  } else {
+    const sl = _groupSetlists[0];
+    html += '<div class="bg-setlist-row"><span style="flex:1;">' + esc(sl.name) + '</span>' +
+      '<span style="font-size:0.62rem;color:var(--text-mid);">' + (sl.songIds||[]).length + ' songs</span></div>';
+    (sl.songIds || []).forEach(id => {
+      const s = _groupSongs.find(x => x.id === id);
+      if (!s) return;
+      html += '<div class="bg-song-row" onclick="openGroupSong(\''+esc(id)+'\')">' +
+        '<div style="flex:1;"><div class="bg-song-title">'+esc(s.title||'Untitled')+'</div>' +
+        '<div class="bg-song-artist">'+esc(s.artist||'')+'</div></div>' +
+        '</div>';
+    });
+  }
+
+  // Conductor actions
+  html += '<div class="bg-section-head">Actions</div>';
+  html += '<div class="bg-action-row" style="flex-direction:column;gap:0.4rem;">' +
+    '<button class="btn btn-lime" onclick="_openPushModal()">📤 Push Current Setlist to Group</button>' +
+    '<button class="btn btn-ghost btn-sm" onclick="_loadGroupData().then(renderGroupUI)">🔄 Refresh</button>' +
+    '<button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red);" onclick="disbandGroup()">🗑 Disband Group</button>' +
+    '</div>';
+
+  el.innerHTML = html;
+}
+
+// ── Member view ──
+function _renderMemberView(el) {
+  const g = _bandGroup;
+  const instr = (_myGroupData && _myGroupData.instrument) || 'all';
+  const instrLabel = { vocalist:'🎤 Vocals', guitarist:'🎸 Guitar', bassist:'🎵 Bass',
+    keys:'🎹 Keys', drums:'🥁 Drums', all:'👁 All Parts' }[instr] || instr;
+
+  let html = '<div class="bg-header">' +
+    '<div><div class="bg-title">🎸 ' + esc(g.name) + '</div>' +
+    '<div class="bg-subtitle">Conductor: ' + esc(g.conductorName || '') + '</div></div>' +
+    '<div class="bg-pill">' + instrLabel + '</div>' +
+    '</div>';
+
+  // Group setlist
+  if (_groupSetlists.length === 0) {
+    html += '<div class="bg-empty">No setlist yet.<br>Waiting for your conductor to push one.</div>';
+  } else {
+    const sl = _groupSetlists[0];
+    html += '<div class="bg-section-head">' + esc(sl.name) + ' — ' + (sl.songIds||[]).length + ' songs</div>';
+    (sl.songIds || []).forEach(id => {
+      const s = _groupSongs.find(x => x.id === id);
+      if (!s) return;
+      const hasNote = _myGroupData && _myGroupData.songNotes && _myGroupData.songNotes[id];
+      html += '<div class="bg-song-row" onclick="openGroupSong(\''+esc(id)+'\')">' +
+        (hasNote ? '<div class="bg-song-note-dot" title="You have notes for this song"></div>' : '') +
+        '<div style="flex:1;"><div class="bg-song-title">'+esc(s.title||'Untitled')+'</div>' +
+        '<div class="bg-song-artist">'+esc(s.artist||'')+'</div></div>' +
+        '<button class="btn btn-ghost btn-sm" style="font-size:0.62rem;padding:0.2rem 0.5rem;" onclick="event.stopPropagation();openMyParts(\''+esc(id)+'\')">✏️ My Parts</button>' +
+        '</div>';
+    });
+  }
+
+  html += '<div class="bg-action-row" style="flex-direction:column;gap:0.4rem;margin-top:0.5rem;">' +
+    '<button class="btn btn-ghost btn-sm" onclick="_loadGroupData().then(renderGroupUI)">🔄 Refresh</button>' +
+    '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="leaveGroup()">Leave Group</button>' +
+    '</div>';
+
+  el.innerHTML = html;
+}
 
 
 /* ═══════════ F1 SETLIST SHOW MODE ═══════════ */
