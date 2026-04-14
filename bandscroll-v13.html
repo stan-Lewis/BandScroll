@@ -6962,12 +6962,12 @@ function _clearGroupState() {
 // ── Get member annotations to overlay on the belt for a given song ──
 function _getMemberAnnsForSong(songId) {
   if (!songId) return [];
-  // Conductor viewing a member's annotations
+  // Conductor viewing a specific member's annotations (overrides own)
   if (_isGroupConductor && _viewingMemberData) {
     return (_viewingMemberData.songAnnotations || {})[songId] || [];
   }
-  // Member viewing their own annotations
-  if (!_isGroupConductor && _myGroupData) {
+  // Own personal annotations — works for both conductors and members
+  if (_myGroupData) {
     return (_myGroupData.songAnnotations || {})[songId] || [];
   }
   return [];
@@ -7088,7 +7088,7 @@ function openMemberAnnEditor(songId) {
   if (titleEl) {
     const who = (_isGroupConductor && _viewingMemberUid && _bandGroup && _bandGroup.memberNames)
       ? (_bandGroup.memberNames[_viewingMemberUid] + '\'s') : 'My';
-    titleEl.textContent = who + ' Annotations — ' + esc(song.title || 'Song');
+    titleEl.textContent = who + ' Annotations — ' + (song.title || 'Song');
   }
   _renderMbrAnnList();
   openModal('mbr-ann-modal');
