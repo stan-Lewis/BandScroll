@@ -4187,20 +4187,28 @@ function startCountdown() {
   const veil = document.getElementById('c-veil');
   const numEl = document.getElementById('c-veil-num');
   document.getElementById('c-veil-song').textContent = song.title.toUpperCase();
-  // Show key/capo in countdown veil
+  // Show key/capo/bpm in countdown veil
   const _cvm = document.getElementById('c-veil-meta');
-  if (_cvm) { const _mp=[]; if(song.key)_mp.push(`<span class="key-m">${esc(song.key)}</span>`); if(song.capo)_mp.push(`<span class="capo-m">CAPO ${song.capo}</span>`); _cvm.innerHTML=_mp.join(''); }
+  if (_cvm) {
+    const _mp=[];
+    if(song.key)_mp.push(`<span class="key-m">${esc(song.key)}</span>`);
+    if(song.capo)_mp.push(`<span class="capo-m">CAPO ${song.capo}</span>`);
+    if(song.bpm)_mp.push(`<span class="capo-m">${song.bpm} BPM</span>`);
+    _cvm.innerHTML=_mp.join('');
+  }
   veil.classList.add('open');
+  // If the song has a BPM, count in at that tempo; otherwise use 1-second beats
+  const beatMs = (song.bpm && song.bpm >= 40 && song.bpm <= 300) ? Math.round(60000 / song.bpm) : 1000;
   let count=5; numEl.textContent=count; bumpEl(numEl);
-  // Use server-synced time so all devices count from the same reference
-  const wallStart = serverNow() + 5000;
+  // wallStart is exactly 5 beats from now so all devices sync correctly
+  const wallStart = serverNow() + (5 * beatMs);
   emit({ type:'play', wallStart, song: serializeSong(song), conductorOffset: APP.offsetAdj });
   if (_countdownIv) clearInterval(_countdownIv);
   _countdownIv = setInterval(()=>{
     count--;
     if(count<=0){ clearInterval(_countdownIv); _countdownIv=null; veil.classList.remove('open'); beginPlay(song,wallStart); }
     else { numEl.textContent=count; bumpEl(numEl); }
-  },1000);
+  }, beatMs);
 }
 
 function beginPlay(song, wallStart) {
@@ -4981,6 +4989,7 @@ function _sectAddCustom() {
 function openManualAdd() {
   APP.editingId = null;
   _annRows = [];
+  _editorTapTimes = [];
   document.getElementById('edit-modal-title').textContent = 'Add Song Manually';
   document.getElementById('edit-form').innerHTML = buildEditForm(null);
   _renderAnnList();
@@ -4994,6 +5003,7 @@ function openEdit(id) {
   APP.editingId = id;
   const s = getSong(id); if(!s) return;
   _annRows = (s.annotations || []).filter(a=>a.annType!=='section').map(a => ({...a}));
+  _editorTapTimes = [];
   document.getElementById('edit-modal-title').textContent = 'Edit Song';
   document.getElementById('edit-form').innerHTML = buildEditForm(s);
   _renderAnnList();
@@ -5053,6 +5063,14 @@ function buildEditForm(s) {
     <div class="two-col">
       <div class="field"><label>Tags</label><input id="e-tags" value="${esc((e.tags||[]).join(', '))}" placeholder="slow, cover, encore…"></div>
       <div class="field"><label>Colour</label><input id="e-color" type="color" value="${e.color||'#6366f1'}" style="width:3rem;height:2rem;padding:2px;cursor:pointer;"></div>
+    </div>
+    <div class="field">
+      <label>BPM / Tempo <span style="font-weight:400;color:var(--text-mid);font-size:0.7rem;">— drives the count-in beat</span></label>
+      <div style="display:flex;gap:0.4rem;align-items:center;">
+        <input id="e-bpm" type="number" min="40" max="300" step="1" placeholder="e.g. 120" value="${e.bpm||''}" style="width:90px;">
+        <button type="button" class="btn btn-ghost btn-sm" id="e-bpm-tap" onclick="editorTapBpm()" style="min-width:3rem;">TAP</button>
+        <span id="e-bpm-tap-hint" style="font-size:0.68rem;color:var(--text-mid);">tap button to the beat</span>
+      </div>
     </div>
     <div class="lyrics-tips">
       <strong>Lyrics formatting:</strong><br>
@@ -5143,6 +5161,8 @@ function saveEdit() {
   const nonSectAnns = _annRows.filter(a => a.text && a.text.trim() && a.annType !== 'section');
   const annotations = [...sectAnnotations, ...nonSectAnns];
 
+  const bpm = parseInt(document.getElementById('e-bpm')?.value)||0;
+
   if (APP.editingId) {
     // Edit existing
     const s = getSong(APP.editingId);
@@ -5150,7 +5170,8 @@ function saveEdit() {
       key:(document.getElementById('e-key')||{value:''}).value.trim(),
       capo:parseInt((document.getElementById('e-capo')||{value:0}).value)||0,
       tags:(document.getElementById('e-tags')||{value:''}).value.split(',').map(t=>t.trim()).filter(Boolean),
-      color:(document.getElementById('e-color')||{value:'#6366f1'}).value});
+      color:(document.getElementById('e-color')||{value:'#6366f1'}).value,
+      bpm});
     // Invalidate mergeAnnotations cache after editing
     delete s._mergedKey; delete s._mergedLines;
     // Preserve chords/tabNote from existing lines before rebuilding
@@ -5171,13 +5192,33 @@ function saveEdit() {
     if (!dur) { toast('Enter the song duration'); return; }
     const song = {
       id: 'song_'+Date.now(), title, artist, album:'', duration:dur, key:'', capo:0, tags:[], color:'#6366f1',
-      syncType, notes, rawLyrics, annotations, savedOffset: 0, tabs: {},
+      syncType, notes, rawLyrics, annotations, savedOffset: 0, tabs: {}, bpm,
       lines: syncType==='synced' ? parseLRC(rawLyrics) : buildPlainLines(rawLyrics, dur)
     };
     closeModal('edit-modal');
     addToBank(song, true);
   }
   renderAll();
+}
+
+// ── BPM tap detector for song editor ──
+let _editorTapTimes = [];
+function editorTapBpm() {
+  const now = Date.now();
+  if (_editorTapTimes.length > 0 && now - _editorTapTimes[_editorTapTimes.length-1] > 3000) _editorTapTimes = [];
+  _editorTapTimes.push(now);
+  if (_editorTapTimes.length > 8) _editorTapTimes.shift();
+  const btn = document.getElementById('e-bpm-tap');
+  if (btn) { btn.classList.add('tap-active'); setTimeout(() => btn.classList.remove('tap-active'), 120); }
+  if (_editorTapTimes.length < 2) { const h = document.getElementById('e-bpm-tap-hint'); if(h) h.textContent = 'keep tapping…'; return; }
+  const intervals = [];
+  for (let i = 1; i < _editorTapTimes.length; i++) intervals.push(_editorTapTimes[i] - _editorTapTimes[i-1]);
+  const avg = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+  const bpm = Math.round(Math.max(40, Math.min(300, 60000 / avg)));
+  const inp = document.getElementById('e-bpm');
+  if (inp) inp.value = bpm;
+  const hint = document.getElementById('e-bpm-tap-hint');
+  if (hint) hint.textContent = bpm + ' BPM detected';
 }
 
 // ── TIMESTAMP EDITOR ──
