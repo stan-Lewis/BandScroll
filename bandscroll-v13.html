@@ -5204,7 +5204,27 @@ function saveEdit() {
 
 // ── BPM lookup via Deezer public API ──
 // Deezer's track endpoint returns a `bpm` field for most tracks in its catalogue.
-// Free & no auth — supports CORS for direct browser calls.
+// Free & no auth. Deezer does NOT support CORS for browser fetch(), so we use
+// JSONP (they officially support ?output=jsonp&callback=...).
+function _deezerJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_dzCb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    let timer = null;
+    const cleanup = () => {
+      if (timer) { clearTimeout(timer); timer = null; }
+      try { delete window[cbName]; } catch(_) { window[cbName] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('network / blocked')); };
+    const sep = url.includes('?') ? '&' : '?';
+    script.src = url + sep + 'output=jsonp&callback=' + cbName;
+    timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
+    document.head.appendChild(script);
+  });
+}
+
 async function editorLookupBpm() {
   const title = (document.getElementById('e-title')?.value || '').trim();
   const artist = (document.getElementById('e-artist')?.value || '').trim();
@@ -5218,21 +5238,26 @@ async function editorLookupBpm() {
     // Build a flexible query: include artist if we have one
     const q = artist ? `artist:"${artist}" track:"${title}"` : `track:"${title}"`;
     const searchUrl = `https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=5`;
-    const searchRes = await fetch(searchUrl);
-    if (!searchRes.ok) throw new Error('search failed');
-    const searchData = await searchRes.json();
+    let searchData;
+    try {
+      searchData = await _deezerJsonp(searchUrl);
+    } catch(e) {
+      // Fallback: try a looser query without field tags (some tracks are indexed loosely)
+      if (hint) hint.textContent = 'Retrying…';
+      const qLoose = artist ? (artist + ' ' + title) : title;
+      searchData = await _deezerJsonp(`https://api.deezer.com/search?q=${encodeURIComponent(qLoose)}&limit=5`);
+    }
     const tracks = (searchData && searchData.data) || [];
     if (!tracks.length) { if (hint) hint.textContent = 'No match on Deezer — try tap'; return; }
     // Fetch each candidate's full track details until we find one with a BPM
-    let foundBpm = 0, foundArtist = '';
+    let foundBpm = 0, foundArtist = '', foundTitle = '';
     for (const t of tracks) {
       try {
-        const trackRes = await fetch(`https://api.deezer.com/track/${t.id}`);
-        if (!trackRes.ok) continue;
-        const trackData = await trackRes.json();
+        const trackData = await _deezerJsonp(`https://api.deezer.com/track/${t.id}`);
         if (trackData && trackData.bpm && trackData.bpm >= 40) {
           foundBpm = Math.round(trackData.bpm);
           foundArtist = (trackData.artist && trackData.artist.name) || '';
+          foundTitle = trackData.title || '';
           break;
         }
       } catch(_) { /* try next */ }
@@ -5246,7 +5271,7 @@ async function editorLookupBpm() {
     }
   } catch(e) {
     console.error('editorLookupBpm:', e);
-    if (hint) hint.textContent = 'Lookup failed — try tap';
+    if (hint) hint.textContent = 'Lookup blocked (' + (e.message||'error') + ') — try tap';
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = origLabel; }
   }
