@@ -6641,7 +6641,7 @@ async function _loadGroupData() {
     } catch(e) {}
     _groupLoaded = true;
 
-    // If a song is already on the belt, refresh it now to include member annotations
+    // If a song is already on the conductor belt, refresh it now to include member annotations
     if (APP.currentId) {
       const _beltSong = getSong(APP.currentId) || _groupSongs.find(s => s.id === APP.currentId);
       if (_beltSong) {
@@ -6654,6 +6654,17 @@ async function _loadGroupData() {
             ? Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj) : 0;
           positionBelt('c-belt','c-belt-wrap','c-cursor', _beltLines, _beltT);
         }
+      }
+    }
+    // Also refresh v-belt for viewer/member mode if a song is loaded there
+    if (V.song) {
+      const _vAnns = _getMemberAnnsForSong(V.song.id);
+      if (_vAnns.length > 0) {
+        _activeMemberAnns = _vAnns;
+        delete V.song._mergedKey; delete V.song._mergedLines;
+        V.song.lines = mergeAnnotations(V.song);
+        buildBelt(document.getElementById('v-belt'), V.song.lines);
+        // positionBelt will be called by the next vTick rAF frame automatically
       }
     }
   } catch(e) {
@@ -7078,7 +7089,11 @@ function _mbrAnnCycleType(i) {
 }
 function addMbrAnn(type) {
   let t = 0;
-  if (APP.isPlaying && APP.playStartPN != null) {
+  if (V.playing && V.startPN != null) {
+    // Viewer mode — use viewer timing
+    t = Math.max(0, (performance.now() - V.startPN)/1000 + (V.conductorOffset||0) + (V.localOffset||0));
+  } else if (APP.isPlaying && APP.playStartPN != null) {
+    // Conductor/solo mode — use conductor timing
     t = Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj);
   } else if (_mbrAnnRows.length) {
     t = Math.max(..._mbrAnnRows.map(a => a.t||0)) + 10;
@@ -7134,7 +7149,7 @@ async function saveMemberAnnotations() {
       toast('My annotations saved ✓');
     }
   } catch(e) { console.error('saveMemberAnnotations:', e); toast('Error saving: '+e.message); return; }
-  // Reload belt overlay for this song if currently loaded
+  // Reload conductor belt if this song is loaded there
   _activeMemberAnns = _getMemberAnnsForSong(APP.currentId);
   if (APP.currentId) {
     const song = getSong(APP.currentId) || _groupSongs.find(s => s.id === APP.currentId);
@@ -7146,6 +7161,14 @@ async function saveMemberAnnotations() {
         ? Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj) : 0;
       positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t);
     }
+  }
+  // Also reload viewer belt if this song is being viewed
+  if (V.song && V.song.id === _mbrAnnSongId) {
+    const vAnns = _getMemberAnnsForSong(V.song.id);
+    _activeMemberAnns = vAnns;
+    delete V.song._mergedKey; delete V.song._mergedLines;
+    V.song.lines = mergeAnnotations(V.song);
+    buildBelt(document.getElementById('v-belt'), V.song.lines);
   }
   closeModal('mbr-ann-modal');
 }
