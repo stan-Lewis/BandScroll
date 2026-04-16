@@ -5066,10 +5066,11 @@ function buildEditForm(s) {
     </div>
     <div class="field">
       <label>BPM / Tempo <span style="font-weight:400;color:var(--text-mid);font-size:0.7rem;">— drives the count-in beat</span></label>
-      <div style="display:flex;gap:0.4rem;align-items:center;">
+      <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
         <input id="e-bpm" type="number" min="40" max="300" step="1" placeholder="e.g. 120" value="${e.bpm||''}" style="width:90px;">
         <button type="button" class="btn btn-ghost btn-sm" id="e-bpm-tap" onclick="editorTapBpm()" style="min-width:3rem;">TAP</button>
-        <span id="e-bpm-tap-hint" style="font-size:0.68rem;color:var(--text-mid);">tap button to the beat</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="e-bpm-lookup" onclick="editorLookupBpm()" style="min-width:3rem;" title="Look up BPM from Deezer by title + artist">🔍 Lookup</button>
+        <span id="e-bpm-tap-hint" style="font-size:0.68rem;color:var(--text-mid);">tap to the beat · or Lookup</span>
       </div>
     </div>
     <div class="lyrics-tips">
@@ -5199,6 +5200,56 @@ function saveEdit() {
     addToBank(song, true);
   }
   renderAll();
+}
+
+// ── BPM lookup via Deezer public API ──
+// Deezer's track endpoint returns a `bpm` field for most tracks in its catalogue.
+// Free & no auth — supports CORS for direct browser calls.
+async function editorLookupBpm() {
+  const title = (document.getElementById('e-title')?.value || '').trim();
+  const artist = (document.getElementById('e-artist')?.value || '').trim();
+  const hint = document.getElementById('e-bpm-tap-hint');
+  if (!title) { if (hint) hint.textContent = 'Enter a title first'; return; }
+  const btn = document.getElementById('e-bpm-lookup');
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Looking up…'; }
+  if (hint) hint.textContent = 'Searching Deezer…';
+  try {
+    // Build a flexible query: include artist if we have one
+    const q = artist ? `artist:"${artist}" track:"${title}"` : `track:"${title}"`;
+    const searchUrl = `https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=5`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) throw new Error('search failed');
+    const searchData = await searchRes.json();
+    const tracks = (searchData && searchData.data) || [];
+    if (!tracks.length) { if (hint) hint.textContent = 'No match on Deezer — try tap'; return; }
+    // Fetch each candidate's full track details until we find one with a BPM
+    let foundBpm = 0, foundArtist = '';
+    for (const t of tracks) {
+      try {
+        const trackRes = await fetch(`https://api.deezer.com/track/${t.id}`);
+        if (!trackRes.ok) continue;
+        const trackData = await trackRes.json();
+        if (trackData && trackData.bpm && trackData.bpm >= 40) {
+          foundBpm = Math.round(trackData.bpm);
+          foundArtist = (trackData.artist && trackData.artist.name) || '';
+          break;
+        }
+      } catch(_) { /* try next */ }
+    }
+    if (foundBpm) {
+      const inp = document.getElementById('e-bpm');
+      if (inp) inp.value = foundBpm;
+      if (hint) hint.textContent = foundBpm + ' BPM' + (foundArtist ? ' · ' + foundArtist : '');
+    } else {
+      if (hint) hint.textContent = 'No BPM on Deezer — try tap';
+    }
+  } catch(e) {
+    console.error('editorLookupBpm:', e);
+    if (hint) hint.textContent = 'Lookup failed — try tap';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+  }
 }
 
 // ── BPM tap detector for song editor ──
