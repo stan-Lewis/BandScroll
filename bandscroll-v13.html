@@ -4232,15 +4232,15 @@ function startCountdown() {
   veil.classList.add('open');
   // If the song has a BPM, count in at that tempo; otherwise use 1-second beats
   const beatMs = (song.bpm && song.bpm >= 40 && song.bpm <= 300) ? Math.round(60000 / song.bpm) : 1000;
-  let count=5; numEl.textContent=count; bumpEl(numEl); _playClick(true);
-  // wallStart is exactly 5 beats from now so all devices sync correctly
-  const wallStart = serverNow() + (5 * beatMs);
+  let count=8; numEl.textContent=count; bumpEl(numEl); _playClick(true);
+  // wallStart is exactly 8 beats from now so all devices sync correctly (2 bars of 4/4)
+  const wallStart = serverNow() + (8 * beatMs);
   emit({ type:'play', wallStart, song: serializeSong(song), conductorOffset: APP.offsetAdj });
   if (_countdownIv) clearInterval(_countdownIv);
   _countdownIv = setInterval(()=>{
     count--;
     if(count<=0){ clearInterval(_countdownIv); _countdownIv=null; veil.classList.remove('open'); beginPlay(song,wallStart); }
-    else { numEl.textContent=count; bumpEl(numEl); _playClick(false); }
+    else { numEl.textContent=count; bumpEl(numEl); _playClick(count % 4 === 0); }
   }, beatMs);
 }
 
@@ -4641,7 +4641,7 @@ function vStartCD(wallStart, song, conductorOffset) {
     const iv = setInterval(() => {
       count--;
       if (count <= 0) { clearInterval(iv); veil.classList.remove('open'); vBegin(wallStart); }
-      else { numEl.textContent = count; bumpEl(numEl); _playClick(false); }
+      else { numEl.textContent = count; bumpEl(numEl); _playClick(count % 4 === 0); }
     }, beatMs);
   } else { vBegin(wallStart); }
 }
