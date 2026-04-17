@@ -1973,6 +1973,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <button class="bpm-btn" id="tap-btn" onclick="tapTempo()" title="Tap T">TAP</button>
           <button class="bpm-btn" id="lock-btn" onclick="toggleBpmLock()" title="Lock scroll speed to BPM">LOCK</button>
           <button class="bpm-btn" onclick="resetBpm()" title="Reset BPM">✕</button>
+          <button class="bpm-btn" id="click-toggle-btn" onclick="toggleCountInClick()" title="Audible click during count-in">🔊 Click</button>
         </div>
         <!-- VIEW TOGGLE (conductor) -->
         <span class="t-sep"></span>
@@ -4181,6 +4182,38 @@ function togglePlay() {
   else startCountdown();
 }
 
+// ── Audible metronome click for count-in ──
+// Uses Web Audio API so no audio files are needed. Short sine burst, accented
+// beat is a higher pitch so musicians can feel the "1".
+let _metroCtx = null;
+let _clickEnabled = (function(){ try { return localStorage.getItem('bs4_click_enabled') !== '0'; } catch(e) { return true; } })();
+function _playClick(accented) {
+  if (!_clickEnabled) return;
+  try {
+    if (!_metroCtx) _metroCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_metroCtx.state === 'suspended') _metroCtx.resume();
+    const ctx = _metroCtx;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = accented ? 1100 : 820;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(accented ? 0.45 : 0.32, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.09);
+  } catch(e) { /* silent fail — count-in still works visually */ }
+}
+function toggleCountInClick() {
+  _clickEnabled = !_clickEnabled;
+  try { localStorage.setItem('bs4_click_enabled', _clickEnabled ? '1' : '0'); } catch(e) {}
+  toast('Count-in click ' + (_clickEnabled ? 'on' : 'off'));
+  if (_clickEnabled) _playClick(true); // preview + warm up audio context
+  const btn = document.getElementById('click-toggle-btn');
+  if (btn) btn.textContent = _clickEnabled ? '🔊 Click' : '🔇 Click';
+}
+
 function startCountdown() {
   const song = getSong(APP.currentId);
   if (!song) { toast('Load a song first'); return; }
@@ -4199,7 +4232,7 @@ function startCountdown() {
   veil.classList.add('open');
   // If the song has a BPM, count in at that tempo; otherwise use 1-second beats
   const beatMs = (song.bpm && song.bpm >= 40 && song.bpm <= 300) ? Math.round(60000 / song.bpm) : 1000;
-  let count=5; numEl.textContent=count; bumpEl(numEl);
+  let count=5; numEl.textContent=count; bumpEl(numEl); _playClick(true);
   // wallStart is exactly 5 beats from now so all devices sync correctly
   const wallStart = serverNow() + (5 * beatMs);
   emit({ type:'play', wallStart, song: serializeSong(song), conductorOffset: APP.offsetAdj });
@@ -4207,7 +4240,7 @@ function startCountdown() {
   _countdownIv = setInterval(()=>{
     count--;
     if(count<=0){ clearInterval(_countdownIv); _countdownIv=null; veil.classList.remove('open'); beginPlay(song,wallStart); }
-    else { numEl.textContent=count; bumpEl(numEl); }
+    else { numEl.textContent=count; bumpEl(numEl); _playClick(false); }
   }, beatMs);
 }
 
@@ -4587,19 +4620,29 @@ function vStartCD(wallStart, song, conductorOffset) {
   const delay = wallStart - serverNow();
   document.getElementById('v-live-pill').style.display = '';
   document.getElementById('v-veil-song').textContent = (V.song.title || '').toUpperCase();
-  // Show key/capo in viewer countdown veil
+  // Show key/capo/bpm in viewer countdown veil
   const _vvm = document.getElementById('v-veil-meta');
-  if (_vvm) { const _vmp=[]; if(V.song.key)_vmp.push(`<span class="key-m">${esc(V.song.key)}</span>`); if(V.song.capo)_vmp.push(`<span class="capo-m">CAPO ${V.song.capo}</span>`); _vvm.innerHTML=_vmp.join(''); }
+  if (_vvm) {
+    const _vmp=[];
+    if(V.song.key)_vmp.push(`<span class="key-m">${esc(V.song.key)}</span>`);
+    if(V.song.capo)_vmp.push(`<span class="capo-m">CAPO ${V.song.capo}</span>`);
+    if(V.song.bpm)_vmp.push(`<span class="capo-m">${V.song.bpm} BPM</span>`);
+    _vvm.innerHTML=_vmp.join('');
+  }
   const veil = document.getElementById('v-veil');
   const numEl = document.getElementById('v-veil-num');
   if (delay > 300) {
     veil.classList.add('open');
-    let count = Math.ceil(delay / 1000); numEl.textContent = count; bumpEl(numEl);
+    // If song has BPM, count in beats at that tempo so band members feel the downbeat
+    const hasBpm = V.song.bpm && V.song.bpm >= 40 && V.song.bpm <= 300;
+    const beatMs = hasBpm ? Math.round(60000 / V.song.bpm) : 1000;
+    let count = Math.max(1, Math.round(delay / beatMs));
+    numEl.textContent = count; bumpEl(numEl); _playClick(true);
     const iv = setInterval(() => {
       count--;
       if (count <= 0) { clearInterval(iv); veil.classList.remove('open'); vBegin(wallStart); }
-      else { numEl.textContent = count; bumpEl(numEl); }
-    }, 1000);
+      else { numEl.textContent = count; bumpEl(numEl); _playClick(false); }
+    }, beatMs);
   } else { vBegin(wallStart); }
 }
 
@@ -7640,6 +7683,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   _watchBpmDisplay();
   _initInstrBadge();
   document.getElementById('set-timer-wrap')?.addEventListener('contextmenu',e=>{e.preventDefault();resetSetTimer();});
+  // Sync click-toggle button to stored preference
+  const _clickBtn = document.getElementById('click-toggle-btn');
+  if (_clickBtn) _clickBtn.textContent = _clickEnabled ? '🔊 Click' : '🔇 Click';
 });
 
 </script>
