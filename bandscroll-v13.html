@@ -4215,7 +4215,12 @@ function toggleCountInClick() {
 }
 
 function startCountdown() {
-  const song = getSong(APP.currentId);
+  let song = getSong(APP.currentId);
+  // Fallback: song may be in the group setlist but not yet in local bank
+  if (!song && APP.currentId && typeof _groupSongs !== 'undefined') {
+    const gs = _groupSongs.find(s => s.id === APP.currentId);
+    if (gs) { APP.bank.push(Object.assign({}, gs)); persist(); song = gs; }
+  }
   if (!song) { toast('Load a song first'); return; }
   const veil = document.getElementById('c-veil');
   const numEl = document.getElementById('c-veil-num');
@@ -4230,8 +4235,9 @@ function startCountdown() {
     _cvm.innerHTML=_mp.join('');
   }
   veil.classList.add('open');
-  // If the song has a BPM, count in at that tempo; otherwise use 1-second beats
-  const beatMs = (song.bpm && song.bpm >= 40 && song.bpm <= 300) ? Math.round(60000 / song.bpm) : 1000;
+  // If the song has a BPM, count in at that tempo; otherwise default to ~96 BPM
+  // so 8 beats ≈ 5s — same feel as the old 5-second countdown
+  const beatMs = (song.bpm && song.bpm >= 40 && song.bpm <= 300) ? Math.round(60000 / song.bpm) : 625;
   let count=8; numEl.textContent=count; bumpEl(numEl); _playClick(true);
   // wallStart is exactly 8 beats from now so all devices sync correctly (2 bars of 4/4)
   const wallStart = serverNow() + (8 * beatMs);
