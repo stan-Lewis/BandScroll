@@ -3657,8 +3657,10 @@ function loadSong(id) {
   const song = getSong(id);
   if (!song) return;
 
-  // Restore saved timing offset for this song
-  APP.offsetAdj = song.savedOffset || 0;
+  // Restore saved timing offset for this song.
+  // Cap at -2s: very negative offsets were usually set by accident and would make
+  // the belt appear frozen at 0:00 for several seconds on the next play.
+  APP.offsetAdj = Math.max(-2, song.savedOffset || 0);
   _updateOffsetDisplay();
   const _savedSpd = song.savedSpeed || 1;
   setSpeed(_savedSpd, 'c');
@@ -4256,6 +4258,11 @@ function beginPlay(song, wallStart) {
   if (!_setTimerRunning) { startSetTimer(); }
   // Use server-synced offset for accurate playback position
   APP.playStartPN = performance.now() - (serverNow() - wallStart);
+  // Guard: if a negative offsetAdj would make t<0 at the start the belt appears frozen.
+  // Clamp playStartPN so t starts at exactly 0 (saves wondering if the app is broken).
+  if ((performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj < -0.1) {
+    APP.playStartPN = performance.now() + APP.offsetAdj * 1000;
+  }
   document.getElementById('play-btn').textContent='⏹ Stop';
   document.getElementById('play-btn').className='btn btn-red';
   const _cmPb=document.getElementById('cm-play-btn'); if(_cmPb) _cmPb.textContent='⏹';
