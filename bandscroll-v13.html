@@ -1362,6 +1362,7 @@ html[data-theme="light"] {
   .bpm-btn:hover { background:rgba(255,255,255,0.25); }
   .bpm-btn.locked { background:rgba(240,180,0,0.4); border-color:#f0b400; color:#f0e68c; }
   .bpm-btn.tap-active { background:rgba(0,255,120,0.3); }
+  .bpm-btn.metro-on { background:rgba(0,255,120,0.35); border-color:#a8ff78; color:#a8ff78; }
 
   /* ===== AI TAB PANEL ===== */
   .ai-key-btn { background:linear-gradient(135deg,#6e3fa3,#3a86ff); border:none; color:#fff;
@@ -1974,6 +1975,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <button class="bpm-btn" id="lock-btn" onclick="toggleBpmLock()" title="Lock scroll speed to BPM">LOCK</button>
           <button class="bpm-btn" onclick="resetBpm()" title="Reset BPM">✕</button>
           <button class="bpm-btn" id="click-toggle-btn" onclick="toggleCountInClick()" title="Audible click during count-in">🔊 Click</button>
+          <button class="bpm-btn" id="song-metro-btn" onclick="toggleSongMetro()" title="Metronome throughout the whole song (for the drummer)">🥁 Metro</button>
         </div>
         <!-- VIEW TOGGLE (conductor) -->
         <span class="t-sep"></span>
@@ -2224,6 +2226,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     </div>
     <div class="v-set-group">
       <button class="chord-tab-tog" onclick="showAiKeyModal()" title="Set OpenAI API Key">🤖 AI KEY</button>
+    </div>
+    <div class="v-set-group">
+      <button class="chord-tab-tog" id="v-song-metro-btn" onclick="toggleSongMetro()" title="Metronome throughout the song (for drummer)">🥁 Metro</button>
     </div>
   </div>
 </div>
@@ -3658,9 +3663,14 @@ function loadSong(id) {
   if (!song) return;
 
   // Restore saved timing offset for this song.
-  // Cap at -2s: very negative offsets were usually set by accident and would make
-  // the belt appear frozen at 0:00 for several seconds on the next play.
-  APP.offsetAdj = Math.max(-2, song.savedOffset || 0);
+  // Negative offsets delay belt start and were almost always set by accident.
+  // Auto-reset them to 0 and clear from the song record.
+  if ((song.savedOffset || 0) < 0) {
+    song.savedOffset = 0;
+    persist();
+    setTimeout(() => toast('Timing offset reset to 0 for this song'), 500);
+  }
+  APP.offsetAdj = song.savedOffset || 0;
   _updateOffsetDisplay();
   const _savedSpd = song.savedSpeed || 1;
   setSpeed(_savedSpd, 'c');
@@ -4175,6 +4185,14 @@ function _seekTo(t) {
   positionBelt('c-belt','c-belt-wrap','c-cursor', lines, t);
   _updateScrub(t, song.duration);
   document.getElementById('prog-fill').style.width = (t / song.duration * 100) + '%';
+  // Realign song metronome beat phase to new position
+  if (APP.isPlaying && _songMetroEnabled && song.bpm) {
+    _startSongMetro(
+      () => Math.max(0,(performance.now()-APP.playStartPN)/1000+APP.offsetAdj),
+      () => (getSong(APP.currentId)||song).bpm||0,
+      () => _speedMult.c
+    );
+  }
 }
 
 // ── PLAYBACK ──
@@ -4214,6 +4232,108 @@ function toggleCountInClick() {
   if (_clickEnabled) _playClick(true); // preview + warm up audio context
   const btn = document.getElementById('click-toggle-btn');
   if (btn) btn.textContent = _clickEnabled ? '🔊 Click' : '🔇 Click';
+}
+
+// ── Throughout-song metronome (lookahead scheduler) ──
+// Schedules clicks ~250ms ahead via AudioContext time so the drummer hears
+// a rock-solid beat regardless of JS jank. Accent on beat 1 of each bar.
+let _songMetroEnabled = (function(){ try { return localStorage.getItem('bs4_songmetro') === '1'; } catch(e) { return false; } })();
+let _songMetroIv = null;
+let _songMetroNextBeat = 0;   // AudioContext time for next scheduled click
+let _songMetroBeatPhase = 0;  // 0-3 for 4/4 accent cycle
+
+function _playClickAt(audioTime, accented) {
+  try {
+    if (!_metroCtx) _metroCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _metroCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = accented ? 1100 : 820;
+    const vol = accented ? 0.35 : 0.22;
+    gain.gain.setValueAtTime(0.0001, audioTime);
+    gain.gain.exponentialRampToValueAtTime(vol, audioTime + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioTime + 0.06);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(audioTime); osc.stop(audioTime + 0.07);
+  } catch(e) {}
+}
+
+function _startSongMetro(getSongTime, getBpm, getSpeed) {
+  _stopSongMetro();
+  if (!_songMetroEnabled) return;
+  try {
+    if (!_metroCtx) _metroCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_metroCtx.state === 'suspended') _metroCtx.resume();
+  } catch(e) { return; }
+  const ctx = _metroCtx;
+  const bpm = getBpm();
+  if (!bpm || bpm < 40 || bpm > 300) return;
+  const speed = getSpeed();
+  const effectiveBpm = bpm * Math.max(0.1, speed);
+  const beatSec = 60 / effectiveBpm;
+  // Align to current song-time position so first click lands on a real beat
+  const t = Math.max(0, getSongTime());
+  const beatNum = Math.floor(t / beatSec);
+  const timeInBeat = t - beatNum * beatSec;
+  _songMetroNextBeat = ctx.currentTime + (beatSec - timeInBeat);
+  _songMetroBeatPhase = (beatNum + 1) % 4;
+  _songMetroIv = setInterval(() => {
+    if (!_songMetroEnabled) { _stopSongMetro(); return; }
+    try {
+      const curBpm = getBpm();
+      const curSpeed = getSpeed();
+      if (!curBpm || curBpm < 40 || curBpm > 300) return;
+      const curBeatSec = 60 / (curBpm * Math.max(0.1, curSpeed));
+      const now = ctx.currentTime;
+      while (_songMetroNextBeat < now + 0.25) {
+        if (_songMetroNextBeat >= now - 0.01) _playClickAt(_songMetroNextBeat, _songMetroBeatPhase % 4 === 0);
+        _songMetroBeatPhase++;
+        _songMetroNextBeat += curBeatSec;
+      }
+    } catch(e) {}
+  }, 100);
+}
+
+function _stopSongMetro() {
+  if (_songMetroIv) { clearInterval(_songMetroIv); _songMetroIv = null; }
+  _songMetroNextBeat = 0;
+  _songMetroBeatPhase = 0;
+}
+
+function toggleSongMetro() {
+  _songMetroEnabled = !_songMetroEnabled;
+  try { localStorage.setItem('bs4_songmetro', _songMetroEnabled ? '1' : '0'); } catch(e) {}
+  ['song-metro-btn','v-song-metro-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.textContent = _songMetroEnabled ? '🥁 Metro ON' : '🥁 Metro'; btn.classList.toggle('metro-on', _songMetroEnabled); }
+  });
+  if (_songMetroEnabled) {
+    // Warm up AudioContext now (user gesture)
+    try { if (!_metroCtx) _metroCtx = new (window.AudioContext || window.webkitAudioContext)(); _metroCtx.resume(); } catch(e) {}
+    // Start immediately if already playing
+    const song = getSong(APP.currentId);
+    if (APP.isPlaying && song && song.bpm) {
+      _startSongMetro(
+        () => Math.max(0,(performance.now()-APP.playStartPN)/1000+APP.offsetAdj),
+        () => (getSong(APP.currentId)||{}).bpm||0,
+        () => _speedMult.c
+      );
+    } else if (V.playing && V.song && V.song.bpm) {
+      _startSongMetro(
+        () => Math.max(0,(performance.now()-V.startPN)/1000+V.conductorOffset+V.localOffset),
+        () => (V.song||{}).bpm||0,
+        () => _speedMult.v
+      );
+    } else if (_songMetroEnabled) {
+      const hasBpm = (song && song.bpm) || (V.song && V.song.bpm);
+      if (!hasBpm) toast('Set a BPM on the song first (edit → BPM field)');
+      else toast('Metronome on — starts with next song');
+    }
+  } else {
+    _stopSongMetro();
+    toast('Metronome off');
+  }
 }
 
 function startCountdown() {
@@ -4258,11 +4378,6 @@ function beginPlay(song, wallStart) {
   if (!_setTimerRunning) { startSetTimer(); }
   // Use server-synced offset for accurate playback position
   APP.playStartPN = performance.now() - (serverNow() - wallStart);
-  // Guard: if a negative offsetAdj would make t<0 at the start the belt appears frozen.
-  // Clamp playStartPN so t starts at exactly 0 (saves wondering if the app is broken).
-  if ((performance.now() - APP.playStartPN) / 1000 + APP.offsetAdj < -0.1) {
-    APP.playStartPN = performance.now() + APP.offsetAdj * 1000;
-  }
   document.getElementById('play-btn').textContent='⏹ Stop';
   document.getElementById('play-btn').className='btn btn-red';
   const _cmPb=document.getElementById('cm-play-btn'); if(_cmPb) _cmPb.textContent='⏹';
@@ -4301,10 +4416,19 @@ function beginPlay(song, wallStart) {
     APP.raf = requestAnimationFrame(tick);
   };
   APP.raf = requestAnimationFrame(tick);
+  // Start throughout-song metronome if enabled and song has a BPM
+  if (_songMetroEnabled && song.bpm) {
+    _startSongMetro(
+      () => Math.max(0,(performance.now()-APP.playStartPN)/1000+APP.offsetAdj),
+      () => (getSong(APP.currentId)||song).bpm||0,
+      () => _speedMult.c
+    );
+  }
 }
 
 function stopPlay() {
   if (_countdownIv) { clearInterval(_countdownIv); _countdownIv = null; }
+  _stopSongMetro();
   // Save timing offset back to song so it's restored next time
   const song = getSong(APP.currentId);
   if (song) {
@@ -4667,7 +4791,15 @@ function vSeek(wallStart, songTime, conductorOffset) {
   positionBelt('v-belt','v-belt-wrap','v-cursor', V.song.lines, t);
   _vUpdateScrub(t, V.song.duration);
   updateSectionPin('v', V.song.lines, t);
-  if (!V.playing) vBegin(wallStart);
+  if (!V.playing) { vBegin(wallStart); return; }
+  // Realign metronome beat phase after seek
+  if (_songMetroEnabled && V.song.bpm) {
+    _startSongMetro(
+      () => Math.max(0,(performance.now()-V.startPN)/1000+(V.conductorOffset||0)+(V.localOffset||0)),
+      () => (V.song||{}).bpm||0,
+      () => _speedMult.v
+    );
+  }
 }
 function vBegin(wallStart) {
   if (!V.song) return;
@@ -4698,11 +4830,20 @@ function vBegin(wallStart) {
     V.raf = requestAnimationFrame(tick);
   };
   V.raf = requestAnimationFrame(tick);
+  // Start throughout-song metronome for viewer/drummer if enabled
+  if (_songMetroEnabled && V.song && V.song.bpm) {
+    _startSongMetro(
+      () => Math.max(0,(performance.now()-V.startPN)/1000+(V.conductorOffset||0)+(V.localOffset||0)),
+      () => (V.song||{}).bpm||0,
+      () => _speedMult.v
+    );
+  }
 }
 
 function vStop() {
   V.playing = false;
   if (V.raf) { cancelAnimationFrame(V.raf); V.raf = null; }
+  _stopSongMetro();
   // Fix 1: release wake lock when song stops
   if (V.wakeLock) { V.wakeLock.release().catch(() => {}); V.wakeLock = null; }
   document.getElementById('v-live-pill').style.display = 'none';
@@ -7699,6 +7840,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Sync click-toggle button to stored preference
   const _clickBtn = document.getElementById('click-toggle-btn');
   if (_clickBtn) _clickBtn.textContent = _clickEnabled ? '🔊 Click' : '🔇 Click';
+  // Sync metro buttons to stored preference
+  ['song-metro-btn','v-song-metro-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.textContent = _songMetroEnabled ? '🥁 Metro ON' : '🥁 Metro'; btn.classList.toggle('metro-on', _songMetroEnabled); }
+  });
 });
 
 </script>
