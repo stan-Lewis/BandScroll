@@ -3662,15 +3662,13 @@ function loadSong(id) {
   const song = getSong(id);
   if (!song) return;
 
-  // Restore saved timing offset for this song.
-  // Negative offsets delay belt start and were almost always set by accident.
-  // Auto-reset them to 0 and clear from the song record.
-  if ((song.savedOffset || 0) < 0) {
-    song.savedOffset = 0;
-    persist();
-    setTimeout(() => toast('Timing offset reset to 0 for this song'), 500);
-  }
-  APP.offsetAdj = song.savedOffset || 0;
+  // Restore saved timing offset — dedicated offset store is the source of truth
+  // (it's written synchronously on every nudge and survives cloud-data reloads).
+  // Fall back to song.savedOffset for offsets set before this store existed.
+  const _storedOff = _readOffset(id);
+  APP.offsetAdj = _storedOff !== null ? _storedOff : (song.savedOffset || 0);
+  // Keep song object in sync
+  song.savedOffset = APP.offsetAdj;
   _updateOffsetDisplay();
   const _savedSpd = song.savedSpeed || 1;
   setSpeed(_savedSpd, 'c');
@@ -4459,6 +4457,7 @@ function stopPlay() {
   if (song) {
     song.savedOffset = APP.offsetAdj;
     song.savedSpeed = _speedMult.c;
+    _writeOffset(APP.currentId, APP.offsetAdj);  // dedicated store — synchronous
     persist();
   }
   APP.isPlaying=false;
@@ -4673,21 +4672,42 @@ function nextSong() {
   if(i>=0&&i<ids.length-1) loadSong(ids[i+1]);
 }
 
+// ── Per-song offset store ──
+// A dedicated localStorage key so offsets survive the 400ms debounce window
+// AND cloud-data reloads that fully replace APP.bank from Firestore.
+// Written synchronously on every nudge — never debounced, never lost.
+function _offStore() {
+  try { return JSON.parse(localStorage.getItem('bs4_offsets') || '{}'); } catch(e) { return {}; }
+}
+function _writeOffset(id, v) {
+  if (!id) return;
+  try {
+    const s = _offStore();
+    if (v === 0) { delete s[id]; } else { s[id] = v; }
+    localStorage.setItem('bs4_offsets', JSON.stringify(s));
+  } catch(e) {}
+}
+function _readOffset(id) {
+  try { const v = _offStore()[id]; return (v !== undefined) ? v : null; } catch(e) { return null; }
+}
+
 // ── NUDGE TIMING ──
 function nudgeOffset(delta) {
   APP.offsetAdj = Math.round((APP.offsetAdj + delta) * 10) / 10;
   APP.offsetAdj = Math.max(-15, Math.min(15, APP.offsetAdj));
   _updateOffsetDisplay();
   _broadcastOffsetIfPlaying();
+  _writeOffset(APP.currentId, APP.offsetAdj);         // immediate, dedicated store
   const song = getSong(APP.currentId);
-  if (song) { song.savedOffset = APP.offsetAdj; persist(); }
+  if (song) { song.savedOffset = APP.offsetAdj; _persistNow(); }
 }
 function resetOffset() {
   APP.offsetAdj = 0;
   _updateOffsetDisplay();
   _broadcastOffsetIfPlaying();
+  _writeOffset(APP.currentId, 0);
   const song = getSong(APP.currentId);
-  if (song) { song.savedOffset = APP.offsetAdj; persist(); }
+  if (song) { song.savedOffset = 0; _persistNow(); }
 }
 function _broadcastOffsetIfPlaying() {
   if (!APP.isPlaying) return;
