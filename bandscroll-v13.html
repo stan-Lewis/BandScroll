@@ -4679,11 +4679,15 @@ function nudgeOffset(delta) {
   APP.offsetAdj = Math.max(-15, Math.min(15, APP.offsetAdj));
   _updateOffsetDisplay();
   _broadcastOffsetIfPlaying();
+  const song = getSong(APP.currentId);
+  if (song) { song.savedOffset = APP.offsetAdj; persist(); }
 }
 function resetOffset() {
   APP.offsetAdj = 0;
   _updateOffsetDisplay();
   _broadcastOffsetIfPlaying();
+  const song = getSong(APP.currentId);
+  if (song) { song.savedOffset = APP.offsetAdj; persist(); }
 }
 function _broadcastOffsetIfPlaying() {
   if (!APP.isPlaying) return;
