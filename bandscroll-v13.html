@@ -1913,6 +1913,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <div class="tab-pane" id="t-bank">
         <div style="font-size:0.68rem;color:var(--text-dim);padding-bottom:0.3rem;">All saved songs. Tap ＋ to add to setlist.</div>
         <input id="bank-search" class="bank-search-input" type="text" placeholder="🔍 Search…" oninput="filterBank(this.value)" autocomplete="off" spellcheck="false">
+        <div id="tag-filter-row" style="padding:0.2rem 0.5rem 0.3rem;flex-wrap:wrap;gap:0.25rem;min-height:0;display:none;"></div>
         <div class="pane-scroll" id="bank-list">
           <div class="empty-msg">No saved songs yet.</div>
         </div>
@@ -2159,7 +2160,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     </div>
     <div class="prog-track"><div class="prog-fill" id="v-prog-fill"></div></div>
   </div>
-  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span><span id="v-key-badge" class="stage-badge key-badge" style="display:none;"></span><span id="v-capo-badge" class="stage-badge capo-badge" style="display:none;"></span></div>
+  <div class="v-song-hdr" id="v-song-hdr"><span class="v-song-title" id="v-song-title"></span><span class="v-section-label" id="v-section-label"></span><span id="v-key-badge" class="stage-badge key-badge" style="display:none;"></span><span id="v-capo-badge" class="stage-badge capo-badge" style="display:none;"></span><span id="v-bpm-badge" class="stage-badge" style="display:none;font-size:0.55rem;opacity:0.7;"></span></div>
   <div class="stage" id="v-stage" style="flex:1;">
     <div class="cursor" id="v-cursor"></div>
     <div class="belt-wrap" id="v-belt-wrap">
@@ -2229,6 +2230,11 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     </div>
     <div class="v-set-group">
       <button class="chord-tab-tog" id="v-song-metro-btn" onclick="toggleSongMetro()" title="Metronome throughout the song (for drummer)">🥁 Metro</button>
+    </div>
+    <div class="v-set-group">
+      <span class="v-set-label">Font</span>
+      <button class="chord-tab-tog" onclick="vAdjFontSize(-1)" title="Smaller text">A−</button>
+      <button class="chord-tab-tog" onclick="vAdjFontSize(1)" title="Larger text">A+</button>
     </div>
   </div>
 </div>
@@ -2321,6 +2327,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     <div id="edit-form"></div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="duplicateSong(APP.editingId);closeModal('edit-modal')" title="Duplicate this song" style="margin-right:auto;">⎘ Duplicate</button>
       <button class="btn btn-lime" onclick="saveEdit()">Save Changes</button>
     </div>
   </div>
@@ -2537,6 +2544,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     <button id="cm-play-btn" onclick="togglePlay()" title="Play / Pause">▶</button>
     <button onclick="nextSong()" title="Next song">⏭</button>
   </div>
+  <div id="cm-meta" style="position:absolute;bottom:3.5rem;left:0;right:0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:0.75rem;letter-spacing:0.12em;color:rgba(255,255,255,0.4);pointer-events:none;"></div>
   <div class="cm-exit-hint" onclick="toggleConfidenceMonitor()">tap here to close · M · esc</div>
 </div>
 
@@ -2813,7 +2821,7 @@ function initAbly(code) {
     return;
   }
   try {
-    if (_ablyClient) { try { _ablyClient.close(); } catch(e) {} }
+    if (_ablyClient) { try { clearInterval(_ablyClient._resyncInterval); _ablyClient.close(); } catch(e) {} }
     _myClientId = 'bs_' + Math.random().toString(36).slice(2);
     _ablyClient = new Ably.Realtime({
       key: _ablyKey,
@@ -2886,11 +2894,15 @@ function initAbly(code) {
   }
 }
 
+let _lastSyncFailToast = 0;
 function emit(msg) {
   // localStorage fallback for same-device
   try { localStorage.setItem('bs4_live_' + APP.roomCode, JSON.stringify({...msg, _t: Date.now()})); } catch(e) {}
   if (_ablyChannel) {
-    try { _ablyChannel.publish('bs', msg); } catch(e) {}
+    _ablyChannel.publish('bs', msg).catch(() => {
+      const now = Date.now();
+      if (now - _lastSyncFailToast > 6000) { _lastSyncFailToast = now; toast('⚠ Sync failed — check connection'); }
+    });
   }
 }
 
@@ -2989,8 +3001,9 @@ function renderLobby() {
   const el = document.getElementById('c-lobby-members');
   if (!el) return;
   const names = Object.values(_lobbyMembers);
-  // Fix 5: toast when a member disappears during playback
+  // Toast on member join or leave
   if (_prevLobbyNames.length > 0) {
+    names.forEach(n => { if (!_prevLobbyNames.includes(n)) toast('🎸 ' + n + ' joined'); });
     _prevLobbyNames.forEach(n => { if (!names.includes(n)) toast('🔴 ' + n + ' disconnected'); });
   }
   _prevLobbyNames = [...names];
@@ -3050,6 +3063,9 @@ function show(id) {
 }
 function startConductor() {
   APP.role = 'conductor';
+  // Clear any lingering viewer state from a previous session
+  if (_lsInterval) { clearInterval(_lsInterval); _lsInterval = null; }
+  _pendingPlay = null;
   // Use next room code if one was set, otherwise generate
   try { _nextRoomCode = localStorage.getItem('bs_next_room') || ''; } catch(e) {}
   const _landCode = (document.getElementById('land-room-code')||{}).value;
@@ -3412,6 +3428,17 @@ function removeFromSetlist(id) {
   persist(); renderAll();
 }
 
+function duplicateSong(id) {
+  const s = getSong(id); if (!s) return;
+  const copy = JSON.parse(JSON.stringify(s));
+  copy.id = 'song_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  copy.title = s.title + ' (copy)';
+  delete copy._mergedKey; delete copy._mergedLines;
+  APP.bank.push(copy);
+  persist(); renderBank();
+  toast('Duplicated: ' + copy.title);
+}
+
 let _deletedSong = null, _deletedSetIds = null, _undoTimer = null;
 function deleteFromBank(id) {
   if (!confirm('Delete this song from your bank?')) return;
@@ -3539,11 +3566,12 @@ function renderBank() {
   const setIds = getSetlistSongIds();
   el.innerHTML = APP.bank.map(s => {
     const inSet = setIds.includes(s.id);
-    return `<div class="song-item" onclick="loadSong('${s.id}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc((s.tags||[]).join(' '))}">
+    const tagsArr = Array.isArray(s.tags) ? s.tags : (s.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+    return `<div class="song-item" onclick="loadSong('${s.id}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc(tagsArr.join(','))}">
       <div class="si-info">
         <div class="si-title">${s.color?'<span class=\"song-color-dot\" style=\"background:'+s.color+'\"></span>':''}${esc(s.title)}${s.key?' <small style=\"opacity:0.5;\">('+esc(s.key)+')</small>':''}</div>
         <div class="si-meta">${esc(s.artist||'—')} · ${fmtTime(s.duration)}</div>
-        ${s.tags&&s.tags.length?'<div class="si-tags">'+s.tags.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>':''}
+        ${tagsArr.length?'<div class="si-tags">'+tagsArr.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>':''}
         </div>
       </div>
       ${s.syncType==='synced'?`<div class="sync-badge">SYNC</div>`:''}
@@ -3557,6 +3585,15 @@ function renderBank() {
       </div>
     </div>`;
   }).join('');
+  renderTagFilterRow();
+}
+
+function duplicateSetlist(id) {
+  const sl = APP.setlists.find(s => s.id === id); if (!sl) return;
+  const copy = { id: 'sl_' + Date.now(), name: sl.name + ' (copy)', songIds: [...sl.songIds] };
+  APP.setlists.push(copy);
+  persist(); renderSets(); renderSetsModal();
+  toast('Duplicated: ' + copy.name);
 }
 
 function renderSets() {
@@ -3565,6 +3602,7 @@ function renderSets() {
     <div class="sl-item${sl.id===APP.activeSetlistId?' active-sl':''}" onclick="switchSetlist('${sl.id}')">
       <div class="sl-name">${esc(sl.name)}</div>
       <div class="sl-count">${sl.songIds.length} songs</div>
+      <button class="icon-btn" onclick="event.stopPropagation();duplicateSetlist('${sl.id}')" title="Duplicate setlist" style="font-size:0.85rem;">⎘</button>
       <button class="icon-btn del" onclick="event.stopPropagation();deleteSetlist('${sl.id}')" title="Delete">🗑</button>
     </div>
   `).join('');
@@ -3577,6 +3615,7 @@ function renderSetsModal() {
       <div class="sl-name">${esc(sl.name)}</div>
       <div class="sl-count">${sl.songIds.length} songs</div>
       ${sl.id===APP.activeSetlistId?`<span style="font-family:'JetBrains Mono';font-size:0.55rem;color:var(--lime);padding:0.1rem 0.3rem;">ACTIVE</span>`:''}
+      <button class="icon-btn" onclick="event.stopPropagation();duplicateSetlist('${sl.id}')" title="Duplicate setlist" style="font-size:0.85rem;">⎘</button>
       <button class="icon-btn del" onclick="event.stopPropagation();deleteSetlist('${sl.id}')" title="Delete">🗑</button>
     </div>
   `).join('');
@@ -4541,14 +4580,30 @@ function toggleSettings(forceClose) {
   }
 }
 
+let _activeTagFilter = '';
 function filterBank(q) {
   const term = q.toLowerCase().trim();
   document.querySelectorAll('#bank-list .song-item').forEach(el => {
     const t = (el.dataset.title||'').toLowerCase();
     const a = (el.dataset.artist||'').toLowerCase();
     const g = (el.dataset.tags||'').toLowerCase();
-    el.style.display = (!term||t.includes(term)||a.includes(term)||g.includes(term)) ? '' : 'none';
+    const tagOk = !_activeTagFilter || g.split(',').map(x=>x.trim()).includes(_activeTagFilter);
+    el.style.display = ((!term||t.includes(term)||a.includes(term)||g.includes(term)) && tagOk) ? '' : 'none';
   });
+}
+function setTagFilter(tag) {
+  _activeTagFilter = (_activeTagFilter === tag) ? '' : tag;
+  renderTagFilterRow();
+  filterBank((document.getElementById('bank-search')||{}).value||'');
+}
+function renderTagFilterRow() {
+  const row = document.getElementById('tag-filter-row'); if (!row) return;
+  const tags = [...new Set(APP.bank.flatMap(s => (s.tags||'').split(',').map(t=>t.trim()).filter(Boolean)))].sort();
+  if (!tags.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex'; row.style.flexWrap = 'wrap';
+  row.innerHTML = tags.map(tag =>
+    `<button onclick="setTagFilter('${esc(tag)}')" style="font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;border:1px solid var(--border2);background:${_activeTagFilter===tag?'var(--lime)':'var(--bg3)'};color:${_activeTagFilter===tag?'#000':'var(--text-mid)'};cursor:pointer;white-space:nowrap;">${esc(tag)}</button>`
+  ).join('');
 }
 
 let _fontSize = 1.0;
@@ -4742,6 +4797,8 @@ function vLoad(song) {
   const _vcb = document.getElementById('v-capo-badge');
   if (_vkb) { _vkb.textContent = song.key || ''; _vkb.style.display = song.key ? '' : 'none'; }
   if (_vcb) { _vcb.textContent = song.capo ? 'CAPO\u00a0' + song.capo : ''; _vcb.style.display = song.capo ? '' : 'none'; }
+  const _vbb = document.getElementById('v-bpm-badge');
+  if (_vbb) { _vbb.textContent = song.bpm ? song.bpm + '\u202fbpm' : ''; _vbb.style.display = song.bpm ? '' : 'none'; }
   document.getElementById('v-song-hdr').classList.add('show');
   const belt = document.getElementById('v-belt');
   belt.style.display = '';
@@ -4922,11 +4979,20 @@ function _vUpdateScrub(t, dur) {
 // Viewer UI controls
 function setLyricScale(val) {
   document.documentElement.style.setProperty('--lyric-scale', val);
-  document.getElementById('v-scale-val').textContent = parseFloat(val).toFixed(1) + '×';
+  const el = document.getElementById('v-scale-val'); if (el) el.textContent = parseFloat(val).toFixed(1) + '×';
+  try { localStorage.setItem('bs4_vscale', val); } catch(e) {}
 }
 function setBrightness(val) {
   document.documentElement.style.setProperty('--brightness', val);
-  document.getElementById('v-bright-val').textContent = Math.round(val * 100) + '%';
+  const el = document.getElementById('v-bright-val'); if (el) el.textContent = Math.round(val * 100) + '%';
+  try { localStorage.setItem('bs4_vbright', val); } catch(e) {}
+}
+let _vFontSize = (()=>{ try { return parseFloat(localStorage.getItem('bs4_vfont')||'1'); } catch(e){ return 1; } })();
+function vAdjFontSize(dir) {
+  _vFontSize = Math.round(Math.max(0.6, Math.min(2.2, _vFontSize + dir * 0.1)) * 10) / 10;
+  document.getElementById('v-belt').style.fontSize = _vFontSize + 'rem';
+  try { localStorage.setItem('bs4_vfont', _vFontSize); } catch(e) {}
+  toast('Viewer font: ' + _vFontSize.toFixed(1) + ' rem');
 }
 
 // ── SECTION PIN BAR ──
@@ -6697,6 +6763,15 @@ function toggleConfidenceMonitor() {
     if (ce) ce.textContent = APP.isPlaying ? '…' : '—';
     if (ne) ne.textContent = '';
     if (cs) cs.textContent = APP.isPlaying ? '● LIVE' : 'waiting for playback';
+    // Key / capo / BPM footer
+    const meta = document.getElementById('cm-meta');
+    if (meta && song) {
+      const parts = [];
+      if (song.key) parts.push('KEY\u00a0' + song.key);
+      if (song.capo) parts.push('CAPO\u00a0' + song.capo);
+      if (song.bpm) parts.push(song.bpm + '\u202fBPM');
+      meta.textContent = parts.join('\u2003·\u2003');
+    }
   }
 }
 
@@ -7885,7 +7960,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   const _clickBtn = document.getElementById('click-toggle-btn');
   if (_clickBtn) _clickBtn.textContent = _clickEnabled ? '🔊 Click' : '🔇 Click';
   _syncMetroButtons();
+  // Restore viewer scale/brightness/font
+  try {
+    const _vs = localStorage.getItem('bs4_vscale');
+    const _vb = localStorage.getItem('bs4_vbright');
+    if (_vs) { const sl = document.getElementById('v-scale-slider'); if (sl) sl.value = _vs; setLyricScale(_vs); }
+    if (_vb) { const bl = document.querySelector('.v-settings input[oninput*="setBrightness"]'); if (bl) bl.value = _vb; setBrightness(_vb); }
+    if (_vFontSize !== 1) { const vb = document.getElementById('v-belt'); if (vb) vb.style.fontSize = _vFontSize + 'rem'; }
+  } catch(e) {}
 });
+// Flush persist debounce on page unload so no changes are lost
+window.addEventListener('beforeunload', () => { if (_persistTimer) { clearTimeout(_persistTimer); _persistNow(); } });
 
 </script>
 
