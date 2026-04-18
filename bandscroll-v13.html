@@ -4259,7 +4259,7 @@ function _playClickAt(audioTime, accented) {
   } catch(e) {}
 }
 
-function _startSongMetro(getSongTime, getBpm, getSpeed) {
+function _startSongMetro(getSongTime, getBpm, getSpeed, wallStart) {
   _stopSongMetro();
   if (!_songMetroEnabled) return;
   try {
@@ -4272,12 +4272,20 @@ function _startSongMetro(getSongTime, getBpm, getSpeed) {
   const speed = getSpeed();
   const effectiveBpm = bpm * Math.max(0.1, speed);
   const beatSec = 60 / effectiveBpm;
-  // Align to current song-time position so first click lands on a real beat
-  const t = Math.max(0, getSongTime());
-  const beatNum = Math.floor(t / beatSec);
-  const timeInBeat = t - beatNum * beatSec;
-  _songMetroNextBeat = ctx.currentTime + (beatSec - timeInBeat);
-  _songMetroBeatPhase = (beatNum + 1) % 4;
+  if (wallStart != null) {
+    // Anchor beat 1 of the song exactly to wallStart — same grid the count-in used.
+    // Convert server-time wallStart to AudioContext time.
+    const audioTimeOfBeat1 = ctx.currentTime + (wallStart - serverNow()) / 1000;
+    _songMetroNextBeat = audioTimeOfBeat1;
+    _songMetroBeatPhase = 0; // beat 1 = downbeat = accented
+  } else {
+    // Mid-song toggle or seek: align from current song position
+    const t = Math.max(0, getSongTime());
+    const beatNum = Math.floor(t / beatSec);
+    const timeInBeat = t - beatNum * beatSec;
+    _songMetroNextBeat = ctx.currentTime + (beatSec - timeInBeat);
+    _songMetroBeatPhase = (beatNum + 1) % 4;
+  }
   _songMetroIv = setInterval(() => {
     if (!_songMetroEnabled) { _stopSongMetro(); return; }
     try {
@@ -4360,15 +4368,30 @@ function startCountdown() {
   // If the song has a BPM, count in at that tempo; otherwise default to ~96 BPM
   // so 8 beats ≈ 5s — same feel as the old 5-second countdown
   const beatMs = (song.bpm && song.bpm >= 40 && song.bpm <= 300) ? Math.round(60000 / song.bpm) : 625;
-  let count=8; numEl.textContent=count; bumpEl(numEl); _playClick(true);
+  const beatSec = beatMs / 1000;
   // wallStart is exactly 8 beats from now so all devices sync correctly (2 bars of 4/4)
   const wallStart = serverNow() + (8 * beatMs);
   emit({ type:'play', wallStart, song: serializeSong(song), conductorOffset: APP.offsetAdj });
+  // Schedule all 8 count-in clicks via AudioContext in one shot — jitter-free,
+  // and beat-grid aligns perfectly with the song metronome which anchors to wallStart.
+  if (_clickEnabled) {
+    try {
+      if (!_metroCtx) _metroCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_metroCtx.state === 'suspended') _metroCtx.resume();
+      const audioWallStart = _metroCtx.currentTime + (wallStart - serverNow()) / 1000;
+      for (let i = 8; i >= 1; i--) {
+        const audioTime = audioWallStart - (i * beatSec);
+        _playClickAt(Math.max(_metroCtx.currentTime + 0.005, audioTime), i === 8 || i === 4);
+      }
+    } catch(e) {}
+  }
+  // Visual countdown only — audio is handled above
+  let count=8; numEl.textContent=count; bumpEl(numEl);
   if (_countdownIv) clearInterval(_countdownIv);
   _countdownIv = setInterval(()=>{
     count--;
     if(count<=0){ clearInterval(_countdownIv); _countdownIv=null; veil.classList.remove('open'); beginPlay(song,wallStart); }
-    else { numEl.textContent=count; bumpEl(numEl); _playClick(count % 4 === 0); }
+    else { numEl.textContent=count; bumpEl(numEl); }
   }, beatMs);
 }
 
@@ -4416,12 +4439,14 @@ function beginPlay(song, wallStart) {
     APP.raf = requestAnimationFrame(tick);
   };
   APP.raf = requestAnimationFrame(tick);
-  // Start throughout-song metronome if enabled and song has a BPM
+  // Start throughout-song metronome if enabled and song has a BPM.
+  // Pass wallStart so beat 1 is anchored to the exact same grid as the count-in.
   if (_songMetroEnabled && song.bpm) {
     _startSongMetro(
       () => Math.max(0,(performance.now()-APP.playStartPN)/1000+APP.offsetAdj),
       () => (getSong(APP.currentId)||song).bpm||0,
-      () => _speedMult.c
+      () => _speedMult.c,
+      wallStart
     );
   }
 }
@@ -4770,15 +4795,27 @@ function vStartCD(wallStart, song, conductorOffset) {
   const numEl = document.getElementById('v-veil-num');
   if (delay > 300) {
     veil.classList.add('open');
-    // If song has BPM, count in beats at that tempo so band members feel the downbeat
     const hasBpm = V.song.bpm && V.song.bpm >= 40 && V.song.bpm <= 300;
     const beatMs = hasBpm ? Math.round(60000 / V.song.bpm) : 1000;
+    const beatSec = beatMs / 1000;
     let count = Math.max(1, Math.round(delay / beatMs));
-    numEl.textContent = count; bumpEl(numEl); _playClick(true);
+    numEl.textContent = count; bumpEl(numEl);
+    // Schedule all count-in clicks via AudioContext — same grid as song metronome
+    if (_clickEnabled) {
+      try {
+        if (!_metroCtx) _metroCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (_metroCtx.state === 'suspended') _metroCtx.resume();
+        const audioWallStart = _metroCtx.currentTime + (wallStart - serverNow()) / 1000;
+        for (let i = count; i >= 1; i--) {
+          const audioTime = audioWallStart - (i * beatSec);
+          _playClickAt(Math.max(_metroCtx.currentTime + 0.005, audioTime), i === count || i % 4 === 0);
+        }
+      } catch(e) {}
+    }
     const iv = setInterval(() => {
       count--;
       if (count <= 0) { clearInterval(iv); veil.classList.remove('open'); vBegin(wallStart); }
-      else { numEl.textContent = count; bumpEl(numEl); _playClick(count % 4 === 0); }
+      else { numEl.textContent = count; bumpEl(numEl); }
     }, beatMs);
   } else { vBegin(wallStart); }
 }
@@ -4830,12 +4867,14 @@ function vBegin(wallStart) {
     V.raf = requestAnimationFrame(tick);
   };
   V.raf = requestAnimationFrame(tick);
-  // Start throughout-song metronome for viewer/drummer if enabled
+  // Start throughout-song metronome for viewer/drummer if enabled.
+  // Pass wallStart so beat 1 aligns with the count-in grid.
   if (_songMetroEnabled && V.song && V.song.bpm) {
     _startSongMetro(
       () => Math.max(0,(performance.now()-V.startPN)/1000+(V.conductorOffset||0)+(V.localOffset||0)),
       () => (V.song||{}).bpm||0,
-      () => _speedMult.v
+      () => _speedMult.v,
+      wallStart
     );
   }
 }
