@@ -2013,7 +2013,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         <!-- Panels float below the bar row, overlay the lyrics, equal height -->
         <div class="tidy-panels-container" id="tidy-panels-container">
           <div class="tidy-panel" id="tidy-speed-panel"><div class="tidy-panel-row" id="tidy-speed-row"></div></div>
-          <div class="tidy-panel" id="tidy-bpm-panel"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div></div>
+          <div class="tidy-panel" id="tidy-bpm-panel"><div class="tidy-panel-row" id="tidy-bpm-row"></div><div class="tidy-panel-row" id="tidy-bpm-row2"></div><div class="tidy-panel-row" id="tidy-bpm-row3"></div></div>
           <div class="tidy-panel" id="tidy-view-panel">
             <div class="tidy-panel-row" style="flex-direction:column;align-items:flex-start;gap:8px">
               <div><div class="tidy-panel-label">Part</div><div id="tidy-view-toggle-wrap" style="display:flex;gap:0"></div></div>
@@ -7910,6 +7910,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     const bpmRow2=document.getElementById('tidy-bpm-row2');
     if(bpmRow){bpmRow.appendChild(bpmDisplay);if(metroBallWrap)bpmRow.appendChild(metroBallWrap);}
     if(bpmRow2){if(tapBtn)bpmRow2.appendChild(tapBtn);if(lockBtn)bpmRow2.appendChild(lockBtn);if(bpmReset)bpmRow2.appendChild(bpmReset);}
+    const clickBtn=document.getElementById('click-toggle-btn');
+    const metroBtn=document.getElementById('song-metro-btn');
+    const bpmRow3=document.getElementById('tidy-bpm-row3');
+    if(bpmRow3){if(clickBtn)bpmRow3.appendChild(clickBtn);if(metroBtn)bpmRow3.appendChild(metroBtn);}
     new MutationObserver(()=>{const l=document.getElementById('tidy-bpm-label');if(l)l.textContent=bpmDisplay.textContent.trim();}).observe(bpmDisplay,{childList:true,characterData:true,subtree:true});
     const viewToggle=document.getElementById('c-view-toggle');
     const viewWrap=document.getElementById('tidy-view-toggle-wrap');
