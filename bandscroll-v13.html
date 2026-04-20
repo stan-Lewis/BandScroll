@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="icon.svg">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' https: data: blob:; connect-src 'self' https: wss:; font-src 'self' https: data:; worker-src 'self' blob:;">
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -3454,7 +3455,7 @@ function deleteFromBank(id) {
   persist(); renderAll();
   // Show undo toast for 6 s
   if (_undoTimer) clearTimeout(_undoTimer);
-  toast('🗑 Deleted "' + esc(_deletedSong?_deletedSong.title:'song') + '"  <a href="#" onclick="undoDelete();return false;" style="color:#facc15;margin-left:8px;">Undo</a>', 20000);
+  toast('🗑 Deleted "' + esc(_deletedSong?_deletedSong.title:'song') + '"  <a href="#" onclick="undoDelete();return false;" style="color:#facc15;margin-left:8px;">Undo</a>', 20000, true);
   _undoTimer = setTimeout(() => { _deletedSong = null; _deletedSetIds = null; }, 20500);
 }
 function undoDelete() {
@@ -3539,9 +3540,9 @@ function renderSetlist() {
   el.innerHTML = ids.map((id,i) => {
     const s = getSong(id); if(!s) return '';
     const active = id===APP.currentId;
-    return `<div class="song-item${active?' active':''}" onclick="loadSong('${id}')"
-      draggable="true" ondragstart="dragStart(event,'${id}')"
-      ondragover="dragOver(event)" ondrop="dragDrop(event,'${id}')"
+    return `<div class="song-item${active?' active':''}" onclick="loadSong('${esc(id)}')"
+      draggable="true" ondragstart="dragStart(event,'${esc(id)}')"
+      ondragover="dragOver(event)" ondrop="dragDrop(event,'${esc(id)}')"
       ondragleave="dragLeave(event)">
       <div class="si-drag">⠿</div>
       <div class="si-num">${i+1}</div>
@@ -3552,8 +3553,8 @@ function renderSetlist() {
       </div>
       ${s.syncType==='synced'?`<div class="sync-badge">SYNC</div>`:''}
       <div class="si-actions" onclick="event.stopPropagation()">
-        <button class="icon-btn edit" onclick="openEdit('${id}')" title="Edit">✎</button>
-        <button class="icon-btn del" onclick="removeFromSetlist('${id}')" title="Remove">✕</button>
+        <button class="icon-btn edit" onclick="openEdit('${esc(id)}')" title="Edit">✎</button>
+        <button class="icon-btn del" onclick="removeFromSetlist('${esc(id)}')" title="Remove">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -3567,9 +3568,9 @@ function renderBank() {
   el.innerHTML = APP.bank.map(s => {
     const inSet = setIds.includes(s.id);
     const tagsArr = Array.isArray(s.tags) ? s.tags : (s.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
-    return `<div class="song-item" onclick="loadSong('${s.id}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc(tagsArr.join(','))}">
+    return `<div class="song-item" onclick="loadSong('${esc(s.id)}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc(tagsArr.join(','))}">
       <div class="si-info">
-        <div class="si-title">${s.color?'<span class=\"song-color-dot\" style=\"background:'+s.color+'\"></span>':''}${esc(s.title)}${s.key?' <small style=\"opacity:0.5;\">('+esc(s.key)+')</small>':''}</div>
+        <div class="si-title">${safeColor(s.color)?'<span class=\"song-color-dot\" style=\"background:'+safeColor(s.color)+'\"></span>':''}${esc(s.title)}${s.key?' <small style=\"opacity:0.5;\">('+esc(s.key)+')</small>':''}</div>
         <div class="si-meta">${esc(s.artist||'—')} · ${fmtTime(s.duration)}</div>
         ${tagsArr.length?'<div class="si-tags">'+tagsArr.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>':''}
         </div>
@@ -3578,10 +3579,10 @@ function renderBank() {
       <div class="si-actions" onclick="event.stopPropagation()">
         ${inSet
           ? `<span style="font-family:'JetBrains Mono';font-size:0.55rem;color:var(--lime-dim);padding:0.1rem 0.3rem;">IN SET</span>`
-          : `<button class="icon-btn" onclick="addToSetlist('${s.id}')" style="color:var(--lime);font-size:1rem;">＋</button>`
+          : `<button class="icon-btn" onclick="addToSetlist('${esc(s.id)}')" style="color:var(--lime);font-size:1rem;">＋</button>`
         }
-        <button class="icon-btn edit" onclick="openEdit('${s.id}')" title="Edit">✎</button>
-        <button class="icon-btn del" onclick="deleteFromBank('${s.id}')" title="Delete">🗑</button>
+        <button class="icon-btn edit" onclick="openEdit('${esc(s.id)}')" title="Edit">✎</button>
+        <button class="icon-btn del" onclick="deleteFromBank('${esc(s.id)}')" title="Delete">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -3599,11 +3600,11 @@ function duplicateSetlist(id) {
 function renderSets() {
   const el = document.getElementById('sets-list');
   el.innerHTML = APP.setlists.map(sl => `
-    <div class="sl-item${sl.id===APP.activeSetlistId?' active-sl':''}" onclick="switchSetlist('${sl.id}')">
+    <div class="sl-item${sl.id===APP.activeSetlistId?' active-sl':''}" onclick="switchSetlist('${esc(sl.id)}')">
       <div class="sl-name">${esc(sl.name)}</div>
       <div class="sl-count">${sl.songIds.length} songs</div>
-      <button class="icon-btn" onclick="event.stopPropagation();duplicateSetlist('${sl.id}')" title="Duplicate setlist" style="font-size:0.85rem;">⎘</button>
-      <button class="icon-btn del" onclick="event.stopPropagation();deleteSetlist('${sl.id}')" title="Delete">🗑</button>
+      <button class="icon-btn" onclick="event.stopPropagation();duplicateSetlist('${esc(sl.id)}')" title="Duplicate setlist" style="font-size:0.85rem;">⎘</button>
+      <button class="icon-btn del" onclick="event.stopPropagation();deleteSetlist('${esc(sl.id)}')" title="Delete">🗑</button>
     </div>
   `).join('');
 }
@@ -3611,12 +3612,12 @@ function renderSets() {
 function renderSetsModal() {
   const el = document.getElementById('sets-modal-list');
   el.innerHTML = APP.setlists.map(sl => `
-    <div class="sl-item${sl.id===APP.activeSetlistId?' active-sl':''}" onclick="switchSetlist('${sl.id}')">
+    <div class="sl-item${sl.id===APP.activeSetlistId?' active-sl':''}" onclick="switchSetlist('${esc(sl.id)}')">
       <div class="sl-name">${esc(sl.name)}</div>
       <div class="sl-count">${sl.songIds.length} songs</div>
       ${sl.id===APP.activeSetlistId?`<span style="font-family:'JetBrains Mono';font-size:0.55rem;color:var(--lime);padding:0.1rem 0.3rem;">ACTIVE</span>`:''}
-      <button class="icon-btn" onclick="event.stopPropagation();duplicateSetlist('${sl.id}')" title="Duplicate setlist" style="font-size:0.85rem;">⎘</button>
-      <button class="icon-btn del" onclick="event.stopPropagation();deleteSetlist('${sl.id}')" title="Delete">🗑</button>
+      <button class="icon-btn" onclick="event.stopPropagation();duplicateSetlist('${esc(sl.id)}')" title="Duplicate setlist" style="font-size:0.85rem;">⎘</button>
+      <button class="icon-btn del" onclick="event.stopPropagation();deleteSetlist('${esc(sl.id)}')" title="Delete">🗑</button>
     </div>
   `).join('');
 }
@@ -3627,7 +3628,7 @@ function renderOverview() {
   if (!ids.length) { el.innerHTML='<div class="empty-msg">No songs in setlist.</div>'; return; }
   el.innerHTML = ids.map((id,i) => {
     const s = getSong(id); if(!s) return '';
-    return `<div class="ov-card${id===APP.currentId?' active':''}" onclick="loadSong('${id}');closeModal('overview-modal')">
+    return `<div class="ov-card${id===APP.currentId?' active':''}" onclick="loadSong('${esc(id)}');closeModal('overview-modal')">
       <div class="ov-num">${i+1}</div>
       <div class="ov-title">${esc(s.title)}</div>
       <div class="ov-artist">${esc(s.artist||'—')}</div>
@@ -5389,7 +5390,7 @@ function buildEditForm(s) {
     <div class="field"><label>Lyrics</label>
       <textarea id="e-lyrics" rows="11">${esc(e.rawLyrics||'')}</textarea>
     </div>
-    ${s&&s.syncType==='synced'?`<button class="btn btn-ghost btn-sm" type="button" onclick="openTSEditor('${s.id}')" style="margin-bottom:0.5rem;">⏱ Edit Timestamps</button>`:''}
+    ${s&&s.syncType==='synced'?`<button class="btn btn-ghost btn-sm" type="button" onclick="openTSEditor('${esc(s.id)}')" style="margin-bottom:0.5rem;">⏱ Edit Timestamps</button>`:''}
 
     <div class="sect-placer-wrap" id="sect-placer-wrap">
       <div class="sect-placer-head">
@@ -6395,9 +6396,14 @@ function esc(str){
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
 }
-function toast(msg, dur){
+// Whitelist CSS color values — only hex, rgb/rgba, hsl/hsla, or plain CSS named colours.
+// Blocks CSS injection attempts (e.g. "red; background-image:url(...)").
+function safeColor(c){
+  return /^#[0-9a-fA-F]{3,8}$|^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+)?\s*\)$|^hsla?\([\d\s,.%]+\)$|^[a-zA-Z]{2,30}$/.test(String(c||'').trim()) ? c : '';
+}
+function toast(msg, dur, isHtml){
   const t=document.getElementById('toast');
-  if (msg.includes('<')) t.innerHTML=msg; else t.textContent=msg;
+  if (isHtml) t.innerHTML=msg; else t.textContent=msg;
   t.classList.add('show');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), dur||2600);
 }
@@ -6915,7 +6921,12 @@ document.addEventListener('keydown', e=>{
 
 
 
-/* BandScroll v13 - Firebase Account System */
+/* BandScroll v13 - Firebase Account System
+   NOTE: Firebase API keys are intentionally public for client-side web apps.
+   Security is enforced via Firebase Security Rules in the Firebase Console,
+   not by hiding the key. The key is restricted to the bandscroll.firebaseapp.com
+   domain and has no privileged server-side access.
+   See: https://firebase.google.com/docs/projects/api-keys */
 const _fbConfig={apiKey:"AIzaSyCl1DfRY2fL4IU-2zOPmL2ACa5uSoIwNQk",authDomain:"bandscroll.firebaseapp.com",projectId:"bandscroll",storageBucket:"bandscroll.firebasestorage.app",messagingSenderId:"1006388233385",appId:"1:1006388233385:web:8a9541873b6e321fd155b8"};
 firebase.initializeApp(_fbConfig);
 const _fbAuth=firebase.auth();
@@ -7052,12 +7063,12 @@ async function _loadGroupData() {
     // Load songs
     const songsSnap = await _fbDb.collection('bandGroups/'+groupId+'/songs').get();
     _groupSongs = [];
-    songsSnap.forEach(d => _groupSongs.push(Object.assign({ id: d.id }, d.data())));
+    songsSnap.forEach(d => _groupSongs.push(JSON.parse(JSON.stringify({ id: d.id, ...d.data() }))));
 
     // Load setlists
     const slSnap = await _fbDb.collection('bandGroups/'+groupId+'/setlists').get();
     _groupSetlists = [];
-    slSnap.forEach(d => _groupSetlists.push(Object.assign({ id: d.id }, d.data())));
+    slSnap.forEach(d => _groupSetlists.push(JSON.parse(JSON.stringify({ id: d.id, ...d.data() }))));
     _groupSetlists.sort((a,b)=>(a.order||0)-(b.order||0));
 
     // Load my member data
@@ -7777,7 +7788,7 @@ function _renderShowMode(){
   songs.forEach((song,i)=>{
     const isCur=song.id===APP.currentId;const isDone=curIdx>0&&i<curIdx;
     const cls=isCur?'sm-song sm-active':isDone?'sm-song sm-done':'sm-song';
-    html+=`<div class="${cls}" onclick="loadSong('${song.id}');_renderShowMode();">
+    html+=`<div class="${cls}" onclick="loadSong('${esc(song.id)}');_renderShowMode();">
       <span class="sm-idx">${i+1}</span>
       <div class="sm-info"><div class="sm-song-title">${esc(song.title||'Untitled')}</div><div class="sm-song-artist">${esc(song.artist||'')}</div></div>
       ${isCur?'<span class="sm-now-badge">NOW</span>':''}
