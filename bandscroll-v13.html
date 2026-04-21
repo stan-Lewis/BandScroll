@@ -2237,6 +2237,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <button class="chord-tab-tog" onclick="vAdjFontSize(-1)" title="Smaller text">A−</button>
       <button class="chord-tab-tog" onclick="vAdjFontSize(1)" title="Larger text">A+</button>
     </div>
+    <div class="v-set-group">
+      <button class="chord-tab-tog" id="v-pedal-btn" onclick="toggleVPedalMode()" title="AirTurn / foot pedal: arrow keys jump lines">🦶 Pedal</button>
+    </div>
   </div>
 </div>
 
@@ -5000,6 +5003,46 @@ function vAdjFontSize(dir) {
   toast('Viewer font: ' + _vFontSize.toFixed(1) + ' rem');
 }
 
+// ── FOOT PEDAL / AIRTURN SUPPORT (viewer mode) ──
+let _vPedalMode = (()=>{ try { return localStorage.getItem('bs4_vpedal') === '1'; } catch(e){ return false; } })();
+function _syncPedalBtn() {
+  const btn = document.getElementById('v-pedal-btn');
+  if (btn) { btn.style.background = _vPedalMode ? 'var(--lime)' : ''; btn.style.color = _vPedalMode ? '#000' : ''; }
+}
+function toggleVPedalMode() {
+  _vPedalMode = !_vPedalMode;
+  try { localStorage.setItem('bs4_vpedal', _vPedalMode ? '1' : '0'); } catch(e) {}
+  _syncPedalBtn();
+  toast(_vPedalMode ? '🦶 Pedal mode ON' : '🦶 Pedal mode OFF');
+}
+function vPedalJump(dir) {
+  if (!V.song) return;
+  const lines = mergeAnnotations(V.song);
+  const now = performance.now();
+  const t = V.playing
+    ? Math.max(0, (now - V.startPN) / 1000 + (V.conductorOffset || 0) + (V.localOffset || 0))
+    : Math.max(0, V.localOffset || 0);
+  let activeIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].t != null && lines[i].t <= t) activeIdx = i;
+  }
+  let targetIdx = -1;
+  if (dir > 0) {
+    for (let i = activeIdx + 1; i < lines.length; i++) {
+      if (lines[i].t != null) { targetIdx = i; break; }
+    }
+  } else {
+    for (let i = activeIdx - 1; i >= 0; i--) {
+      if (lines[i].t != null) { targetIdx = i; break; }
+    }
+  }
+  if (targetIdx < 0) return;
+  const conductorT = V.playing ? Math.max(0, (now - V.startPN) / 1000 + (V.conductorOffset || 0)) : 0;
+  V.localOffset = lines[targetIdx].t - conductorT;
+  const btn = document.getElementById('v-resync-btn');
+  if (btn) btn.style.display = Math.abs(V.localOffset) > 0.1 ? '' : 'none';
+}
+
 // ── SECTION PIN BAR ──
 const _sectionPinState = { c: { current: '', pending: '' }, v: { current: '', pending: '' } };
 
@@ -6285,6 +6328,13 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     const ov = document.getElementById('pdf-viewer-overlay');
     if (ov && ov.classList.contains('open')) closePdfViewer();
+  }
+  // Foot pedal / AirTurn: viewer line jump (ArrowRight/Down = forward, ArrowLeft/Up = back)
+  if (APP.role === 'viewer' && _vPedalMode) {
+    if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+    if (e.code === 'ArrowRight' || e.code === 'ArrowDown') { e.preventDefault(); vPedalJump(1); }
+    else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') { e.preventDefault(); vPedalJump(-1); }
+    else if (e.code === 'Space') { e.preventDefault(); vPedalJump(1); }
   }
 });
 
@@ -7990,6 +8040,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if (_vs) { const sl = document.getElementById('v-scale-slider'); if (sl) sl.value = _vs; setLyricScale(_vs); }
     if (_vb) { const bl = document.querySelector('.v-settings input[oninput*="setBrightness"]'); if (bl) bl.value = _vb; setBrightness(_vb); }
     if (_vFontSize !== 1) { const vb = document.getElementById('v-belt'); if (vb) vb.style.fontSize = _vFontSize + 'rem'; }
+    if (_vPedalMode) _syncPedalBtn();
   } catch(e) {}
 });
 // Flush persist debounce on page unload so no changes are lost
