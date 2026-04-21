@@ -3176,7 +3176,7 @@ async function doSearch() {
   } catch(e) {
     el.innerHTML = `<div class="search-status" style="color:var(--red);">
       ❌ Search failed. Make sure you're online and have hosted the file (not opening locally).<br>
-      <span style="opacity:0.7;font-size:0.65rem;">${e.message}</span>
+      <span style="opacity:0.7;font-size:0.65rem;">${esc(e.message)}</span>
     </div>`;
   }
 }
@@ -3201,10 +3201,10 @@ function renderSearchResults(items) {
 async function pickResult(i) {
   const el = document.getElementById('search-results');
   const r = el._results[i];
-  if (!r) return;
+  if (!r || typeof r.id !== 'number') return;
   el.innerHTML = `<div class="search-status">⏳ Loading "${esc(r.trackName)}"…</div>`;
   try {
-    const data = await lrcFetch(`https://lrclib.net/api/get/${r.id}`);
+    const data = await lrcFetch(`https://lrclib.net/api/get/${encodeURIComponent(r.id)}`);
     const song = buildSong(data);
     addToBank(song, true);
     el.innerHTML = `<div class="search-status" style="color:var(--lime);">
@@ -3219,8 +3219,12 @@ async function pickResult(i) {
 
 // ── SONG BUILDER ──
 function buildSong(data) {
+  // Validate expected fields from external API before use
+  if (!data || typeof data !== 'object') throw new Error('Invalid song data');
+  const title = String(data.trackName || '').trim().slice(0, 200) || 'Unknown';
+  const artist = String(data.artistName || '').trim().slice(0, 200);
+  const duration = (typeof data.duration === 'number' && isFinite(data.duration)) ? Math.min(data.duration, 7200) : 180;
   const id = 'song_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
-  const duration = data.duration || 180;
   let lines, syncType, rawLyrics;
   if (data.syncedLyrics) {
     syncType = 'synced'; rawLyrics = data.syncedLyrics;
@@ -3231,8 +3235,8 @@ function buildSong(data) {
   } else {
     syncType = 'plain'; rawLyrics = ''; lines = [];
   }
-  return { id, title: data.trackName, artist: data.artistName,
-    album: data.albumName, duration, syncType, lines, rawLyrics, notes: '',
+  const album = String(data.albumName || '').trim().slice(0, 200);
+  return { id, title, artist, album, duration, syncType, lines, rawLyrics, notes: '',
     savedOffset: 0, annotations: [], tabs: {} };
 }
 
@@ -5560,8 +5564,9 @@ async function editorLookupBpm() {
     // Fetch each candidate's full track details until we find one with a BPM
     let foundBpm = 0, foundArtist = '', foundTitle = '';
     for (const t of tracks) {
+      if (!t || typeof t.id !== 'number') continue;
       try {
-        const trackData = await _deezerJsonp(`https://api.deezer.com/track/${t.id}`);
+        const trackData = await _deezerJsonp(`https://api.deezer.com/track/${encodeURIComponent(t.id)}`);
         if (trackData && trackData.bpm && trackData.bpm >= 40) {
           foundBpm = Math.round(trackData.bpm);
           foundArtist = (trackData.artist && trackData.artist.name) || '';
@@ -6399,7 +6404,8 @@ function esc(str){
 // Whitelist CSS color values — only hex, rgb/rgba, hsl/hsla, or plain CSS named colours.
 // Blocks CSS injection attempts (e.g. "red; background-image:url(...)").
 function safeColor(c){
-  return /^#[0-9a-fA-F]{3,8}$|^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+)?\s*\)$|^hsla?\([\d\s,.%]+\)$|^[a-zA-Z]{2,30}$/.test(String(c||'').trim()) ? c : '';
+  // Strict whitelist: hex, rgb/rgba (numeric), hsl/hsla (numeric degrees/percent), CSS named colours (alpha only)
+  return /^#[0-9a-fA-F]{3,8}$|^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$|^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$|^[a-zA-Z]{2,30}$/.test(String(c||'').trim()) ? c : '';
 }
 function toast(msg, dur, isHtml){
   const t=document.getElementById('toast');
@@ -6892,12 +6898,18 @@ document.addEventListener('keydown', e=>{
   if (hash.startsWith('#pack=') && typeof LZString !== 'undefined') {
     try {
       const raw = LZString.decompressFromEncodedURIComponent(hash.slice(6));
+      if (raw && raw.length > 2000000) throw new Error('Pack too large');
       const data = raw ? JSON.parse(raw) : null;
+      const VALID_LINE_TYPES = new Set(['lyric','section','empty','annotation']);
       if (data && Array.isArray(data.songs) && data.songs.length) {
         hydrate(); // ensure APP.bank exists
         let added = 0;
         data.songs.forEach(s => {
-          if (!s || !s.id || !s.title || !Array.isArray(s.lines)) return;
+          if (!s || typeof s.id !== 'string' || !s.id || typeof s.title !== 'string' || !s.title) return;
+          if (!Array.isArray(s.lines)) return;
+          // Deep-validate each line: must be an object with a recognised type and string text
+          const linesOk = s.lines.every(l => l && typeof l === 'object' && VALID_LINE_TYPES.has(l.type) && (l.text === undefined || typeof l.text === 'string') && (l.t === undefined || l.t === null || typeof l.t === 'number'));
+          if (!linesOk) return;
           if (!APP.bank.find(b => b.id === s.id)) { APP.bank.push(s); added++; }
         });
         if (data.setlistName && data.songs.length) {
@@ -7458,7 +7470,7 @@ async function conductorViewMember(uid) {
       _viewingMemberData = doc.exists ? doc.data() : { instrument:'all', songNotes:{}, songAnnotations:{} };
       if (!_viewingMemberData.songAnnotations) _viewingMemberData.songAnnotations = {};
       _activeMemberAnns = _getMemberAnnsForSong(APP.currentId);
-      const nm = (_bandGroup.memberNames && _bandGroup.memberNames[uid]) || 'member';
+      const nm = ((_bandGroup.memberNames && _bandGroup.memberNames[uid]) || 'member').slice(0, 50);
       toast('Viewing ' + nm + '\'s annotations');
     } catch(e) {
       console.error('conductorViewMember:', e);
@@ -7677,7 +7689,7 @@ function _renderConductorView(el) {
     html += '<div style="font-size:0.72rem;color:var(--text-mid);margin-bottom:0.5rem;">No members yet — share the invite code.</div>';
   } else {
     members.forEach(uid => {
-      const nm = memberNames[uid] || uid;
+      const nm = (memberNames[uid] || uid).slice(0, 50);
       const isViewing = _viewingMemberUid === uid;
       html += '<div class="bg-member-row">' +
         '<span class="bg-member-name">' + esc(nm) + '</span>' +
