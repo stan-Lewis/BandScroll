@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>BandScroll v13</title>
+<title>BandScroll</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -1831,7 +1831,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 <!-- ══════════ LANDING ══════════ -->
 <div id="s-auth" class="screen">
   <div class="brand"><span>Band</span><span>Scroll</span></div>
-  <div class="brand-sub">v13 · Sign in to your BandScroll account</div>
+  <div class="brand-sub">Sign in to your BandScroll account</div>
   <div class="auth-card">
     <div class="auth-tabs">
       <button class="auth-tab on" id="auth-tab-login" onclick="authSwitchTab('login')">Log In</button>
@@ -1859,7 +1859,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 
 <div id="s-land" class="screen active">
   <div class="brand">Band<span>Scroll</span></div>
-  <div class="brand-sub">v13 · Live Lyrics · Tabs · BPM Sync · AI · Accounts Tabs · Real-Time Sync · Full Band</div>
+  <div class="brand-sub">Live Lyrics · Tabs · BPM Sync · AI · Real-Time Sync · Full Band</div>
   <div class="role-row">
     <div class="r-card" onclick="show('s-auth')">
       <div class="r-icon">🎤</div>
@@ -6154,7 +6154,7 @@ function generatePackUrl() {
   const sl = getActiveSetlist();
   const json = JSON.stringify({ songs, setlistName: sl ? sl.name : 'Setlist' });
   const compressed = LZString.compressToEncodedURIComponent(json);
-  const base = 'https://stan-lewis.github.io/BandScroll/bandscroll-v13.html';
+  const base = 'https://stan-lewis.github.io/BandScroll/bandscroll.html';
   return base + '#pack=' + compressed;
 }
 
