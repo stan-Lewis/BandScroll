@@ -358,10 +358,13 @@ textarea{resize:vertical;}
   margin-top:0.08rem;
 }
 .sync-badge{
-  font-family:'JetBrains Mono',monospace;font-size:0.5rem;
-  background:var(--lime);color:#000;padding:0.08rem 0.28rem;border-radius:2px;flex-shrink:0;
+  font-family:'JetBrains Mono',monospace;font-size:0.48rem;letter-spacing:0.06em;
+  background:var(--lime);color:#041412;padding:0.1rem 0.3rem;border-radius:2px;flex-shrink:0;font-weight:700;
 }
+/* Bank card right column */
+.si-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem;flex-shrink:0;justify-content:center;}
 .si-actions{display:flex;gap:0.02rem;flex-shrink:0;}
+.bi-inset-lbl{font-family:'JetBrains Mono',monospace;font-size:0.48rem;letter-spacing:0.06em;color:var(--lime-dim);padding:0.08rem 0.28rem;border:1px solid rgba(15,212,192,0.2);border-radius:2px;}
 .empty-msg{text-align:center;padding:2rem 1rem;color:var(--text-dim);font-size:0.78rem;line-height:1.8;}
 
 /* SEARCH */
@@ -1478,6 +1481,8 @@ html[data-theme="light"] {
   .ai-modal input, .ai-modal select { width:100%; padding:9px 12px; border-radius:7px;
     border:1px solid var(--border2); background:var(--bg); color:var(--text); font-size:14px; margin-bottom:12px; box-sizing:border-box; outline:none; transition:border-color .2s; }
   .ai-modal input:focus, .ai-modal select:focus { border-color:var(--lime); }
+  .ai-field { display:flex; flex-direction:column; gap:0.3rem; margin-bottom:1rem; }
+  .ai-label { font-family:'JetBrains Mono',monospace; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-mid); }
   .ai-modal .btn-row { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
   .ai-modal button { padding:8px 20px; border-radius:7px; border:none; cursor:pointer; font-size:14px; font-weight:600; }
   .ai-save-btn { background:var(--lime); color:#041412; font-weight:700; }
@@ -2653,17 +2658,17 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 <div class="ai-modal-overlay" id="ai-modal-overlay" onclick="if(event.target===this)closeAiModal()" style="display:none;align-items:center;justify-content:center;">
   <div class="ai-modal">
     <h3>🤖 Claude AI Settings</h3>
-    <div style="margin-bottom:12px;font-size:13px;color:#a0aec0;line-height:1.5;">
-      Get a free key at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#bf9fff;">console.anthropic.com</a> → API Keys. Used for chord generation &amp; tab processing. Saved in your browser only.
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="display:block;font-size:12px;color:#a0aec0;margin-bottom:4px;">Anthropic API Key</label>
+    <p style="font-size:13px;color:var(--text-mid);line-height:1.5;margin:0 0 1.2rem;">
+      Get a free key at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--lime);">console.anthropic.com</a> → API Keys. Used for chord generation &amp; tab processing. Saved in your browser only.
+    </p>
+    <div class="ai-field">
+      <label class="ai-label">Anthropic API Key</label>
       <input id="ai-key-input" type="password" placeholder="sk-ant-api03-…" autocomplete="off">
     </div>
-    <div style="margin-bottom:16px;">
-      <label style="display:block;font-size:12px;color:#a0aec0;margin-bottom:4px;">Model</label>
+    <div class="ai-field">
+      <label class="ai-label">Model</label>
       <select id="ai-model-select">
-        <option value="claude-haiku-4-5">Claude Haiku 4.5 — fastest &amp; cheapest</option>
+        <option value="claude-haiku-4-5" selected>Claude Haiku 4.5 — fastest &amp; cheapest</option>
         <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — balanced</option>
         <option value="claude-opus-4-7">Claude Opus 4.7 — most capable</option>
       </select>
@@ -3721,21 +3726,22 @@ function renderBank() {
   el.innerHTML = APP.bank.map(s => {
     const inSet = setIds.includes(s.id);
     const tagsArr = Array.isArray(s.tags) ? s.tags : (s.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
-    return `<div class="song-item" onclick="loadSong('${esc(s.id)}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc(tagsArr.join(','))}">
+    return `<div class="song-item${inSet?' bi-inset':''}" onclick="loadSong('${esc(s.id)}')" data-title="${esc(s.title)}" data-artist="${esc(s.artist||'')}" data-tags="${esc(tagsArr.join(','))}">
       <div class="si-info">
         <div class="si-title">${safeColor(s.color)?'<span class=\"song-color-dot\" style=\"background:'+safeColor(s.color)+'\"></span>':''}${esc(s.title)}${s.key?' <small style=\"opacity:0.5;\">('+esc(s.key)+')</small>':''}</div>
         <div class="si-meta">${esc(s.artist||'—')} · ${fmtTime(s.duration)}</div>
         ${tagsArr.length?'<div class="si-tags">'+tagsArr.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>':''}
-        </div>
       </div>
-      ${s.syncType==='synced'?`<div class="sync-badge">SYNC</div>`:''}
-      <div class="si-actions" onclick="event.stopPropagation()">
-        ${inSet
-          ? `<span style="font-family:'JetBrains Mono';font-size:0.55rem;color:var(--lime-dim);padding:0.1rem 0.3rem;">IN SET</span>`
-          : `<button class="icon-btn" onclick="addToSetlist('${esc(s.id)}')" style="color:var(--lime);font-size:1rem;">＋</button>`
-        }
-        <button class="icon-btn edit" onclick="openEdit('${esc(s.id)}')" title="Edit">✎</button>
-        <button class="icon-btn del" onclick="deleteFromBank('${esc(s.id)}')" title="Delete">🗑</button>
+      <div class="si-right">
+        ${s.syncType==='synced'?`<span class="sync-badge">SYNC</span>`:'<span class="sync-badge" style="background:var(--bg4);color:var(--text-mid);">PLAIN</span>'}
+        <div class="si-actions" onclick="event.stopPropagation()">
+          ${inSet
+            ? `<span class="bi-inset-lbl">IN&nbsp;SET</span>`
+            : `<button class="icon-btn" onclick="addToSetlist('${esc(s.id)}')" title="Add to setlist" style="color:var(--lime);font-size:1rem;">＋</button>`
+          }
+          <button class="icon-btn edit" onclick="openEdit('${esc(s.id)}')" title="Edit">✎</button>
+          <button class="icon-btn del" onclick="deleteFromBank('${esc(s.id)}')" title="Delete">🗑</button>
+        </div>
       </div>
     </div>`;
   }).join('');
