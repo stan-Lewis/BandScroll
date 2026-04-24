@@ -320,7 +320,7 @@ textarea{resize:vertical;}
   border-bottom:1px solid rgba(15,212,192,0.08);
   border-left:3px solid transparent;
   padding:0.6rem 0.75rem 0.6rem 0.6rem;
-  display:flex;align-items:center;gap:0.55rem;
+  display:flex;align-items:flex-start;gap:0.55rem;
   cursor:pointer;transition:all 0.15s;margin-bottom:0;
   border-radius:0;user-select:none;
   -webkit-tap-highlight-color:rgba(15,212,192,0.07);
@@ -339,13 +339,14 @@ textarea{resize:vertical;}
 .si-num{
   font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:400;
   color:rgba(15,212,192,0.35);min-width:1.4rem;letter-spacing:0.05em;
+  padding-top:0.1rem;flex-shrink:0;
 }
 .song-item.active .si-num{color:var(--lime);}
-.si-drag{color:var(--text-dim);cursor:grab;font-size:0.9rem;flex-shrink:0;opacity:0.4;}
+.si-drag{color:var(--text-dim);cursor:grab;font-size:0.9rem;flex-shrink:0;opacity:0.4;padding-top:0.1rem;}
 .si-info{flex:1;min-width:0;}
 .si-title{
   font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.88rem;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:normal;overflow:visible;
   display:flex;align-items:center;gap:5px;
   color:var(--text);letter-spacing:0.01em;
 }
@@ -363,7 +364,7 @@ textarea{resize:vertical;}
 }
 /* Bank card right column */
 .si-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem;flex-shrink:0;justify-content:center;}
-.si-actions{display:flex;gap:0.02rem;flex-shrink:0;}
+.si-actions{display:flex;gap:0.02rem;flex-shrink:0;align-self:flex-start;}
 .bi-inset-lbl{font-family:'JetBrains Mono',monospace;font-size:0.48rem;letter-spacing:0.06em;color:var(--lime-dim);padding:0.08rem 0.28rem;border:1px solid rgba(15,212,192,0.2);border-radius:2px;}
 .empty-msg{text-align:center;padding:2rem 1rem;color:var(--text-dim);font-size:0.78rem;line-height:1.8;}
 
