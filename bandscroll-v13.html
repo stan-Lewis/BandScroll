@@ -3733,12 +3733,12 @@ function renderBank() {
         ${tagsArr.length?'<div class="si-tags">'+tagsArr.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>':''}
       </div>
       <div class="si-right">
-        ${s.syncType==='synced'?`<span class="sync-badge">SYNC</span>`:'<span class="sync-badge" style="background:var(--bg4);color:var(--text-mid);">PLAIN</span>'}
+        <div style="display:flex;align-items:center;gap:0.3rem;">
+          ${s.syncType==='synced'?`<span class="sync-badge">SYNC</span>`:'<span class="sync-badge" style="background:var(--bg4);color:var(--text-mid);">PLAIN</span>'}
+          ${inSet ? `<span class="bi-inset-lbl">IN&nbsp;SET</span>` : ''}
+        </div>
         <div class="si-actions" onclick="event.stopPropagation()">
-          ${inSet
-            ? `<span class="bi-inset-lbl">IN&nbsp;SET</span>`
-            : `<button class="icon-btn" onclick="addToSetlist('${esc(s.id)}')" title="Add to setlist" style="color:var(--lime);font-size:1rem;">＋</button>`
-          }
+          ${!inSet ? `<button class="icon-btn" onclick="addToSetlist('${esc(s.id)}')" title="Add to setlist" style="color:var(--lime);font-size:1rem;">＋</button>` : ''}
           <button class="icon-btn edit" onclick="openEdit('${esc(s.id)}')" title="Edit">✎</button>
           <button class="icon-btn del" onclick="deleteFromBank('${esc(s.id)}')" title="Delete">🗑</button>
         </div>
