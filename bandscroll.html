@@ -3058,7 +3058,33 @@ function emit(msg) {
   }
 }
 
+// 1d: watchdog — reset on every conductor message; fire toast if silent for 25s
+let _conductorWatchdog = null;
+let _conductorEverSeen = false;
+function _resetConductorWatchdog() {
+  if (APP.role !== 'viewer') return;
+  _conductorEverSeen = true;
+  if (_conductorWatchdog) clearTimeout(_conductorWatchdog);
+  _conductorWatchdog = setTimeout(() => {
+    if (APP.role === 'viewer' && V.song) {
+      toast('⚠ Conductor appears offline');
+      _setSyncDotViewer('disconnected');
+    }
+  }, 25000);
+}
+function _clearConductorWatchdog() {
+  if (_conductorWatchdog) { clearTimeout(_conductorWatchdog); _conductorWatchdog = null; }
+  _conductorEverSeen = false;
+}
+function _setSyncDotViewer(state) {
+  const d = document.getElementById('v-sync-dot');
+  if (!d) return;
+  d.classList.remove('connected','disconnected');
+  if (state) d.classList.add(state);
+}
+
 function onBC(msg) {
+  _resetConductorWatchdog(); // any message from conductor = conductor is alive
   if (msg.type === 'presence') {
     if (APP.role === 'conductor') {
       // Track member joining
@@ -3217,6 +3243,7 @@ function startConductor() {
   APP.role = 'conductor';
   // Clear any lingering viewer state from a previous session
   if (_lsInterval) { clearInterval(_lsInterval); _lsInterval = null; }
+  _clearConductorWatchdog();
   _pendingPlay = null;
   // Use next room code if one was set, otherwise generate
   try { _nextRoomCode = localStorage.getItem('bs_next_room') || ''; } catch(e) {}
@@ -3274,6 +3301,7 @@ function doJoin() {
   }
   APP.role = 'viewer';
   APP.roomCode = code;
+  _clearConductorWatchdog(); // reset watchdog for new session
   document.getElementById('v-name-pill').textContent = name;
   document.getElementById('v-room-pill').textContent = code;
   initAbly(code);
@@ -7900,7 +7928,7 @@ function _renderConductorView(el) {
     '<div><div class="bg-title">🎸 ' + esc(g.name) + '</div>' +
     '<div class="bg-subtitle">You are the conductor</div></div>' +
     '<div style="text-align:right;"><div class="bg-invite-label">Invite Code</div>' +
-    '<div class="bg-invite" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(g.inviteCode)+'\').then(()=>toast(\'Code copied!\'))" title="Tap to copy">'+ esc(g.inviteCode) +'</div></div>' +
+    '<div class="bg-invite" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(g.inviteCode)+'\').then(()=>toast(\'Code copied!\')).catch(()=>toast(\'Copy failed\'))" title="Tap to copy">'+ esc(g.inviteCode) +'</div></div>' +
     '</div>';
 
   // Viewing banner (if conductor is viewing a member's annotations)
