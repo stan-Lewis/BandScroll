@@ -2,7 +2,7 @@
   "name": "BandScroll",
   "short_name": "BandScroll",
   "description": "Live lyric teleprompter for bands — scroll lyrics in sync across all devices",
-  "start_url": "/BandScroll/",
+  "start_url": "/BandScroll/bandscroll.html",
   "scope": "/BandScroll/",
   "display": "standalone",
   "background_color": "#0f1117",

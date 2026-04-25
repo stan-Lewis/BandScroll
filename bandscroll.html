@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>BandScroll</title>
+<title>BandScroll v13</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -1831,7 +1831,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 <!-- ══════════ LANDING ══════════ -->
 <div id="s-auth" class="screen">
   <div class="brand"><span>Band</span><span>Scroll</span></div>
-  <div class="brand-sub">Sign in to your BandScroll account</div>
+  <div class="brand-sub">v13 · Sign in to your BandScroll account</div>
   <div class="auth-card">
     <div class="auth-tabs">
       <button class="auth-tab on" id="auth-tab-login" onclick="authSwitchTab('login')">Log In</button>
@@ -1859,7 +1859,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 
 <div id="s-land" class="screen active">
   <div class="brand">Band<span>Scroll</span></div>
-  <div class="brand-sub">Live Lyrics · Tabs · BPM Sync · AI · Real-Time Sync · Full Band</div>
+  <div class="brand-sub">v13 · Live Lyrics · Tabs · BPM Sync · AI · Accounts Tabs · Real-Time Sync · Full Band</div>
   <div class="role-row">
     <div class="r-card" onclick="show('s-auth')">
       <div class="r-icon">🎤</div>
@@ -1892,7 +1892,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 <div id="s-vjoin" class="screen">
   <div class="join-card">
     <h2>Join Session</h2>
-    <p>Get the room code from your conductor.</p>
+    <div id="vjoin-sync-hint" style="display:none;background:rgba(15,212,192,0.07);border:1px solid rgba(15,212,192,0.2);border-radius:6px;padding:0.4rem 0.75rem;font-size:0.75rem;color:var(--lime);font-family:'JetBrains Mono',monospace;letter-spacing:0.04em;margin-bottom:0.75rem;">🔗 Sync key included — enter your name and join</div>
+    <p id="vjoin-hint-text">Get the room code from your conductor.</p>
     <div class="field">
       <label>Room Code</label>
       <input id="v-code" type="text" maxlength="6" placeholder="BAND42"
@@ -2947,7 +2948,7 @@ function _updateApiKeyStatus() {
   const el = document.getElementById('apikey-status');
   if (!el) return;
   if (_ablyKey) {
-    const short = _ablyKey.slice(0,8) + '…';
+    const short = esc(_ablyKey.slice(0,8)) + '…';
     el.innerHTML = `<span style="color:var(--lime-dim);">KEY SET: ${short}</span>`;
   } else {
     el.innerHTML = `<span style="color:var(--red);">⚠ No API key set — cross-device sync disabled</span>`;
@@ -3241,6 +3242,11 @@ function startConductor() {
 function showVJoin() {
   const p = new URLSearchParams(location.search);
   if (p.get('room')) document.getElementById('v-code').value = p.get('room').toUpperCase();
+  // Show sync-ready banner if key is embedded in the share link
+  const syncHint = document.getElementById('vjoin-sync-hint');
+  const hintText = document.getElementById('vjoin-hint-text');
+  if (syncHint) syncHint.style.display = p.get('k') ? 'block' : 'none';
+  if (hintText) hintText.style.display = p.get('k') ? 'none' : 'block';
   show('s-vjoin');
 
   // Restore saved instrument preference
@@ -3259,6 +3265,13 @@ function doJoin() {
   const code = document.getElementById('v-code').value.trim().toUpperCase();
   const name = document.getElementById('v-name').value.trim() || 'Band Member';
   if (code.length < 4 || code.length > 12 || !/^[A-Z0-9]+$/.test(code)) { toast('Enter a valid room code'); return; }
+  // If no local Ably key, try to use one embedded in the share URL by the conductor
+  if (!_ablyKey) {
+    try {
+      const _pk = new URLSearchParams(location.search).get('k');
+      if (_pk) _ablyKey = atob(_pk);
+    } catch(e) {}
+  }
   APP.role = 'viewer';
   APP.roomCode = code;
   document.getElementById('v-name-pill').textContent = name;
@@ -6125,16 +6138,19 @@ function genCode(){
   const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('');
 }
+function _buildShareUrl(){
+  // Embed the Ably key so band members can join without setting up their own key
+  return location.origin+location.pathname+'?room='+APP.roomCode+(_ablyKey?'&k='+btoa(_ablyKey):'');
+}
 function updateShareUrl(){
-  const url=location.origin+location.pathname+'?room='+APP.roomCode;
+  const url=_buildShareUrl();
   document.getElementById('sm-url').textContent=url;
   const qrImg = document.getElementById('sm-qr-img');
   if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?data='+encodeURIComponent(url)+'&size=156x156&margin=2';
 }
 function copyRoom(){navigator.clipboard.writeText(APP.roomCode).then(()=>toast('Code copied!')).catch(()=>toast('Copy failed'));}
 function copyShareUrl(){
-  const url=location.origin+location.pathname+'?room='+APP.roomCode;
-  navigator.clipboard.writeText(url).then(()=>toast('Link copied!')).catch(()=>toast('Copy failed'));
+  navigator.clipboard.writeText(_buildShareUrl()).then(()=>toast('Link copied!')).catch(()=>toast('Copy failed'));
 }
 
 // ── OFFLINE SHARING ──
@@ -6154,7 +6170,7 @@ function generatePackUrl() {
   const sl = getActiveSetlist();
   const json = JSON.stringify({ songs, setlistName: sl ? sl.name : 'Setlist' });
   const compressed = LZString.compressToEncodedURIComponent(json);
-  const base = 'https://stan-lewis.github.io/BandScroll/bandscroll.html';
+  const base = 'https://stan-lewis.github.io/BandScroll/bandscroll-v13.html';
   return base + '#pack=' + compressed;
 }
 
