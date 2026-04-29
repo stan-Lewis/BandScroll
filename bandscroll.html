@@ -3734,7 +3734,7 @@ function renderSetlist() {
   const el = document.getElementById('setlist-list');
   if (!el) return;
   const ids = getSetlistSongIds();
-  if (!ids.length) { el.innerHTML='<div class="empty-msg">No songs.<br>Search to add.</div>'; const _td=document.getElementById('sl-total-dur');if(_td)_td.textContent=''; renderOverview(); return; }
+  if (!ids.length) { el.innerHTML='<div class="empty-msg" style="padding:2.5rem 1rem;">📋<br><br>Setlist is empty.<br><span style="opacity:0.6;font-size:0.72rem;">Find a song in <strong>My Songs</strong> and tap <strong>＋</strong> to add it here.</span></div>'; const _td=document.getElementById('sl-total-dur');if(_td)_td.textContent=''; renderOverview(); return; }
   // Fix 4: show total setlist duration
   const _totalSec = ids.reduce((sum,id)=>{ const s=getSong(id); return sum+(s?s.duration||0:0); },0);
   const _td = document.getElementById('sl-total-dur');
@@ -3765,7 +3765,8 @@ function renderSetlist() {
 
 function renderBank() {
   const el = document.getElementById('bank-list');
-  if (!APP.bank.length) { el.innerHTML='<div class="empty-msg">No saved songs.</div>'; return; }
+  if (!el) return;
+  if (!APP.bank.length) { el.innerHTML='<div class="empty-msg" style="padding:2.5rem 1rem;">🎵<br><br>No songs yet.<br><span style="opacity:0.6;font-size:0.72rem;">Use <strong>Search</strong> above to find songs,<br>or tap <strong>+ New</strong> to add one manually.</span></div>'; return; }
   const setIds = getSetlistSongIds();
   el.innerHTML = APP.bank.map(s => {
     const inSet = setIds.includes(s.id);
@@ -3924,6 +3925,19 @@ function loadSong(id) {
   const _tcb = document.getElementById('t-capo-badge');
   if (_tkb) { _tkb.textContent = song.key || ''; _tkb.style.display = song.key ? '' : 'none'; }
   if (_tcb) { _tcb.textContent = song.capo ? 'CAPO\u00a0' + song.capo : ''; _tcb.style.display = song.capo ? '' : 'none'; }
+  // Keep confidence monitor meta in sync when monitor is already open
+  if (_cmOpen) {
+    const _cmst = document.getElementById('cm-song-title');
+    const _cmmeta = document.getElementById('cm-meta');
+    if (_cmst) _cmst.textContent = song.title.toUpperCase();
+    if (_cmmeta) {
+      const _p = [];
+      if (song.key) _p.push('KEY\u00a0' + song.key);
+      if (song.capo) _p.push('CAPO\u00a0' + song.capo);
+      if (song.bpm) _p.push(song.bpm + '\u202fBPM');
+      _cmmeta.textContent = _p.join('\u2003·\u2003');
+    }
+  }
 
   // Next song preview
   const ids = getSetlistSongIds();
