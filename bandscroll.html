@@ -3732,6 +3732,7 @@ function updateSetlistName() {
 
 function renderSetlist() {
   const el = document.getElementById('setlist-list');
+  if (!el) return;
   const ids = getSetlistSongIds();
   if (!ids.length) { el.innerHTML='<div class="empty-msg">No songs.<br>Search to add.</div>'; const _td=document.getElementById('sl-total-dur');if(_td)_td.textContent=''; renderOverview(); return; }
   // Fix 4: show total setlist duration
@@ -6389,7 +6390,8 @@ function clearTab(instrument) {
   if (cardEl) cardEl.classList.remove('has-tab');
   // Rebuild the upload card HTML
   const song = APP.editingId ? getSong(APP.editingId) : null;
-  document.getElementById('edit-form').innerHTML = buildEditForm(song);
+  const _ef = document.getElementById('edit-form');
+  if (_ef) _ef.innerHTML = buildEditForm(song);
   _renderAnnList();
 }
 
@@ -6709,8 +6711,8 @@ function bumpEl(el){
     const btn = document.getElementById('lock-btn');
     if (!btn) return;
     if (_bpmLocked) {
-      const dispText = document.getElementById('bpm-display').textContent.trim();
-      _lockedBpm = parseFloat(dispText) || null;
+      const _bd = document.getElementById('bpm-display');
+      _lockedBpm = _bd ? parseFloat(_bd.textContent.trim()) || null : null;
       // Capture current speed as reference
       const slider = document.getElementById('c-speed-slider');
       _refSpeed = slider ? parseFloat(slider.value) || 1.0 : 1.0;
@@ -7208,7 +7210,7 @@ async function authForgotPassword(){const em=document.getElementById('auth-email
 function authGuest(){_fbUser=null;_cloudSyncEnabled=false;show('s-conductor');startConductor();toast('Guest mode — data saved locally only');}
 async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopPlay();if(APP.role==='viewer'){vStop();if(_lsInterval){clearInterval(_lsInterval);_lsInterval=null;}_clearConductorWatchdog();}if(_ablyClient){try{_ablyClient.close();}catch(e){}}_ablyClient=null;_ablyChannel=null;await _fbAuth.signOut();APP.bank=[];APP.setlists=[{id:'main',name:'Main Set',songIds:[]}];APP.activeSetlistId='main';_fbUser=null;_cloudSyncEnabled=false;_clearGroupState();show('s-land');toast('Signed out');}
 function _authErrMsg(c){return({'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account found with that email.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'An account with this email already exists.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'Network error. Check your connection.'})[c]||('Error: '+c);}
-_fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;await _loadCloudData();_renderAccountPill();if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}}});
+_fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;try{await _loadCloudData();}catch(e){console.error('Cloud load failed:',e);toast('⚠ Could not load cloud data — using local copy');}  _renderAccountPill();if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}}});
 async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>cb.push(Object.assign({id:d.id},d.data())));APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;if(p.ablyKey)APP.ablyKey=p.ablyKey;
   // ── Restore band group membership ──
   if(p.groupId){
