@@ -774,7 +774,7 @@ html[data-theme="light"] {
 .modal-bg{
   position:fixed;inset:0;background:rgba(0,0,0,0.82);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;
+  z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;
 }
 .modal-bg.open{display:flex;}
 .modal{
@@ -4827,7 +4827,7 @@ function setTagFilter(tag) {
 }
 function renderTagFilterRow() {
   const row = document.getElementById('tag-filter-row'); if (!row) return;
-  const tags = [...new Set(APP.bank.flatMap(s => (s.tags||'').split(',').map(t=>t.trim()).filter(Boolean)))].sort();
+  const tags = [...new Set(APP.bank.flatMap(s => Array.isArray(s.tags) ? s.tags.map(t=>String(t).trim()).filter(Boolean) : (s.tags||'').split(',').map(t=>t.trim()).filter(Boolean)))].sort();
   if (!tags.length) { row.style.display = 'none'; return; }
   row.style.display = 'flex'; row.style.flexWrap = 'wrap';
   row.innerHTML = tags.map(tag =>
@@ -6190,6 +6190,7 @@ function switchTab(name) {
     const el=document.getElementById(id); if(el) el.classList.toggle('on',order[i]===name);
   });
   if(name==='band') renderGroupUI();
+  if(name==='sets') renderSets();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
