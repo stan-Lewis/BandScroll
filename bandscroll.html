@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>BandScroll v13</title>
+<title>BandScroll</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -2901,6 +2901,12 @@ function hydrate() {
     if (!APP.activeSetlistId || !APP.setlists.find(s => s.id === APP.activeSetlistId)) {
       APP.activeSetlistId = APP.setlists[0].id;
     }
+    // Normalise tags: ensure every song has tags as an array (older saves used undefined or string)
+    APP.bank.forEach(s => {
+      if (!Array.isArray(s.tags)) {
+        s.tags = s.tags ? String(s.tags).split(',').map(t=>t.trim()).filter(Boolean) : [];
+      }
+    });
   } catch(e) {
     APP.setlists = [{ id: 'sl_default', name: 'Main Set', songIds: [] }];
     APP.activeSetlistId = 'sl_default';
@@ -6233,7 +6239,7 @@ function generatePackUrl() {
   const sl = getActiveSetlist();
   const json = JSON.stringify({ songs, setlistName: sl ? sl.name : 'Setlist' });
   const compressed = LZString.compressToEncodedURIComponent(json);
-  const base = 'https://stan-lewis.github.io/BandScroll/bandscroll-v13.html';
+  const base = location.origin + location.pathname;
   return base + '#pack=' + compressed;
 }
 
