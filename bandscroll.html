@@ -2904,6 +2904,8 @@ function hydrate() {
   } catch(e) {
     APP.setlists = [{ id: 'sl_default', name: 'Main Set', songIds: [] }];
     APP.activeSetlistId = 'sl_default';
+    // Notify user — localStorage data is corrupt; they may want to export a backup via Settings
+    setTimeout(() => toast('⚠ Saved data could not be loaded — it may be corrupted. Use Settings › Export to recover a backup.'), 1500);
   }
 }
 
@@ -2921,6 +2923,7 @@ let _serverTimeOffset = 0; // ms: serverTime = Date.now() + _serverTimeOffset
 let _lobbyMembers = {}; // id -> name (conductor view)
 let _myClientId = '';
 let _nextRoomCode = ''; // room code to use on next session
+let _ablyResyncIv = null; // module-level so it survives Ably client recreation
 
 function loadAblyKey() {
   try { _ablyKey = localStorage.getItem('bs_ably_key') || ''; } catch(e) {}
@@ -2973,7 +2976,8 @@ function initAbly(code) {
     return;
   }
   try {
-    if (_ablyClient) { try { clearInterval(_ablyClient._resyncInterval); _ablyClient.close(); } catch(e) {} }
+    if (_ablyResyncIv) { clearInterval(_ablyResyncIv); _ablyResyncIv = null; }
+    if (_ablyClient) { try { _ablyClient.close(); } catch(e) {} }
     _myClientId = 'bs_' + Math.random().toString(36).slice(2);
     _ablyClient = new Ably.Realtime({
       key: _ablyKey,
@@ -2982,13 +2986,11 @@ function initAbly(code) {
     _ablyChannel = _ablyClient.channels.get('bandscroll_' + code);
 
     // Fix 7: periodically resync server clock to prevent drift on mobile network changes
-    if (!_ablyClient._resyncInterval) {
-      _ablyClient._resyncInterval = setInterval(() => {
-        if (_ablyClient && _ablyClient.connection.state === 'connected') {
-          _syncServerTime(_ablyClient);
-        }
-      }, 30000);
-    }
+    _ablyResyncIv = setInterval(() => {
+      if (_ablyClient && _ablyClient.connection.state === 'connected') {
+        _syncServerTime(_ablyClient);
+      }
+    }, 30000);
 
     _ablyClient.connection.on('connected', async () => {
       await _syncServerTime(_ablyClient);
@@ -3243,6 +3245,7 @@ function startConductor() {
   APP.role = 'conductor';
   // Clear any lingering viewer state from a previous session
   if (_lsInterval) { clearInterval(_lsInterval); _lsInterval = null; }
+  _stopSongMetro();
   _clearConductorWatchdog();
   _pendingPlay = null;
   // Use next room code if one was set, otherwise generate
@@ -3296,7 +3299,11 @@ function doJoin() {
   if (!_ablyKey) {
     try {
       const _pk = new URLSearchParams(location.search).get('k');
-      if (_pk) _ablyKey = atob(_pk);
+      if (_pk) {
+        const decoded = atob(_pk);
+        // Validate Ably key format: appId.keyId:keySecret
+        if (/^[\w-]+\.[\w-]+:[\w+/=]+$/.test(decoded)) _ablyKey = decoded;
+      }
     } catch(e) {}
   }
   APP.role = 'viewer';
@@ -3304,6 +3311,7 @@ function doJoin() {
   _clearConductorWatchdog(); // reset watchdog for new session
   document.getElementById('v-name-pill').textContent = name;
   document.getElementById('v-room-pill').textContent = code;
+  _stopSongMetro();
   initAbly(code);
   // localStorage fallback for same-device use — clear any previous interval first
   let _lastBCt = 0;
@@ -3895,9 +3903,6 @@ function _ensureIntroSectionAtZero(song) {
   }
 }
 
-// _migrateIntroSections: disabled to prevent wiping section timings
-function _migrateIntroSections() { /* intentionally empty */ }
-
 function loadSong(id) {
   if (_autoAdvanceTimer) { clearTimeout(_autoAdvanceTimer); _autoAdvanceTimer = null; }
   stopPlay();
@@ -4203,7 +4208,9 @@ function mergeAnnotations(song) {
   const linesLen = (song.lines || []).length;
   const annsLen = (song.annotations || []).length;
   const extraLen = extraAnns.length;
-  const cacheKey = song.id + '|' + linesLen + '|' + annsLen + '|' + extraLen;
+  const lastAnn = (song.annotations || []).slice(-1)[0];
+  const cacheKey = song.id + '|' + linesLen + '|' + annsLen + '|' + extraLen
+    + '|' + (lastAnn ? lastAnn.t + lastAnn.text : '') + '|' + (song._annsVersion || 0);
   if (song._mergedKey === cacheKey && song._mergedLines) return song._mergedLines;
 
   // Strip annotation lines already in lines[] — idempotent for band members
@@ -4680,7 +4687,7 @@ function beginPlay(song, wallStart) {
       if(_loopB>0 && cl>=_loopB && _loopA>=0){ APP.offsetAdj=_loopA; APP.playStartPN=performance.now(); }
       if(t * _speedMult.c > dur + 1){ stopPlay(); autoAdvance(); return; }
     } catch(err) { console.error('Conductor tick error:', err); }
-    APP.raf = requestAnimationFrame(tick);
+    finally { APP.raf = requestAnimationFrame(tick); }
   };
   APP.raf = requestAnimationFrame(tick);
   if (_songMetroEnabled && song.bpm) {
@@ -4747,6 +4754,7 @@ function toggleAutoPlay() {
   }
 }
 
+let _fsChangeHandler = null; // module-level to prevent listener stacking
 function toggleFullscreen() {
   const el = document.documentElement;
   if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
@@ -4757,9 +4765,12 @@ function toggleFullscreen() {
     const b = document.getElementById('fs-btn'); if(b) b.textContent = '⧆ Full';
   }
   const fsEvent = 'onfullscreenchange' in document ? 'fullscreenchange' : 'webkitfullscreenchange';
-  document.addEventListener(fsEvent, ()=>{
+  if (_fsChangeHandler) document.removeEventListener(fsEvent, _fsChangeHandler);
+  _fsChangeHandler = () => {
     if(!(document.fullscreenElement||document.webkitFullscreenElement)){const b=document.getElementById('fs-btn');if(b)b.textContent='⧆ Full';}
-  }, {once:true});
+    _fsChangeHandler = null;
+  };
+  document.addEventListener(fsEvent, _fsChangeHandler, {once:true});
 }
 
 function toggleTheme() {
@@ -5146,7 +5157,7 @@ function vBegin(wallStart) {
       }
       if (t > dur + 1) { vStop(); return; }
     } catch(err) { console.error('Viewer tick error:', err); }
-    V.raf = requestAnimationFrame(tick);
+    finally { V.raf = requestAnimationFrame(tick); }
   };
   V.raf = requestAnimationFrame(tick);
   if (_songMetroEnabled && V.song.bpm) {
@@ -6069,7 +6080,7 @@ function _renderCtReview(song, aiResults) {
 }
 
 function escTa(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ── CHORD / TAB TOGGLE ──
@@ -6149,7 +6160,14 @@ function importBank(inp) {
       const data = JSON.parse(e.target.result);
       if (!data.bank||!Array.isArray(data.bank)) throw new Error('Invalid format');
       let added=0;
-      data.bank.forEach(s=>{ if(!s||!s.id||!s.title||!Array.isArray(s.lines)) return; if(!APP.bank.find(b=>b.id===s.id)){APP.bank.push(s);added++;} });
+      data.bank.forEach(s=>{
+        if(!s||typeof s.id!=='string'||typeof s.title!=='string'||!Array.isArray(s.lines)) return;
+        if(s.artist!==undefined&&typeof s.artist!=='string') return;
+        if(s.key!==undefined&&typeof s.key!=='string') return;
+        if(s.syncType!==undefined&&!['synced','plain'].includes(s.syncType)) return;
+        if(s.annotations!==undefined&&!Array.isArray(s.annotations)) return;
+        if(!APP.bank.find(b=>b.id===s.id)){APP.bank.push(s);added++;}
+      });
       if (data.setlists?.length) {
         data.setlists.forEach(sl=>{
           if(!APP.setlists.find(x=>x.id===sl.id)) APP.setlists.push(sl);
@@ -7408,7 +7426,13 @@ function _loadGroupDataFromCache() {
     const gs = localStorage.getItem('bs4_group_songs');
     const gsl = localStorage.getItem('bs4_group_setlists');
     const gmd = localStorage.getItem('bs4_group_mydata');
-    if (gs) _groupSongs = JSON.parse(gs);
+    if (gs) {
+      const parsed = JSON.parse(gs);
+      // Validate each song object to prevent corrupt cache from crashing positionBelt
+      if (Array.isArray(parsed)) {
+        _groupSongs = parsed.filter(s => s && typeof s.id === 'string' && typeof s.title === 'string' && Array.isArray(s.lines));
+      }
+    }
     if (gsl) _groupSetlists = JSON.parse(gsl);
     if (gmd) _myGroupData = JSON.parse(gmd);
     if (!_myGroupData) _myGroupData = { instrument: 'all', songNotes: {} };
