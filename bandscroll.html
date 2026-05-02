@@ -4945,8 +4945,7 @@ function prevSong() {
   // If currently playing, stop and restart this song from the beginning
   if (APP.isPlaying) {
     stopPlay();
-    APP.offsetAdj = 0;
-    _updateOffsetDisplay();
+    // Do NOT reset offsetAdj — offset is a per-song timing calibration, not a position
     _updateScrub(0, getSong(APP.currentId)?.duration || 0);
     const song = getSong(APP.currentId);
     if (song) {
@@ -4966,8 +4965,7 @@ function prevSong() {
     const pct = fill ? parseFloat(fill.style.width) : 0;
     const curT = (pct / 100) * dur;
     if (curT > 1.5) {
-      APP.offsetAdj = 0;
-      _updateOffsetDisplay();
+      // Do NOT reset offsetAdj — offset is a per-song timing calibration, not a position
       _updateScrub(0, dur);
       positionBelt('c-belt','c-belt-wrap','c-cursor', lines, 0);
       updateSectionPin('c', lines, 0);
@@ -4994,7 +4992,9 @@ function _writeOffset(id, v) {
   if (!id) return;
   try {
     const s = _loadOffsets();
-    if (v === 0) { delete s[id]; } else { s[id] = v; }
+    // Always store the value — including 0 — so an explicit reset is preserved
+    // and never silently falls back to a stale song.savedOffset.
+    s[id] = v;
     localStorage.setItem('bs4_offsets', JSON.stringify(s));
   } catch(e) {}
 }
