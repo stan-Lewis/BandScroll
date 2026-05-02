@@ -4875,16 +4875,18 @@ function renderTagFilterRow() {
   ).join('');
 }
 
-let _fontSize = 1.0;
+let _fontSize = (()=>{ try { return parseFloat(localStorage.getItem('bs4_cfont')||'1'); } catch(e){ return 1; } })();
 function setFontSize(dir) {
   if (dir===0) _fontSize=1.0;
   else _fontSize = Math.max(0.5, Math.min(2.5, Math.round((_fontSize + dir*0.1)*10)/10));
-  const belt = document.getElementById('c-belt');
-  if(belt) belt.style.fontSize = _fontSize+'rem';
+  // .ll elements use calc(clamp(...rem) * var(--lyric-scale)) — rem ignores parent font-size,
+  // so we must drive the CSS variable, not belt.style.fontSize.
+  document.documentElement.style.setProperty('--lyric-scale', _fontSize);
   const d = document.getElementById('fontsize-display');
   if(d) d.textContent = _fontSize.toFixed(1)+'×';
   const d2=document.getElementById('sp-fontsize-display'); if(d2) d2.textContent=_fontSize.toFixed(1)+'×';
   if(APP) APP._cachedLineH = null;
+  try { localStorage.setItem('bs4_cfont', _fontSize); } catch(e) {}
 }
 
 // A-B Loop
@@ -8329,6 +8331,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const _clickBtn = document.getElementById('click-toggle-btn');
   if (_clickBtn) _clickBtn.textContent = _clickEnabled ? '🔊 Click' : '🔇 Click';
   _syncMetroButtons();
+  // Restore conductor font size
+  if (_fontSize !== 1) {
+    document.documentElement.style.setProperty('--lyric-scale', _fontSize);
+    const d2 = document.getElementById('sp-fontsize-display'); if (d2) d2.textContent = _fontSize.toFixed(1) + '×';
+  }
   // Restore viewer scale/brightness/font
   try {
     const _vs = localStorage.getItem('bs4_vscale');
