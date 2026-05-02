@@ -63,7 +63,7 @@ body{
 /* ═══════════════════════════════════════
    SCREENS
 ═══════════════════════════════════════ */
-.screen{display:none;height:100dvh;flex-direction:column;overflow:hidden;}
+.screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden;}
 .screen.active{display:flex;}
 
 /* ═══════════════════════════════════════
@@ -782,7 +782,7 @@ html[data-theme="light"] {
   border:1px solid rgba(15,212,192,0.2);
   border-left:3px solid rgba(15,212,192,0.4);
   padding:1.8rem;width:100%;max-width:520px;
-  max-height:90dvh;overflow-y:auto;border-radius:2px 10px 10px 2px;
+  max-height:90vh;max-height:90dvh;overflow-y:auto;border-radius:2px 10px 10px 2px;
   box-shadow:0 24px 64px rgba(0,0,0,0.7), -4px 0 24px rgba(15,212,192,0.06), 0 0 0 1px rgba(255,255,255,0.02) inset;
 }
 .modal-bg.open .modal{animation:mup 0.28s cubic-bezier(0.34,1.56,0.64,1);}
@@ -1509,7 +1509,7 @@ html[data-theme="light"] {
 .pdf-viewer-zoom-btns{display:flex;gap:4px}
 .pdf-viewer-zoom-btns button{background:var(--bg3);color:var(--lime);border:1px solid var(--border2);border-radius:4px;padding:5px 12px;font-size:16px;cursor:pointer;font-weight:700;line-height:1}
 .pdf-viewer-zoom-btns button:hover{background:var(--bg4)}
-.pdf-viewer-frame-wrap{flex:1;overflow:auto;position:relative;-webkit-overflow-scrolling:touch}
+.pdf-viewer-frame-wrap{flex:1;overflow:auto;position:relative;}
 #pdf-viewer-iframe{width:100%;height:100%;border:none;background:#fff;display:block}
 .tab-pdf-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--lime);color:#041412;border:none;border-radius:10px;padding:18px 36px;font-size:18px;font-weight:800;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;margin:0 auto;box-shadow:0 4px 20px rgba(15,212,192,0.3);transition:all .15s;font-family:'Syne',sans-serif;}
 .tab-pdf-btn:hover{background:var(--lime-dim);transform:translateY(-1px);box-shadow:0 6px 28px rgba(15,212,192,0.45)}
@@ -2375,6 +2375,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <img id="sm-qr-img" src="" alt="QR code" style="width:156px;height:156px;display:block;">
     </div>
     <div class="share-url" id="sm-url" onclick="copyShareUrl()">Click to copy link…</div>
+    <p id="sm-key-note" class="share-note" style="display:none;color:var(--amber);font-size:0.72rem;margin-top:0.3rem;">⚠ This link contains your Ably key — only share with trusted band members.</p>
     <p class="share-note">Band members open this same HTML file on their device → tap <strong>Band Member</strong> → enter code. Works on any device over any network.</p>
     <div style="margin-top:1rem;border-top:1px solid var(--border2);padding-top:0.9rem;">
       <div style="font-family:'JetBrains Mono';font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem;">Change Room Code (takes effect next session)</div>
@@ -2872,6 +2873,11 @@ function _persistNow() {
     }
     return Object.assign({}, song, { tabs });
   });
+  // Proactive size warning before hitting quota (iOS Safari limit is ~5 MB)
+  try {
+    const approxBytes = JSON.stringify(bankForStorage).length + JSON.stringify(APP.setlists).length;
+    if (approxBytes > 4 * 1024 * 1024) toast('⚠️ Song bank is approaching storage limits — export a backup from Settings', 8000);
+  } catch(e) {}
   try {
     localStorage.setItem('bs4_bank', JSON.stringify(bankForStorage));
     localStorage.setItem('bs4_setlists', JSON.stringify(APP.setlists));
@@ -2887,6 +2893,7 @@ function _persistNow() {
 }
 function hydrate() {
   try {
+    const schemaVer = parseInt(localStorage.getItem('bs4_schema_version') || '1', 10);
     const b = localStorage.getItem('bs4_bank');
     const sl = localStorage.getItem('bs4_setlists');
     const as = localStorage.getItem('bs4_activeSet');
@@ -2901,12 +2908,17 @@ function hydrate() {
     if (!APP.activeSetlistId || !APP.setlists.find(s => s.id === APP.activeSetlistId)) {
       APP.activeSetlistId = APP.setlists[0].id;
     }
-    // Normalise tags: ensure every song has tags as an array (older saves used undefined or string)
-    APP.bank.forEach(s => {
-      if (!Array.isArray(s.tags)) {
-        s.tags = s.tags ? String(s.tags).split(',').map(t=>t.trim()).filter(Boolean) : [];
-      }
-    });
+    // Schema migrations — each is idempotent; only runs if version < N
+    if (schemaVer < 2) {
+      // v1 → v2: normalise tags as arrays (older saves used undefined or string)
+      APP.bank.forEach(s => {
+        if (!Array.isArray(s.tags)) {
+          s.tags = s.tags ? String(s.tags).split(',').map(t=>t.trim()).filter(Boolean) : [];
+        }
+      });
+    }
+    // Stamp current schema version
+    try { localStorage.setItem('bs4_schema_version', '2'); } catch(e) {}
   } catch(e) {
     APP.setlists = [{ id: 'sl_default', name: 'Main Set', songIds: [] }];
     APP.activeSetlistId = 'sl_default';
@@ -3091,6 +3103,16 @@ function _setSyncDotViewer(state) {
   if (state) d.classList.add(state);
 }
 
+// ── Validate incoming broadcast song objects ──
+// Rejects malformed payloads from Ably or localStorage fallback before they reach vLoad().
+function _validateBCSong(s) {
+  if (!s || typeof s !== 'object') return false;
+  if (typeof s.id !== 'string' || s.id.length > 256) return false;
+  if (typeof s.title !== 'string' || s.title.length > 512) return false;
+  if (!Array.isArray(s.lines) || s.lines.length > 5000) return false;
+  return true;
+}
+
 function onBC(msg) {
   _resetConductorWatchdog(); // any message from conductor = conductor is alive
   if (msg.type === 'presence') {
@@ -3126,7 +3148,7 @@ function onBC(msg) {
     return;
   }
   if (APP.role !== 'viewer') return;
-  if (msg.type === 'load') vLoad(msg.song);
+  if (msg.type === 'load') { if (!_validateBCSong(msg.song)) return; vLoad(msg.song); }
   else if (msg.type === 'play') {
     if (typeof msg.wallStart !== 'number' || !isFinite(msg.wallStart)) return;
     // Fix 5: queue if song not yet loaded (Ably doesn't guarantee message order)
@@ -3327,6 +3349,8 @@ function doJoin() {
       const raw = localStorage.getItem('bs4_live_' + code);
       if (!raw) return;
       const msg = JSON.parse(raw);
+      if (!msg || typeof msg._t !== 'number' || !isFinite(msg._t)) return;
+      if (msg.type === 'load' && !_validateBCSong(msg.song)) return;
       if (msg._t > _lastBCt) { _lastBCt = msg._t; onBC(msg); }
     } catch(e) {}
   }, 250);
@@ -3777,7 +3801,12 @@ function renderSetlist() {
   renderOverview();
 }
 
+let _renderBankTimer = null;
 function renderBank() {
+  clearTimeout(_renderBankTimer);
+  _renderBankTimer = setTimeout(_renderBankNow, 80);
+}
+function _renderBankNow() {
   const el = document.getElementById('bank-list');
   if (!el) return;
   if (!APP.bank.length) { el.innerHTML='<div class="empty-msg" style="padding:2.5rem 1rem;">🎵<br><br>No songs yet.<br><span style="opacity:0.6;font-size:0.72rem;">Use <strong>Search</strong> above to find songs,<br>or tap <strong>+ New</strong> to add one manually.</span></div>'; return; }
@@ -4041,8 +4070,12 @@ function _renderChordRow(chordStr, lyricText) {
 }
 
 const LINE_H = 64;
+// Cache belt NodeLists keyed by beltId to avoid querySelectorAll('.ll') in the 60fps rAF loop.
+// Invalidated by buildBelt whenever the belt is rebuilt.
+const _beltElsCache = {};
 
 function buildBelt(beltEl, lines) {
+  delete _beltElsCache[beltEl.id]; // invalidate cached NodeList for this belt
   beltEl.innerHTML = '';
   lines.forEach((line,i) => {
     const div = document.createElement('div');
@@ -4109,7 +4142,8 @@ function positionBelt(beltId, wrapId, cursorId, lines, songTime) {
 
     belt.style.paddingTop = cursorY + 'px';
     belt.style.paddingBottom = cursorY + 'px';
-  const els = belt.querySelectorAll('.ll');
+  if (!_beltElsCache[beltId]) _beltElsCache[beltId] = belt.querySelectorAll('.ll');
+  const els = _beltElsCache[beltId];
 
   // Pre-compute active section and last section indices in O(n) — avoids O(n²) inner loops
   let _activeSectIdx = -1, _lastSectIdx = -1;
@@ -5786,25 +5820,18 @@ function saveEdit() {
 
 // ── BPM lookup via Deezer public API ──
 // Deezer's track endpoint returns a `bpm` field for most tracks in its catalogue.
-// Free & no auth. Deezer does NOT support CORS for browser fetch(), so we use
-// JSONP (they officially support ?output=jsonp&callback=...).
-function _deezerJsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_dzCb_' + Math.random().toString(36).slice(2);
-    const script = document.createElement('script');
-    let timer = null;
-    const cleanup = () => {
-      if (timer) { clearTimeout(timer); timer = null; }
-      try { delete window[cbName]; } catch(_) { window[cbName] = undefined; }
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error('network / blocked')); };
-    const sep = url.includes('?') ? '&' : '?';
-    script.src = url + sep + 'output=jsonp&callback=' + cbName;
-    timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
-    document.head.appendChild(script);
-  });
+// Free & no auth. Uses the CORS proxy to avoid JSONP dynamic script injection.
+async function _deezerFetch(url) {
+  const proxied = PROXY + encodeURIComponent(url);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const resp = await fetch(proxied, { signal: ctrl.signal });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return resp.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function editorLookupBpm() {
@@ -5822,12 +5849,12 @@ async function editorLookupBpm() {
     const searchUrl = `https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=5`;
     let searchData;
     try {
-      searchData = await _deezerJsonp(searchUrl);
+      searchData = await _deezerFetch(searchUrl);
     } catch(e) {
       // Fallback: try a looser query without field tags (some tracks are indexed loosely)
       if (hint) hint.textContent = 'Retrying…';
       const qLoose = artist ? (artist + ' ' + title) : title;
-      searchData = await _deezerJsonp(`https://api.deezer.com/search?q=${encodeURIComponent(qLoose)}&limit=5`);
+      searchData = await _deezerFetch(`https://api.deezer.com/search?q=${encodeURIComponent(qLoose)}&limit=5`);
     }
     const tracks = (searchData && searchData.data) || [];
     if (!tracks.length) { if (hint) hint.textContent = 'No match on Deezer — try tap'; return; }
@@ -5836,7 +5863,7 @@ async function editorLookupBpm() {
     for (const t of tracks) {
       if (!t || typeof t.id !== 'number') continue;
       try {
-        const trackData = await _deezerJsonp(`https://api.deezer.com/track/${encodeURIComponent(t.id)}`);
+        const trackData = await _deezerFetch(`https://api.deezer.com/track/${encodeURIComponent(t.id)}`);
         if (trackData && trackData.bpm && trackData.bpm >= 40) {
           foundBpm = Math.round(trackData.bpm);
           foundArtist = (trackData.artist && trackData.artist.name) || '';
@@ -6168,6 +6195,9 @@ function importBank(inp) {
       let added=0;
       data.bank.forEach(s=>{
         if(!s||typeof s.id!=='string'||typeof s.title!=='string'||!Array.isArray(s.lines)) return;
+        if(s.id.length>256||s.title.length>512||s.lines.length>5000) return; // length caps
+        if(s.notes!==undefined&&typeof s.notes==='string'&&s.notes.length>50000) s.notes=s.notes.slice(0,50000);
+        if(s.rawLyrics!==undefined&&typeof s.rawLyrics==='string'&&s.rawLyrics.length>50000) s.rawLyrics=s.rawLyrics.slice(0,50000);
         if(s.artist!==undefined&&typeof s.artist!=='string') return;
         if(s.key!==undefined&&typeof s.key!=='string') return;
         if(s.syncType!==undefined&&!['synced','plain'].includes(s.syncType)) return;
@@ -6214,6 +6244,8 @@ function _buildShareUrl(){
 function updateShareUrl(){
   const url=_buildShareUrl();
   document.getElementById('sm-url').textContent=url;
+  const note = document.getElementById('sm-key-note');
+  if (note) note.style.display = _ablyKey ? '' : 'none';
   const qrImg = document.getElementById('sm-qr-img');
   if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?data='+encodeURIComponent(url)+'&size=156x156&margin=2';
 }
@@ -7204,9 +7236,16 @@ document.addEventListener('keydown', e=>{
         data.songs.forEach(s => {
           if (!s || typeof s.id !== 'string' || !s.id || typeof s.title !== 'string' || !s.title) return;
           if (!Array.isArray(s.lines)) return;
+          if (s.id.length > 256 || s.title.length > 512 || s.lines.length > 5000) return; // length caps
           // Deep-validate each line: must be an object with a recognised type and string text
-          const linesOk = s.lines.every(l => l && typeof l === 'object' && VALID_LINE_TYPES.has(l.type) && (l.text === undefined || typeof l.text === 'string') && (l.t === undefined || l.t === null || typeof l.t === 'number'));
+          const linesOk = s.lines.every(l => l && typeof l === 'object' && VALID_LINE_TYPES.has(l.type) && (l.text === undefined || (typeof l.text === 'string' && l.text.length < 2000)) && (l.t === undefined || l.t === null || typeof l.t === 'number'));
           if (!linesOk) return;
+          // Validate annotations array if present
+          if (s.annotations !== undefined) {
+            if (!Array.isArray(s.annotations)) return;
+            const annsOk = s.annotations.every(a => a && typeof a === 'object' && (a.text === undefined || (typeof a.text === 'string' && a.text.length < 2000)));
+            if (!annsOk) return;
+          }
           if (!APP.bank.find(b => b.id === s.id)) { APP.bank.push(s); added++; }
         });
         if (data.setlistName && data.songs.length) {
@@ -7240,6 +7279,10 @@ const _fbConfig={apiKey:"AIzaSyCl1DfRY2fL4IU-2zOPmL2ACa5uSoIwNQk",authDomain:"ba
 firebase.initializeApp(_fbConfig);
 const _fbAuth=firebase.auth();
 const _fbDb=firebase.firestore();
+// Enable offline persistence so Firestore writes queue while offline and sync on reconnect
+_fbDb.enablePersistence({ synchronizeTabs: true }).catch(e => {
+  if (e.code !== 'failed-precondition' && e.code !== 'unimplemented') console.warn('Firestore offline persistence:', e);
+});
 let _fbUser=null,_cloudSyncEnabled=false;
 function authSwitchTab(t){document.getElementById('auth-form-login').style.display=t==='login'?'':'none';document.getElementById('auth-form-signup').style.display=t==='signup'?'':'none';document.getElementById('auth-tab-login').classList.toggle('on',t==='login');document.getElementById('auth-tab-signup').classList.toggle('on',t==='signup');document.getElementById('auth-err-login').textContent='';document.getElementById('auth-err-signup').textContent='';}
 document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;if(!document.getElementById('s-auth').classList.contains('active'))return;document.getElementById('auth-form-login').style.display!=='none'?authLogin():authSignup();});
@@ -8337,6 +8380,23 @@ window.addEventListener('beforeunload', () => { if (_persistTimer) { clearTimeou
   </div>
 </div>
 <div id="print-frame"></div>
+
+<!-- PDF Viewer Overlay — referenced by openPdfViewer() / closePdfViewer() -->
+<div class="pdf-viewer-overlay" id="pdf-viewer-overlay">
+  <div class="pdf-viewer-bar">
+    <div class="pdf-viewer-title" id="pdf-viewer-title">Tab PDF</div>
+    <div class="pdf-viewer-zoom-btns">
+      <button onclick="pdfViewerZoom(-0.25)">−</button>
+      <span id="pdf-zoom-label" style="font-size:12px;min-width:40px;text-align:center;color:var(--text-mid);font-family:'JetBrains Mono',monospace;">100%</span>
+      <button onclick="pdfViewerZoom(0.25)">＋</button>
+      <button onclick="pdfViewerZoom(0)">↺</button>
+    </div>
+    <button class="pdf-viewer-close" onclick="closePdfViewer()">✕ Close</button>
+  </div>
+  <div class="pdf-viewer-frame-wrap">
+    <iframe id="pdf-viewer-iframe" sandbox="allow-scripts allow-same-origin" title="Tab PDF viewer" style="width:100%;height:100%;border:none;background:#fff;display:block;"></iframe>
+  </div>
+</div>
 
 <script id="tidy-ui-init">
 (function(){
