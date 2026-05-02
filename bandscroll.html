@@ -544,45 +544,42 @@ textarea{resize:vertical;}
   transition:color 0.22s, font-size 0.22s, opacity 0.22s, text-shadow 0.22s, font-weight 0.22s;
   user-select:none;
 }
-/* SECTION HEADER — teal glow divider */
+/* SECTION HEADER — amber divider, centred with lyrics */
 .ll.section{
   font-family:'JetBrains Mono',monospace;
-  font-size:0.6rem;letter-spacing:0.28em;text-transform:uppercase;font-weight:500;
-  text-align:left;
-  /* Break out of belt's horizontal padding for full bleed */
-  margin-left:clamp(-5rem,-6vw,-1rem);
-  margin-right:clamp(-5rem,-6vw,-1rem);
-  padding:0.9rem clamp(1rem,6vw,5rem) 0.4rem;
+  font-size:0.6rem;letter-spacing:0.28em;text-transform:uppercase;font-weight:600;
+  text-align:center;
+  padding:0.9rem 0 0.4rem;
   margin-top:0.8rem;margin-bottom:0.15rem;
   background:none;
-  border-top:1px solid rgba(15,212,192,0.2);
+  border-top:1px solid rgba(245,158,11,0.25);
   border-bottom:none;
-  color:rgba(15,212,192,0.45);
+  color:rgba(245,158,11,0.6);
   position:relative;
   transition:opacity 0.3s,color 0.3s,border-color 0.3s,text-shadow 0.3s;
 }
 .ll.section::before{
-  content:'';position:absolute;top:0;left:clamp(1rem,6vw,5rem);right:clamp(1rem,6vw,5rem);
+  content:'';position:absolute;top:0;left:0;right:0;
   height:2px;
-  background:linear-gradient(90deg,var(--lime-dim),transparent);
-  opacity:0.35;
+  background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent);
+  opacity:0.5;
 }
 /* Section belt states during play */
 .ll.section.sect-past{
   opacity:0.2;
-  border-top-color:rgba(15,212,192,0.06);
-  color:rgba(15,212,192,0.25);
+  border-top-color:rgba(245,158,11,0.06);
+  color:rgba(245,158,11,0.25);
 }
 .ll.section.sect-past::before{opacity:0.08;}
 .ll.section.sect-active{
   opacity:1;
-  border-top-color:rgba(15,212,192,0.5);
-  color:var(--lime);
-  text-shadow:0 0 18px rgba(15,212,192,0.5);
+  border-top-color:rgba(245,158,11,0.55);
+  color:#f59e0b;
+  text-shadow:0 0 18px rgba(245,158,11,0.55);
 }
 .ll.section.sect-active::before{
-  background:linear-gradient(90deg,var(--lime),rgba(15,212,192,0.2),transparent);
-  opacity:0.8;
+  background:linear-gradient(90deg,transparent,rgba(245,158,11,0.7),transparent);
+  opacity:0.9;
 }
 /* Final section state handled by .final-section rule above */
 .ll.section.sect-upcoming{
@@ -5713,6 +5710,7 @@ function buildEditForm(s) {
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 2','section')">🎤 Verse 2</span>
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Pre-Chorus','section')">🎵 Pre-Chorus</span>
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Chorus','section')">🎵 Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Post-Chorus','section')">🎵 Post-Chorus</span>
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Bridge','section')">🎵 Bridge</span>
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Guitar Solo','section')">🎸 Guitar Solo</span>
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Outro','section')">🎸 Outro</span>
