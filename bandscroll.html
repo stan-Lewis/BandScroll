@@ -2634,22 +2634,6 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <div class="sect-lyric-list" id="sect-lyric-list"></div>
     </div>
 
-    <!-- ANNOTATIONS (shown when needed) -->
-    <div class="ann-editor-wrap" style="display:none" id="ann-editor-legacy">
-      <div class="ann-editor-head">
-        <span class="ann-editor-title">🎨 Annotations (Chord/Note)</span>
-        <div class="ann-add-btns">
-          <button class="ann-add-btn type-chord" onclick="addAnn('chord')">＋ Chord/Key</button>
-          <button class="ann-add-btn type-note"  onclick="addAnn('note')">＋ Note</button>
-        </div>
-      </div>
-      <div class="ann-list" id="ann-list"></div>
-      <div class="ann-hint">
-        <span style="color:#60a5fa;">■ Chord/Key</span> = Am G F / Key of A &nbsp;
-        <span style="color:#34d399;">■ Note</span> = performance cues
-      </div>
-    </div>
-
     <!-- TAB UPLOADS -->
     <details class="sep-details" id="sep-tabs-details">
       <summary>Tab PDFs</summary>
@@ -5640,67 +5624,6 @@ function _updateLyricLineProg(role, lines, t) {
 }
 
 
-// ══════════════════════════════════════════════════════════
-// ── Annotation editor state ──
-let _annRows = []; // working copy while modal is open
-
-function _renderAnnList() {
-  const list = document.getElementById('ann-list');
-  if (!list) return;
-  list.innerHTML = _annRows.map((a,i) => `
-    <div class="ann-row" draggable="true"
-      ondragstart="_annDragStart(${i})" ondragover="event.preventDefault();this.classList.add('drag-over')"
-      ondragleave="this.classList.remove('drag-over')" ondrop="_annDrop(event,${i})">
-      <span class="ann-drag-handle">⠿</span>
-      <span class="ann-colour-dot type-${esc(a.annType)}"></span>
-      <input class="ann-text-input" type="text" placeholder="Type annotation…"
-        value="${esc(a.text)}" data-idx="${i}"
-        oninput="_annRows[${i}].text=this.value">
-      <input class="ann-time-input" type="text" placeholder="0:00"
-        value="${fmtTimeMs(a.t)}" data-idx="${i}"
-        oninput="_annRows[${i}].t=parseTime(this.value)"
-        title="Timestamp (m:ss) when this appears">
-      <span class="ann-type-badge type-${esc(a.annType)}" onclick="_annCycleType(${i})"
-        title="Click to change type">${esc(a.annType.toUpperCase())}</span>
-      <button class="icon-btn del" onclick="_annRows.splice(${i},1);_renderAnnList()" style="flex-shrink:0;">✕</button>
-    </div>`).join('');
-}
-
-let _annDragIdx = null;
-function _annDragStart(i) { _annDragIdx = i; }
-function _annDrop(e, i) {
-  e.preventDefault();
-  document.querySelectorAll('.ann-row').forEach(r => r.classList.remove('drag-over'));
-  if (_annDragIdx === null || _annDragIdx === i) return;
-  const moved = _annRows.splice(_annDragIdx, 1)[0];
-  _annRows.splice(i, 0, moved);
-  _annDragIdx = null;
-  _renderAnnList();
-}
-function _annCycleType(i) {
-  const types = ['section','chord','note'];
-  const cur = _annRows[i].annType;
-  _annRows[i].annType = types[(types.indexOf(cur)+1) % types.length];
-  _renderAnnList();
-}
-function addAnn(type) {
-  // Default timestamp: current song time if playing, else end of last ann + 10s
-  let t = 0;
-  if (APP.isPlaying && APP.playStartPN != null) {
-    t = Math.max(0, (performance.now() - APP.playStartPN)/1000 + APP.offsetAdj);
-  } else if (_annRows.length) {
-    t = Math.max(..._annRows.map(a => a.t||0)) + 10;
-  }
-  _annRows.push({ annType: type, text: '', t });
-  _renderAnnList();
-  // Focus the new text input
-  setTimeout(() => {
-    const inputs = document.querySelectorAll('.ann-text-input');
-    if (inputs.length) inputs[inputs.length-1].focus();
-  }, 50);
-}
-
-
 // ══════════════════════════════════════════════════════════════════════
 // SECTION PLACER — drag-and-drop section banners onto lyric lines
 // ══════════════════════════════════════════════════════════════════════
@@ -5710,13 +5633,16 @@ let _sectDragBannerIdx = null;
 let _sectState = [];
 
 function _sectBuildState(song) {
-  // Only section-type banners go in the placer; chord/note live in ann-list only
-  const annotations = (song.annotations||[]).filter(a=>a.annType==='section'&&a.text);
+  // All annotation types (section, chord, note) live in the placer — single source of truth
+  const annotations = (song.annotations||[]).filter(a=>a.annType&&a.text);
   const lyrics = (song.lines||[])
     .filter(l=>l.type==='lyric')
     .sort((a,b)=>(a.t||0)-(b.t||0))
     .map((l,i)=>({ kind:'lyric', t:l.t, text:l.text, origIdx:i }));
-  if (!lyrics.length) return [];
+  // For plain songs (no timestamps): just show annotation banners, no lyric rows
+  if (!lyrics.length) {
+    return annotations.map(ann => ({ kind:'banner', label:ann.text, annType:ann.annType||'section' }));
+  }
   const banners = [];
   annotations.forEach(ann => {
     let bestIdx = lyrics.length - 1;
@@ -5759,7 +5685,7 @@ function _renderSectPlacer(song) {
   if (!list) return;
   _sectState = _sectBuildState(song);
   if (!_sectState.length) {
-    list.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">No synced lyric lines yet. Add lyrics with timestamps first.</div>';
+    list.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Drag chips above into this area to add sections, chords &amp; notes.</div>';
     return;
   }
   _sectRenderList(list);
@@ -5846,7 +5772,6 @@ function openSongEditPanel(id, isNew) {
   APP.editingId = isNew ? null : id;
   const s = isNew ? null : getSong(id);
   if (!isNew && !s) return;
-  _annRows = s ? (s.annotations||[]).filter(a=>a.annType!=='section').map(a=>({...a})) : [];
   _editorTapTimes = [];
   _sepSynced = s ? (s.syncType==='synced') : false;
 
@@ -5864,11 +5789,6 @@ function openSongEditPanel(id, isNew) {
   // Tab upload cards
   const tabGrid = document.getElementById('sep-tab-grid');
   if (tabGrid) tabGrid.innerHTML = _buildTabUploadCards(s||{});
-
-  // Annotations
-  _renderAnnList();
-  const legacyEl = document.getElementById('ann-editor-legacy');
-  if (legacyEl) legacyEl.style.display = _annRows.length ? '' : 'none';
 
   // Section placer
   if (isNew) {
@@ -6131,20 +6051,6 @@ function buildEditForm(s) {
       </div>
       <div class="sect-lyric-list" id="sect-lyric-list"></div>
     </div>
-    <div class="ann-editor-wrap" style="display:none" id="ann-editor-legacy">
-      <div class="ann-editor-head">
-        <span class="ann-editor-title">🎨 Annotations (Chord/Note)</span>
-        <div class="ann-add-btns">
-          <button class="ann-add-btn type-chord"   onclick="addAnn('chord')">＋ Chord/Key</button>
-          <button class="ann-add-btn type-note"    onclick="addAnn('note')">＋ Note</button>
-        </div>
-      </div>
-      <div class="ann-list" id="ann-list"></div>
-      <div class="ann-hint">
-        <span style="color:#60a5fa;">■ Chord/Key</span> = Am G F / Key of A &nbsp;
-        <span style="color:#34d399;">■ Note</span> = performance cues
-      </div>
-    </div>
     <div class="tab-upload-section">
       <div style="font-family:'JetBrains Mono';font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem;">🎸 Tab PDFs — upload per instrument</div>
       <div class="tab-upload-grid">
@@ -6169,18 +6075,7 @@ function saveEdit() {
   const notes = document.getElementById('e-notes').value.trim();
   const arrNotes = (document.getElementById('e-arr-notes')?.value ?? '').trim();
 
-  // Read annotation rows from DOM (in case last keystroke didn't fire oninput)
-  const annEls = document.querySelectorAll('.ann-row');
-  annEls.forEach((el, i) => {
-    if (!_annRows[i]) return;
-    const textInp = el.querySelector('.ann-text-input');
-    const timeInp = el.querySelector('.ann-time-input');
-    if (textInp) _annRows[i].text = textInp.value;
-    if (timeInp) _annRows[i].t = parseTime(timeInp.value);
-  });
-  const sectAnnotations = _sectGetAnnotations();
-  const nonSectAnns = _annRows.filter(a => a.text && a.text.trim() && a.annType !== 'section');
-  const annotations = [...sectAnnotations, ...nonSectAnns];
+  const annotations = _sectGetAnnotations();
 
   const bpm = parseInt(document.getElementById('e-bpm')?.value)||0;
 
