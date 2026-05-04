@@ -5926,6 +5926,11 @@ function _buildSepMeta(s) {
         <span id="e-bpm-tap-hint" style="font-size:0.68rem;color:var(--text-mid);">tap to the beat · or Lookup</span>
       </div>
     </div>
+    <div class="field" ${e.arrNotes ? '' : 'style="display:none"'} id="sep-arr-notes-field">
+      <label>Arrangement Notes <span style="font-weight:400;color:var(--text-mid);font-size:0.7rem;">— live banner set during show</span></label>
+      <input id="e-arr-notes" value="${esc(e.arrNotes||'')}" placeholder="Clear this to remove from the banner">
+      <div class="hint" style="color:#f87171;">⚠ Clear and Save to remove from the song banner.</div>
+    </div>
   `;
 }
 
@@ -6161,6 +6166,7 @@ function saveEdit() {
   const dur = (()=>{ const raw=document.getElementById('e-dur').value; if(raw.trim()) return parseTime(raw); const syncT=document.getElementById('e-sync')?document.getElementById('e-sync').value:''; if(syncT==='synced'){ const lns=parseLRC(rawLyrics); const last=lns.filter(l=>l.type==='lyric').pop(); if(last&&last.t>0) return Math.ceil(last.t)+5; } return 0; })();
   const syncType = document.getElementById('e-sync').value;
   const notes = document.getElementById('e-notes').value.trim();
+  const arrNotes = (document.getElementById('e-arr-notes')?.value ?? '').trim();
 
   // Read annotation rows from DOM (in case last keystroke didn't fire oninput)
   const annEls = document.querySelectorAll('.ann-row');
@@ -6180,7 +6186,7 @@ function saveEdit() {
   if (APP.editingId) {
     // Edit existing
     const s = getSong(APP.editingId);
-    Object.assign(s, {title, artist, duration:dur||s.duration, syncType, notes, rawLyrics, annotations,
+    Object.assign(s, {title, artist, duration:dur||s.duration, syncType, notes, arrNotes, rawLyrics, annotations,
       key:(document.getElementById('e-key')||{value:''}).value.trim(),
       capo:parseInt((document.getElementById('e-capo')||{value:0}).value)||0,
       tags:(document.getElementById('e-tags')||{value:''}).value.split(',').map(t=>t.trim()).filter(Boolean),
@@ -6206,7 +6212,7 @@ function saveEdit() {
     if (!dur) { toast('Enter the song duration'); return; }
     const song = {
       id: 'song_'+Date.now(), title, artist, album:'', duration:dur, key:'', capo:0, tags:[], color:'#6366f1',
-      syncType, notes, rawLyrics, annotations, savedOffset: 0, tabs: {}, bpm,
+      syncType, notes, arrNotes, rawLyrics, annotations, savedOffset: 0, tabs: {}, bpm,
       lines: syncType==='synced' ? parseLRC(rawLyrics) : buildPlainLines(rawLyrics, dur)
     };
     closeSongEditPanel();
