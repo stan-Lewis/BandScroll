@@ -5710,7 +5710,8 @@ let _sectDragBannerIdx = null;
 let _sectState = [];
 
 function _sectBuildState(song) {
-  const annotations = (song.annotations||[]).filter(a=>a.annType&&a.text);
+  // Only section-type banners go in the placer; chord/note live in ann-list only
+  const annotations = (song.annotations||[]).filter(a=>a.annType==='section'&&a.text);
   const lyrics = (song.lines||[])
     .filter(l=>l.type==='lyric')
     .sort((a,b)=>(a.t||0)-(b.t||0))
