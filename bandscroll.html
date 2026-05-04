@@ -256,14 +256,117 @@ textarea{resize:vertical;}
 .c-body{
   display:grid;grid-template-columns:310px 1fr;
   flex:1;overflow:hidden;min-height:0;
+  transition:padding-right 0.38s cubic-bezier(0.4,0,0.2,1);
 }
+.c-body.edit-panel-open{padding-right:480px;}
 @media(max-width:660px){
   .c-body{grid-template-columns:1fr;}
   .sidebar{display:none;}
   .sidebar.mob-open{
     display:flex;position:fixed;inset:0;z-index:50;overflow-y:auto;
   }
+  .c-body.edit-panel-open{padding-right:0;}
 }
+
+/* ══ SONG EDIT PANEL (right-side drawer) ══════════════════ */
+#song-edit-panel{
+  position:fixed;right:0;top:0;bottom:0;width:480px;
+  background:linear-gradient(160deg,var(--bg2) 0%,var(--bg3) 100%);
+  border-left:3px solid rgba(15,212,192,0.35);
+  z-index:9500;
+  display:flex;flex-direction:column;
+  transform:translateX(110%);
+  transition:transform 0.38s cubic-bezier(0.4,0,0.2,1),box-shadow 0.38s ease;
+  box-shadow:none;
+  overflow:hidden;
+}
+#song-edit-panel.open{
+  transform:translateX(0);
+  box-shadow:-10px 0 48px rgba(0,0,0,0.55),-2px 0 20px rgba(15,212,192,0.07);
+}
+@media(max-width:660px){
+  #song-edit-panel{width:100%;border-left:none;border-top:3px solid rgba(15,212,192,0.35);top:auto;height:88dvh;transform:translateY(110%);}
+  #song-edit-panel.open{transform:translateY(0);}
+}
+.sep-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.9rem 1.2rem 0.7rem;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  flex-shrink:0;gap:0.5rem;
+}
+.sep-header-title{
+  font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--lime);
+  text-shadow:0 0 16px rgba(15,212,192,0.25);flex:1;
+}
+.sep-close-btn{
+  background:none;border:none;color:var(--text-mid);font-size:1.15rem;
+  cursor:pointer;padding:0.25rem 0.45rem;line-height:1;border-radius:4px;
+  transition:color 0.18s,background 0.18s;flex-shrink:0;
+}
+.sep-close-btn:hover{color:var(--text);background:rgba(255,255,255,0.08);}
+.sep-body{
+  flex:1;overflow-y:auto;padding:0.9rem 1.2rem;
+  display:flex;flex-direction:column;gap:0.75rem;
+}
+.sep-footer{
+  display:flex;gap:0.5rem;justify-content:flex-end;align-items:center;
+  padding:0.75rem 1.2rem;
+  border-top:1px solid rgba(255,255,255,0.07);
+  flex-shrink:0;
+}
+/* collapsible section */
+.sep-details{border:1px solid rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;}
+.sep-details summary{
+  display:flex;align-items:center;gap:0.5rem;
+  padding:0.55rem 0.75rem;
+  font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--text-mid);cursor:pointer;
+  background:rgba(255,255,255,0.03);list-style:none;user-select:none;
+  transition:background 0.15s;
+}
+.sep-details summary::-webkit-details-marker{display:none;}
+.sep-details summary::before{content:'▶';font-size:0.55rem;transition:transform 0.2s;display:inline-block;}
+.sep-details[open] summary::before{transform:rotate(90deg);}
+.sep-details summary:hover{background:rgba(255,255,255,0.06);}
+.sep-details-body{padding:0.75rem;}
+/* lyric row editor */
+.sep-rows-label{
+  font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.sep-rows-label span.hint{
+  font-family:'DM Sans',sans-serif;text-transform:none;letter-spacing:0;
+  font-style:italic;color:var(--text-dim);font-size:0.65rem;opacity:0.7;
+}
+#sep-rows-list{display:flex;flex-direction:column;gap:2px;max-height:40vh;overflow-y:auto;
+  border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:4px;background:var(--bg2);}
+.sep-row{display:flex;gap:3px;align-items:center;}
+.sep-row-ts{
+  width:74px;flex-shrink:0;
+  font-family:'JetBrains Mono',monospace;font-size:0.72rem;
+  background:var(--bg3);border:1px solid rgba(255,255,255,0.08);
+  color:var(--lime);padding:0.26rem 0.35rem;border-radius:4px;text-align:center;
+  transition:opacity 0.2s;
+}
+.sep-row-ts.ts-hidden{display:none;}
+.sep-row-text{
+  flex:1;min-width:0;
+  background:var(--bg3);border:1px solid rgba(255,255,255,0.08);
+  color:var(--text);padding:0.26rem 0.45rem;border-radius:4px;font-size:0.8rem;
+}
+.sep-row-text:focus,.sep-row-ts:focus{
+  outline:none;border-color:rgba(15,212,192,0.4);
+  box-shadow:0 0 0 2px rgba(15,212,192,0.08);
+}
+.sep-row-del{
+  background:none;border:none;color:var(--text-dim);cursor:pointer;
+  font-size:0.78rem;padding:0.22rem 0.32rem;border-radius:3px;flex-shrink:0;
+  transition:color 0.15s,background 0.15s;line-height:1;
+}
+.sep-row-del:hover{color:#f87171;background:rgba(248,113,113,0.12);}
+.sep-add-row-btns{display:flex;gap:0.35rem;margin-top:0.45rem;flex-wrap:wrap;}
 
 /* SIDEBAR */
 .sidebar{
@@ -2463,7 +2566,108 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   </div>
 </div>
 
-<!-- ══════════ EDIT SONG MODAL ══════════ -->
+<!-- ══════════ SONG EDIT PANEL (right-side drawer) ══════════ -->
+<div id="song-edit-panel">
+  <div class="sep-header">
+    <span class="sep-header-title" id="sep-panel-title">Edit Song</span>
+    <button class="sep-close-btn" onclick="closeSongEditPanel()" title="Close panel">✕</button>
+  </div>
+  <div class="sep-body">
+
+    <!-- META FIELDS (collapsible) -->
+    <details class="sep-details" open id="sep-meta-details">
+      <summary>Song Details</summary>
+      <div class="sep-details-body" id="sep-meta-body">
+        <!-- populated by _buildSepMeta() -->
+      </div>
+    </details>
+
+    <!-- LYRICS — two-column row editor -->
+    <div>
+      <div class="sep-rows-label">
+        Lyrics
+        <span class="hint" id="sep-ts-hint">— timestamp&nbsp;|&nbsp;line</span>
+      </div>
+      <div id="sep-rows-list"></div>
+      <div class="sep-add-row-btns">
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('lyric')">＋ Line</button>
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('blank')">＋ Blank</button>
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('section')">＋ Section</button>
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('backing')">＋ Backing</button>
+        <button class="btn btn-ghost btn-sm" id="sep-ts-editor-btn" style="display:none;margin-left:auto;" onclick="openTSEditor(APP.editingId)">⏱ Timestamps</button>
+      </div>
+      <!-- hidden textarea — saveEdit() reads from here -->
+      <textarea id="e-lyrics" style="display:none;"></textarea>
+    </div>
+
+    <!-- SECTION PLACER -->
+    <div class="sect-placer-wrap" id="sect-placer-wrap">
+      <div class="sect-placer-head">
+        <span class="sect-placer-title">🎸 Section Markers</span>
+      </div>
+      <div class="sect-palette" id="sect-palette">
+        <span class="sect-palette-label">Sections</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Intro','section')">🎸 Intro</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 1','section')">🎤 Verse 1</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎤 Verse 2','section')">🎤 Verse 2</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Pre-Chorus','section')">🎵 Pre-Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Chorus','section')">🎵 Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Post-Chorus','section')">🎵 Post-Chorus</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Bridge','section')">🎵 Bridge</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Guitar Solo','section')">🎸 Guitar Solo</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Outro','section')">🎸 Outro</span>
+        <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎵 Instrumental','section')">🎵 Instrumental</span>
+        <span class="sect-palette-label">Chords / Key</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Am G F C','chord')">Am G F C</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Key of A','chord')">Key of A</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Capo 2','chord')">Capo 2</span>
+        <span class="sect-chip chord-chip" draggable="true" ondragstart="_sectChipDrag(event,'Drop D','chord')">Drop D</span>
+        <span class="sect-palette-label">Notes / Cues</span>
+        <span class="sect-chip note-chip" draggable="true" ondragstart="_sectChipDrag(event,'Slow build','note')">Slow build</span>
+        <span class="sect-chip note-chip" draggable="true" ondragstart="_sectChipDrag(event,'Full band','note')">Full band</span>
+        <span class="sect-chip note-chip" draggable="true" ondragstart="_sectChipDrag(event,'Quiet','note')">Quiet</span>
+        <div class="sect-custom-input">
+          <input id="sect-custom-text" placeholder="Custom…" onkeydown="if(event.key==='Enter')_sectAddCustom()">
+          <button onclick="_sectAddCustom()">＋ Add</button>
+        </div>
+      </div>
+      <div class="sect-lyric-list" id="sect-lyric-list"></div>
+    </div>
+
+    <!-- ANNOTATIONS (shown when needed) -->
+    <div class="ann-editor-wrap" style="display:none" id="ann-editor-legacy">
+      <div class="ann-editor-head">
+        <span class="ann-editor-title">🎨 Annotations (Chord/Note)</span>
+        <div class="ann-add-btns">
+          <button class="ann-add-btn type-chord" onclick="addAnn('chord')">＋ Chord/Key</button>
+          <button class="ann-add-btn type-note"  onclick="addAnn('note')">＋ Note</button>
+        </div>
+      </div>
+      <div class="ann-list" id="ann-list"></div>
+      <div class="ann-hint">
+        <span style="color:#60a5fa;">■ Chord/Key</span> = Am G F / Key of A &nbsp;
+        <span style="color:#34d399;">■ Note</span> = performance cues
+      </div>
+    </div>
+
+    <!-- TAB UPLOADS -->
+    <details class="sep-details" id="sep-tabs-details">
+      <summary>Tab PDFs</summary>
+      <div class="sep-details-body">
+        <div class="tab-upload-grid" id="sep-tab-grid"></div>
+        <div class="hint" style="margin-top:0.5rem;">Upload a PDF tab per instrument. Press the instrument button while playing to open it full-screen.</div>
+      </div>
+    </details>
+
+  </div><!-- /sep-body -->
+  <div class="sep-footer">
+    <button class="btn btn-ghost btn-sm" id="sep-dup-btn" onclick="duplicateSong(APP.editingId);closeSongEditPanel()" title="Duplicate this song" style="margin-right:auto;display:none;">⎘ Duplicate</button>
+    <button class="btn btn-ghost" onclick="closeSongEditPanel()">Cancel</button>
+    <button class="btn btn-lime" onclick="saveEdit()">Save Changes</button>
+  </div>
+</div>
+
+<!-- ══════════ EDIT SONG MODAL (legacy — kept for fallback) ══════════ -->
 <div class="modal-bg" id="edit-modal">
   <div class="modal" style="max-width:600px;">
     <h3 id="edit-modal-title">Edit Song</h3>
@@ -5630,30 +5834,181 @@ function _sectAddCustom() {
 }
 
 function openManualAdd() {
-  APP.editingId = null;
-  _annRows = [];
-  _editorTapTimes = [];
-  document.getElementById('edit-modal-title').textContent = 'Add Song Manually';
-  document.getElementById('edit-form').innerHTML = buildEditForm(null);
-  _renderAnnList();
-  _sectState = [];
-  const sectList = document.getElementById('sect-lyric-list');
-  if (sectList) sectList.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Save the song first, then re-open to place sections.</div>';
-  openModal('edit-modal');
+  openSongEditPanel(null, true);
 }
 
 function openEdit(id) {
-  APP.editingId = id;
-  const s = getSong(id); if(!s) return;
-  _annRows = (s.annotations || []).filter(a=>a.annType!=='section').map(a => ({...a}));
+  openSongEditPanel(id, false);
+}
+
+// ── SONG EDIT PANEL ──────────────────────────────────────────
+let _sepSynced = false;
+
+function openSongEditPanel(id, isNew) {
+  APP.editingId = isNew ? null : id;
+  const s = isNew ? null : getSong(id);
+  if (!isNew && !s) return;
+  _annRows = s ? (s.annotations||[]).filter(a=>a.annType!=='section').map(a=>({...a})) : [];
   _editorTapTimes = [];
-  document.getElementById('edit-modal-title').textContent = 'Edit Song';
-  document.getElementById('edit-form').innerHTML = buildEditForm(s);
+  _sepSynced = s ? (s.syncType==='synced') : false;
+
+  // Panel title + duplicate btn
+  document.getElementById('sep-panel-title').textContent = isNew ? 'Add Song' : 'Edit Song';
+  const dupBtn = document.getElementById('sep-dup-btn');
+  if (dupBtn) dupBtn.style.display = isNew ? 'none' : '';
+
+  // Build meta fields
+  _buildSepMeta(s);
+
+  // Build lyric rows
+  _buildSepRows(s ? (s.rawLyrics||'') : '', _sepSynced);
+
+  // Tab upload cards
+  const tabGrid = document.getElementById('sep-tab-grid');
+  if (tabGrid) tabGrid.innerHTML = _buildTabUploadCards(s||{});
+
+  // Annotations
   _renderAnnList();
   const legacyEl = document.getElementById('ann-editor-legacy');
   if (legacyEl) legacyEl.style.display = _annRows.length ? '' : 'none';
-  _renderSectPlacer(s);
-  openModal('edit-modal');
+
+  // Section placer
+  if (isNew) {
+    _sectState = [];
+    const sl = document.getElementById('sect-lyric-list');
+    if (sl) sl.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Save the song first, then re-open to place sections.</div>';
+  } else {
+    _renderSectPlacer(s);
+  }
+
+  // Open panel + squish layout
+  document.getElementById('song-edit-panel').classList.add('open');
+  document.querySelector('.c-body').classList.add('edit-panel-open');
+}
+
+function closeSongEditPanel() {
+  document.getElementById('song-edit-panel').classList.remove('open');
+  document.querySelector('.c-body').classList.remove('edit-panel-open');
+}
+
+function _buildSepMeta(s) {
+  const e = s||{};
+  document.getElementById('sep-meta-body').innerHTML = `
+    <div class="two-col">
+      <div class="field"><label>Title *</label><input id="e-title" value="${esc(e.title||'')}"></div>
+      <div class="field"><label>Artist</label><input id="e-artist" value="${esc(e.artist||'')}"></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Duration (m:ss)</label>
+        <input id="e-dur" value="${e.duration?fmtTime(e.duration):''}"></div>
+      <div class="field"><label>Sync type</label>
+        <select id="e-sync" onchange="_sepOnSyncChange()">
+          <option value="synced" ${(!s||s.syncType==='synced')?'selected':''}>Synced (timestamps)</option>
+          <option value="plain" ${s&&s.syncType==='plain'?'selected':''}>Plain (evenly spaced)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Song Notes</label>
+      <input id="e-notes" value="${esc(e.notes||'')}" placeholder="e.g. Capo 3 · Drop D · Start slow">
+      <div class="hint">Shown above lyrics before you hit play.</div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Key</label><input id="e-key" value="${esc(e.key||'')}" placeholder="e.g. G, Dbm, F#"></div>
+      <div class="field"><label>Capo</label><input id="e-capo" type="number" min="0" max="11" value="${e.capo||0}" style="width:3.5rem;"></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Tags</label><input id="e-tags" value="${esc((e.tags||[]).join(', '))}" placeholder="slow, cover, encore…"></div>
+      <div class="field"><label>Colour</label><input id="e-color" type="color" value="${e.color||'#6366f1'}" style="width:3rem;height:2rem;padding:2px;cursor:pointer;"></div>
+    </div>
+    <div class="field">
+      <label>BPM / Tempo <span style="font-weight:400;color:var(--text-mid);font-size:0.7rem;">— drives the count-in beat</span></label>
+      <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+        <input id="e-bpm" type="number" min="40" max="300" step="1" placeholder="e.g. 120" value="${e.bpm||''}" style="width:90px;">
+        <button type="button" class="btn btn-ghost btn-sm" id="e-bpm-tap" onclick="editorTapBpm()">TAP</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="e-bpm-lookup" onclick="editorLookupBpm()" title="Look up BPM from Deezer">🔍 Lookup</button>
+        <span id="e-bpm-tap-hint" style="font-size:0.68rem;color:var(--text-mid);">tap to the beat · or Lookup</span>
+      </div>
+    </div>
+  `;
+}
+
+function _buildSepRows(rawLyrics, synced) {
+  _sepSynced = synced;
+  const list = document.getElementById('sep-rows-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const hint  = document.getElementById('sep-ts-hint');
+  const tsBtn = document.getElementById('sep-ts-editor-btn');
+  if (hint)  hint.style.display  = synced ? '' : 'none';
+  if (tsBtn) tsBtn.style.display = (synced && APP.editingId) ? '' : 'none';
+  const lines = rawLyrics ? rawLyrics.split('\n') : [''];
+  lines.forEach(line => list.appendChild(_sepCreateRow(line, synced)));
+  _sepSyncTextarea();
+}
+
+function _sepCreateRow(line, synced) {
+  const row = document.createElement('div');
+  row.className = 'sep-row';
+  let ts = '', text = line;
+  if (synced) {
+    const m = line.match(/^\[(\d+:\d+\.\d*)\](.*)/);
+    if (m) { ts = m[1]; text = m[2]; }
+  }
+  const tsClass = 'sep-row-ts' + (synced ? '' : ' ts-hidden');
+  row.innerHTML =
+    `<input class="${tsClass}" type="text" placeholder="0:00.00" value="${esc(ts)}" oninput="_sepSyncTextarea()">` +
+    `<input class="sep-row-text" type="text" placeholder="Lyric line…" value="${esc(text)}" oninput="_sepSyncTextarea()">` +
+    `<button class="sep-row-del" onclick="_sepDeleteRow(this)" title="Delete line">✕</button>`;
+  return row;
+}
+
+function _sepSyncTextarea() {
+  const list = document.getElementById('sep-rows-list');
+  const ta   = document.getElementById('e-lyrics');
+  if (!list || !ta) return;
+  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
+  const lines = Array.from(list.querySelectorAll('.sep-row')).map(row => {
+    const tsEl   = row.querySelector('.sep-row-ts');
+    const textEl = row.querySelector('.sep-row-text');
+    const text = textEl ? textEl.value : '';
+    if (synced && tsEl && tsEl.value.trim()) return `[${tsEl.value.trim()}]${text}`;
+    return text;
+  });
+  ta.value = lines.join('\n');
+}
+
+function _sepOnSyncChange() {
+  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
+  _sepSynced = synced;
+  const hint  = document.getElementById('sep-ts-hint');
+  const tsBtn = document.getElementById('sep-ts-editor-btn');
+  if (hint)  hint.style.display  = synced ? '' : 'none';
+  if (tsBtn) tsBtn.style.display = (synced && APP.editingId) ? '' : 'none';
+  document.querySelectorAll('#sep-rows-list .sep-row-ts').forEach(el => {
+    el.classList.toggle('ts-hidden', !synced);
+  });
+  _sepSyncTextarea();
+}
+
+function _sepAddRow(type) {
+  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
+  const list   = document.getElementById('sep-rows-list');
+  if (!list) return;
+  let line = '';
+  if (type === 'section') line = '[Section Name]';
+  else if (type === 'backing') line = '(backing vocal)';
+  // blank and lyric both produce an empty row
+  const row = _sepCreateRow(synced && line ? '[0:00.00]'+line : line, synced);
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+  const inp = row.querySelector('.sep-row-text');
+  if (inp) { inp.focus(); inp.select(); }
+  _sepSyncTextarea();
+}
+
+function _sepDeleteRow(btn) {
+  const row = btn.closest('.sep-row');
+  if (row) { row.remove(); _sepSyncTextarea(); }
 }
 
 function _buildTabUploadCards(song) {
@@ -5829,7 +6184,7 @@ function saveEdit() {
     // Preserve tabs (they are modified in-place via loadTabPdf)
     if (!s.tabs) s.tabs = {};
     persist();
-    closeModal('edit-modal');
+    closeSongEditPanel();
     if (APP.currentId===APP.editingId) loadSong(APP.editingId);
     toast('Song updated');
   } else {
@@ -5840,7 +6195,7 @@ function saveEdit() {
       syncType, notes, rawLyrics, annotations, savedOffset: 0, tabs: {}, bpm,
       lines: syncType==='synced' ? parseLRC(rawLyrics) : buildPlainLines(rawLyrics, dur)
     };
-    closeModal('edit-modal');
+    closeSongEditPanel();
     addToBank(song, true);
   }
   renderAll();
@@ -6487,11 +6842,10 @@ function clearTab(instrument) {
   const cardEl = document.getElementById(`tab-card-${instrument}`);
   if (statusEl) statusEl.textContent = 'No tab';
   if (cardEl) cardEl.classList.remove('has-tab');
-  // Rebuild the upload card HTML
+  // Rebuild the upload card HTML in the new panel tab grid
   const song = APP.editingId ? getSong(APP.editingId) : null;
-  const _ef = document.getElementById('edit-form');
-  if (_ef) _ef.innerHTML = buildEditForm(song);
-  _renderAnnList();
+  const tabGrid = document.getElementById('sep-tab-grid');
+  if (tabGrid) tabGrid.innerHTML = _buildTabUploadCards(song||{});
 }
 
 
