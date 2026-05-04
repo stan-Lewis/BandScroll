@@ -1,5 +1,5 @@
 // BandScroll Service Worker — offline support
-const CACHE = 'bandscroll-v3';
+const CACHE = 'bandscroll-v4';
 const CORE = [
   '/BandScroll/',
   '/BandScroll/index.html',

@@ -955,44 +955,41 @@ html[data-theme="light"] {
 .ll.ann,.ll.ann-chord,.ll.ann-note{line-height:1.3;padding:0.12rem 0;transition:color 0.22s,opacity 0.22s;user-select:none;}
 .ll.ann-section{line-height:1.3;transition:color 0.3s,opacity 0.3s,background 0.3s,border-color 0.3s,text-shadow 0.3s;user-select:none;}
 .ll.ann.past,.ll.ann-chord.past,.ll.ann-note.past{opacity:0.12;}
-/* SECTION annotations — teal divider (matches parsed sections) */
+/* SECTION annotations — amber divider (matches parsed sections) */
 .ll.ann-section{
   font-family:'JetBrains Mono',monospace;
   font-weight:500;font-style:normal;
   font-size:0.6rem;letter-spacing:0.28em;text-transform:uppercase;
-  text-align:left;
-  /* Full-bleed — cancel belt's horizontal padding */
-  margin-left:clamp(-5rem,-6vw,-1rem);
-  margin-right:clamp(-5rem,-6vw,-1rem);
-  padding:0.9rem clamp(1rem,6vw,5rem) 0.4rem;
+  text-align:center;
   margin-top:0.8rem;margin-bottom:0.15rem;
+  padding:0.9rem 0 0.4rem;
   background:none;
-  border-top:1px solid rgba(15,212,192,0.2);
+  border-top:1px solid rgba(245,158,11,0.25);
   border-bottom:none;
-  color:rgba(15,212,192,0.45);
+  color:rgba(245,158,11,0.6);
   position:relative;
   opacity:0.9;
 }
 .ll.ann-section::before{
-  content:'';position:absolute;top:0;left:clamp(1rem,6vw,5rem);right:clamp(1rem,6vw,5rem);
+  content:'';position:absolute;top:0;left:0;right:0;
   height:2px;
-  background:linear-gradient(90deg,var(--lime-dim),transparent);
-  opacity:0.35;
+  background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),transparent);
+  opacity:0.5;
 }
 .ll.ann-section.past{
   opacity:0.2;
-  border-top-color:rgba(15,212,192,0.06);
-  color:rgba(15,212,192,0.2);
+  border-top-color:rgba(245,158,11,0.06);
+  color:rgba(245,158,11,0.25);
 }
 .ll.ann-section.active-ann{
   opacity:1;
-  border-top-color:rgba(15,212,192,0.5);
-  color:var(--lime);
-  text-shadow:0 0 18px rgba(15,212,192,0.5);
+  border-top-color:rgba(245,158,11,0.55);
+  color:#f59e0b;
+  text-shadow:0 0 18px rgba(245,158,11,0.55);
 }
 .ll.ann-section.active-ann::before{
-  background:linear-gradient(90deg,var(--lime),rgba(15,212,192,0.2),transparent);
-  opacity:0.8;
+  background:linear-gradient(90deg,transparent,rgba(245,158,11,0.7),transparent);
+  opacity:0.9;
 }
 /* Final section — amber pulse to signal song is ending */
 .ll.ann-section.final-section.active-ann,
@@ -1015,16 +1012,17 @@ html[data-theme="light"] {
   letter-spacing:0.02em;line-height:1.3;padding:0.12rem 0;
 }
 /* .ll.ann::before removed */
-/* Override: section annotations must not inherit .ll.ann amber — restore teal */
+/* Override: section annotations must not inherit .ll.ann font/size — keep mono small */
 .ll.ann.ann-section{
-  color:rgba(15,212,192,0.45);
+  color:rgba(245,158,11,0.6);
   font-family:'JetBrains Mono',monospace;
   font-weight:500;font-style:normal;
   font-size:0.6rem;letter-spacing:0.28em;
+  text-align:center;
   opacity:0.9;
 }
-.ll.ann.ann-section.past{color:rgba(15,212,192,0.2);opacity:0.2;}
-.ll.ann.ann-section.active-ann{color:var(--lime);text-shadow:0 0 18px rgba(15,212,192,0.5);opacity:1;}
+.ll.ann.ann-section.past{color:rgba(245,158,11,0.25);opacity:0.2;}
+.ll.ann.ann-section.active-ann{color:#f59e0b;text-shadow:0 0 18px rgba(245,158,11,0.55);opacity:1;}
 
 /* CHORD annotations — Am G F / Key change (blue, mono) */
 .ll.ann-chord{
