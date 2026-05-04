@@ -340,8 +340,6 @@ textarea{resize:vertical;}
   font-family:'DM Sans',sans-serif;text-transform:none;letter-spacing:0;
   font-style:italic;color:var(--text-dim);font-size:0.65rem;opacity:0.7;
 }
-#sep-rows-list{display:flex;flex-direction:column;gap:2px;max-height:40vh;overflow-y:auto;
-  border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:4px;background:var(--bg2);}
 .sep-row{display:flex;gap:3px;align-items:center;}
 .sep-row-ts{
   width:74px;flex-shrink:0;
@@ -2582,29 +2580,13 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       </div>
     </details>
 
-    <!-- LYRICS — two-column row editor -->
-    <div>
-      <div class="sep-rows-label">
-        Lyrics
-        <span class="hint" id="sep-ts-hint">— timestamp&nbsp;|&nbsp;line</span>
-      </div>
-      <div id="sep-rows-list"></div>
-      <div class="sep-add-row-btns">
-        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('lyric')">＋ Line</button>
-        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('blank')">＋ Blank</button>
-        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('section')">＋ Section</button>
-        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_sepAddRow('backing')">＋ Backing</button>
-        <button class="btn btn-ghost btn-sm" id="sep-ts-editor-btn" style="display:none;margin-left:auto;" onclick="openTSEditor(APP.editingId)">⏱ Timestamps</button>
-      </div>
-      <!-- hidden textarea — saveEdit() reads from here -->
-      <textarea id="e-lyrics" style="display:none;"></textarea>
-    </div>
-
-    <!-- SECTION PLACER -->
+    <!-- UNIFIED LYRICS + ANNOTATIONS -->
     <div class="sect-placer-wrap" id="sect-placer-wrap">
       <div class="sect-placer-head">
-        <span class="sect-placer-title">🎸 Section Markers</span>
+        <span class="sect-placer-title" id="sep-ts-hint">Lyrics &amp; Annotations</span>
+        <button class="btn btn-ghost btn-sm" id="sep-ts-editor-btn" style="display:none;" onclick="openTSEditor(APP.editingId)">⏱ Timestamps</button>
       </div>
+      <!-- Chip palette — drag chips into the list below -->
       <div class="sect-palette" id="sect-palette">
         <span class="sect-palette-label">Sections</span>
         <span class="sect-chip" draggable="true" ondragstart="_sectChipDrag(event,'🎸 Intro','section')">🎸 Intro</span>
@@ -2631,7 +2613,13 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <button onclick="_sectAddCustom()">＋ Add</button>
         </div>
       </div>
-      <div class="sect-lyric-list" id="sect-lyric-list"></div>
+      <!-- Unified list: editable lyric rows + draggable annotation banners interleaved -->
+      <div class="sect-lyric-list" id="unified-lyric-list" style="max-height:52vh;overflow-y:auto;"></div>
+      <div class="sep-add-row-btns" style="margin-top:0.4rem;">
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_unifiedAddRow('lyric')">＋ Line</button>
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_unifiedAddRow('blank')">＋ Blank</button>
+        <button class="btn btn-ghost btn-sm sep-add-row-btn" onclick="_unifiedAddRow('backing')">＋ Backing</button>
+      </div>
     </div>
 
     <!-- TAB UPLOADS -->
@@ -5624,137 +5612,201 @@ function _updateLyricLineProg(role, lines, t) {
 }
 
 
-// ══════════════════════════════════════════════════════════════════════
-// SECTION PLACER — drag-and-drop section banners onto lyric lines
-// ══════════════════════════════════════════════════════════════════════
-let _sectDragLabel = null;
-let _sectDragAnnType = null;
-let _sectDragBannerIdx = null;
-let _sectState = [];
+// ── UNIFIED LYRIC + ANNOTATION EDITOR ──────────────────────────────────────
+// _unifiedState: ordered array of {kind:'lyric', ts:'', text:''} and
+//                {kind:'banner', label:'', annType:'section'|'chord'|'note'}
+let _unifiedState = [];
+let _uDragIdx    = null;   // index being dragged (lyric or banner)
+let _uChipLabel  = null;   // chip being dragged from palette
+let _uChipType   = null;
 
-function _sectBuildState(song) {
-  // All annotation types (section, chord, note) live in the placer — single source of truth
-  const annotations = (song.annotations||[]).filter(a=>a.annType&&a.text);
-  const lyrics = (song.lines||[])
-    .filter(l=>l.type==='lyric')
-    .sort((a,b)=>(a.t||0)-(b.t||0))
-    .map((l,i)=>({ kind:'lyric', t:l.t, text:l.text, origIdx:i }));
-  // For plain songs (no timestamps): just show annotation banners, no lyric rows
-  if (!lyrics.length) {
-    return annotations.map(ann => ({ kind:'banner', label:ann.text, annType:ann.annType||'section' }));
-  }
-  const banners = [];
-  annotations.forEach(ann => {
-    let bestIdx = lyrics.length - 1;
-    for (let i = 0; i < lyrics.length; i++) {
-      if ((lyrics[i].t||0) >= (ann.t||0) - 0.5) { bestIdx = i; break; }
+// Build unified state from a saved song
+function _buildUnifiedState(s) {
+  const synced = s && s.syncType === 'synced';
+  const raw    = s ? (s.rawLyrics || '') : '';
+  const anns   = (s ? (s.annotations || []) : []).filter(a => a.annType && a.text);
+
+  const lyricItems = (raw ? raw.split('\n') : ['']).map(line => {
+    let ts = '', text = line;
+    if (synced) {
+      const m = line.match(/^\[(\d+:\d+\.\d*)\](.*)/);
+      if (m) { ts = m[1]; text = m[2]; }
     }
-    banners.push({ kind:'banner', label:ann.text, annType:ann.annType||'section', beforeLyricIdx:bestIdx });
+    return { kind: 'lyric', ts, text };
   });
-  const ordered = [];
-  for (let i = 0; i < lyrics.length; i++) {
-    banners.filter(b=>b.beforeLyricIdx===i).forEach(b=>ordered.push({...b}));
-    ordered.push(lyrics[i]);
+
+  if (!synced || !lyricItems.length) {
+    // Plain song: banners first, then lyrics
+    return [
+      ...anns.map(a => ({ kind: 'banner', label: a.text, annType: a.annType || 'section' })),
+      ...lyricItems
+    ];
   }
-  return ordered;
+
+  // Synced song: interleave banners before their nearest lyric by timestamp
+  const banners = anns.map(ann => {
+    let bestIdx = lyricItems.length - 1;
+    for (let i = 0; i < lyricItems.length; i++) {
+      if ((parseTime(lyricItems[i].ts) || 0) >= (ann.t || 0) - 0.5) { bestIdx = i; break; }
+    }
+    return { kind: 'banner', label: ann.text, annType: ann.annType || 'section', _bi: bestIdx };
+  });
+
+  const result = [];
+  for (let i = 0; i < lyricItems.length; i++) {
+    banners.filter(b => b._bi === i).forEach(b => result.push({ kind: 'banner', label: b.label, annType: b.annType }));
+    result.push(lyricItems[i]);
+  }
+  return result;
 }
 
-function _sectGetAnnotations() {
-  const annotations = [];
-  _sectState.forEach((item, idx) => {
-    if (item.kind !== 'banner') return;
-    let nextLyric = null;
-    for (let i = idx+1; i < _sectState.length; i++) {
-      if (_sectState[i].kind === 'lyric') { nextLyric = _sectState[i]; break; }
-    }
-    if (!nextLyric) {
-      let prevLyric = null;
-      for (let i = idx-1; i >= 0; i--) {
-        if (_sectState[i].kind === 'lyric') { prevLyric = _sectState[i]; break; }
-      }
-      annotations.push({ annType:item.annType||'section', text:item.label, t: prevLyric ? (prevLyric.t||0)+1 : 0 });
-    } else {
-      annotations.push({ annType:item.annType||'section', text:item.label, t: Math.max(0, (nextLyric.t||0) - 0.001) });
-    }
-  });
-  return annotations;
-}
+// Render the unified list
+function _renderUnifiedList() {
+  const container = document.getElementById('unified-lyric-list');
+  if (!container) return;
+  const synced = (document.getElementById('e-sync') || { value: 'plain' }).value === 'synced';
+  const tsBtn  = document.getElementById('sep-ts-editor-btn');
+  if (tsBtn) tsBtn.style.display = (synced && APP.editingId) ? '' : 'none';
 
-function _renderSectPlacer(song) {
-  const list = document.getElementById('sect-lyric-list');
-  if (!list) return;
-  _sectState = _sectBuildState(song);
-  if (!_sectState.length) {
-    list.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Drag chips above into this area to add sections, chords &amp; notes.</div>';
+  if (!_unifiedState.length) {
+    container.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Drag chips above into the list, or use ＋ Line to add lyrics.</div>';
     return;
   }
-  _sectRenderList(list);
-}
 
-function _sectRenderList(list) {
-  if (!list) list = document.getElementById('sect-lyric-list');
-  if (!list) return;
-  let html = '';
-  html += `<div class="sect-drop-zone sect-drop-top" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,0)"></div>`;
-  _sectState.forEach((item, idx) => {
+  let html = _dropZone(0);
+  _unifiedState.forEach((item, idx) => {
     if (item.kind === 'banner') {
-      const bannerClass = item.annType==='chord'?'chord-banner':item.annType==='note'?'note-banner':'';
-      html += `<div class="sect-banner-row ${bannerClass}" draggable="true" ondragstart="_sectBannerDrag(event,${idx})">
+      const bc = item.annType === 'chord' ? 'chord-banner' : item.annType === 'note' ? 'note-banner' : '';
+      html += `<div class="sect-banner-row ${bc}" draggable="true" ondragstart="_uBannerDrag(event,${idx})" ondragover="_uDragOver(event,this)" ondragleave="_uDragLeave(this)" ondrop="_uDrop(event,${idx})">
         <span class="sect-banner-handle">⠿</span>
-        <input class="sect-banner-label" type="text" value="${esc(item.label)}" oninput="_sectState[${idx}].label=this.value">
-        <button class="sect-banner-del" onclick="_sectRemoveBanner(${idx})" title="Remove">✕</button>
+        <input class="sect-banner-label" type="text" value="${esc(item.label)}" oninput="_unifiedState[${idx}].label=this.value">
+        <button class="sect-banner-del" onclick="_uDelete(${idx})" title="Remove">✕</button>
       </div>`;
     } else {
-      const t = item.t != null ? fmtTime(item.t) : '?';
-      html += `<div class="sect-lyric-row"><span class="sect-lyric-t">${t}</span><span>${esc(item.text)}</span></div>`;
+      html += `<div class="sep-row" draggable="true" ondragstart="_uLyricDrag(event,${idx})" ondragover="_uDragOver(event,this)" ondragleave="_uDragLeave(this)" ondrop="_uDrop(event,${idx})">
+        <input class="sep-row-ts${synced ? '' : ' ts-hidden'}" type="text" placeholder="0:00.00" value="${esc(item.ts || '')}" oninput="_unifiedState[${idx}].ts=this.value">
+        <input class="sep-row-text" type="text" placeholder="Lyric line…" value="${esc(item.text || '')}" oninput="_unifiedState[${idx}].text=this.value">
+        <button class="sep-row-del" onclick="_uDelete(${idx})" title="Delete">✕</button>
+      </div>`;
     }
-    html += `<div class="sect-drop-zone" ondragover="_sectDragOver(event,this)" ondragleave="_sectDragLeave(this)" ondrop="_sectDrop(event,${idx+1})"></div>`;
+    html += _dropZone(idx + 1);
   });
-  list.innerHTML = html;
+  container.innerHTML = html;
 }
 
+function _dropZone(pos) {
+  return `<div class="sect-drop-zone" ondragover="_uDragOver(event,this)" ondragleave="_uDragLeave(this)" ondrop="_uDrop(event,${pos})"></div>`;
+}
+
+// Drag handlers
+function _uBannerDrag(event, idx) { _uDragIdx = idx; _uChipLabel = null; event.dataTransfer.effectAllowed = 'move'; }
+function _uLyricDrag(event, idx)  { _uDragIdx = idx; _uChipLabel = null; event.dataTransfer.effectAllowed = 'move'; }
+function _uDragOver(event, el)    { event.preventDefault(); el.classList.add('drag-active'); }
+function _uDragLeave(el)          { el.classList.remove('drag-active'); }
+
+function _uDrop(event, pos) {
+  event.preventDefault();
+  document.querySelectorAll('#unified-lyric-list .drag-active, #unified-lyric-list .drag-over').forEach(el => el.classList.remove('drag-active', 'drag-over'));
+  if (_uChipLabel !== null) {
+    // Chip from palette dropped here — insert banner at pos
+    _unifiedState.splice(pos, 0, { kind: 'banner', label: _uChipLabel, annType: _uChipType || 'section' });
+    _uChipLabel = null; _uChipType = null;
+  } else if (_uDragIdx !== null) {
+    // Row reorder
+    const moved = _unifiedState.splice(_uDragIdx, 1)[0];
+    const adj   = pos > _uDragIdx ? pos - 1 : pos;
+    _unifiedState.splice(adj, 0, moved);
+    _uDragIdx = null;
+  }
+  _renderUnifiedList();
+}
+
+function _uDelete(idx) {
+  _unifiedState.splice(idx, 1);
+  _renderUnifiedList();
+}
+
+// Called by palette chip drag-start
 function _sectChipDrag(event, label, annType) {
-  _sectDragLabel = label; _sectDragAnnType = annType||'section'; _sectDragBannerIdx = null;
+  _uChipLabel  = label;
+  _uChipType   = annType || 'section';
+  _uDragIdx    = null;
   event.dataTransfer.effectAllowed = 'copy';
 }
-function _sectBannerDrag(event, idx) {
-  _sectDragBannerIdx = idx; _sectDragLabel = null;
-  event.dataTransfer.effectAllowed = 'move';
-}
-function _sectDragOver(event, el) {
-  event.preventDefault();
-  el.classList.add('drag-active');
-}
-function _sectDragLeave(el) { el.classList.remove('drag-active'); }
-function _sectDrop(event, pos) {
-  event.preventDefault();
-  document.querySelectorAll('.sect-drop-zone').forEach(z=>z.classList.remove('drag-active'));
-  if (_sectDragLabel !== null) {
-    _sectState.splice(pos, 0, { kind:'banner', label:_sectDragLabel, annType:_sectDragAnnType||'section' });
-    _sectDragLabel = null; _sectDragAnnType = null;
-  } else if (_sectDragBannerIdx !== null) {
-    const moved = _sectState.splice(_sectDragBannerIdx, 1)[0];
-    const adj = pos > _sectDragBannerIdx ? pos-1 : pos;
-    _sectState.splice(adj, 0, moved);
-    _sectDragBannerIdx = null;
-  }
-  _sectRenderList();
-}
-function _sectRemoveBanner(idx) { _sectState.splice(idx,1); _sectRenderList(); }
+
+// Add a custom chip from the text input
 function _sectAddCustom() {
-  const inp = document.getElementById('sect-custom-text');
+  const inp   = document.getElementById('sect-custom-text');
   if (!inp) return;
-  const label = inp.value.trim(); if (!label) return;
+  const label = inp.value.trim();
+  if (!label) return;
   const palette = document.getElementById('sect-palette');
   if (palette) {
     const chip = document.createElement('span');
     chip.className = 'sect-chip custom-chip';
     chip.draggable = true;
     chip.textContent = label;
-    chip.setAttribute('ondragstart', "_sectChipDrag(event," + JSON.stringify(label) + ")");
-    palette.insertBefore(chip, palette.querySelector('.sect-custom-input'));
+    chip.ondragstart = e => _sectChipDrag(e, label, 'section');
+    const customDiv = palette.querySelector('.sect-custom-input');
+    if (customDiv) palette.insertBefore(chip, customDiv);
   }
   inp.value = '';
+}
+
+// Add a lyric/blank/backing row at the bottom
+function _unifiedAddRow(type) {
+  let text = '';
+  if (type === 'backing') text = '(backing vocal)';
+  const synced = (document.getElementById('e-sync') || { value: 'plain' }).value === 'synced';
+  _unifiedState.push({ kind: 'lyric', ts: synced ? '0:00.00' : '', text });
+  _renderUnifiedList();
+  // Focus the new row's text input
+  const container = document.getElementById('unified-lyric-list');
+  if (!container) return;
+  const rows = container.querySelectorAll('.sep-row-text');
+  if (rows.length) { const last = rows[rows.length - 1]; last.focus(); last.select(); }
+  container.scrollTop = container.scrollHeight;
+}
+
+// Toggle timestamp column visibility when sync type changes
+function _sepOnSyncChange() {
+  const synced = (document.getElementById('e-sync') || { value: 'plain' }).value === 'synced';
+  const tsBtn  = document.getElementById('sep-ts-editor-btn');
+  if (tsBtn) tsBtn.style.display = (synced && APP.editingId) ? '' : 'none';
+  document.querySelectorAll('#unified-lyric-list .sep-row-ts').forEach(el => {
+    el.classList.toggle('ts-hidden', !synced);
+  });
+}
+
+// Extract rawLyrics string from the current unified state
+function _unifiedGetRawLyrics(synced) {
+  return _unifiedState
+    .filter(i => i.kind === 'lyric')
+    .map(i => (synced && i.ts && i.ts.trim()) ? `[${i.ts.trim()}]${i.text}` : i.text)
+    .join('\n');
+}
+
+// Extract annotations array from the current unified state (with timestamps derived from adjacent lyrics)
+function _unifiedGetAnnotations(synced) {
+  const result = [];
+  _unifiedState.forEach((item, idx) => {
+    if (item.kind !== 'banner') return;
+    // Find next lyric after this banner
+    let nextLyric = null;
+    for (let i = idx + 1; i < _unifiedState.length; i++) {
+      if (_unifiedState[i].kind === 'lyric') { nextLyric = _unifiedState[i]; break; }
+    }
+    if (!nextLyric) {
+      let prevLyric = null;
+      for (let i = idx - 1; i >= 0; i--) {
+        if (_unifiedState[i].kind === 'lyric') { prevLyric = _unifiedState[i]; break; }
+      }
+      result.push({ annType: item.annType || 'section', text: item.label, t: prevLyric ? (parseTime(prevLyric.ts) || 0) + 1 : 0 });
+    } else {
+      result.push({ annType: item.annType || 'section', text: item.label, t: Math.max(0, (parseTime(nextLyric.ts) || 0) - 0.001) });
+    }
+  });
+  return result;
 }
 
 function openManualAdd() {
@@ -5766,14 +5818,11 @@ function openEdit(id) {
 }
 
 // ── SONG EDIT PANEL ──────────────────────────────────────────
-let _sepSynced = false;
-
 function openSongEditPanel(id, isNew) {
   APP.editingId = isNew ? null : id;
   const s = isNew ? null : getSong(id);
   if (!isNew && !s) return;
   _editorTapTimes = [];
-  _sepSynced = s ? (s.syncType==='synced') : false;
 
   // Panel title + duplicate btn
   document.getElementById('sep-panel-title').textContent = isNew ? 'Add Song' : 'Edit Song';
@@ -5783,21 +5832,13 @@ function openSongEditPanel(id, isNew) {
   // Build meta fields
   _buildSepMeta(s);
 
-  // Build lyric rows
-  _buildSepRows(s ? (s.rawLyrics||'') : '', _sepSynced);
+  // Build unified lyric + annotation list
+  _unifiedState = _buildUnifiedState(s);
+  _renderUnifiedList();
 
   // Tab upload cards
   const tabGrid = document.getElementById('sep-tab-grid');
   if (tabGrid) tabGrid.innerHTML = _buildTabUploadCards(s||{});
-
-  // Section placer
-  if (isNew) {
-    _sectState = [];
-    const sl = document.getElementById('sect-lyric-list');
-    if (sl) sl.innerHTML = '<div style="padding:0.7rem 0.8rem;color:var(--text-dim);font-size:0.78rem;font-style:italic;">Save the song first, then re-open to place sections.</div>';
-  } else {
-    _renderSectPlacer(s);
-  }
 
   // Open panel + squish layout
   document.getElementById('song-edit-panel').classList.add('open');
@@ -5855,98 +5896,6 @@ function _buildSepMeta(s) {
   `;
 }
 
-function _buildSepRows(rawLyrics, synced) {
-  _sepSynced = synced;
-  const list = document.getElementById('sep-rows-list');
-  if (!list) return;
-  list.innerHTML = '';
-  const hint  = document.getElementById('sep-ts-hint');
-  const tsBtn = document.getElementById('sep-ts-editor-btn');
-  if (hint)  hint.style.display  = synced ? '' : 'none';
-  if (tsBtn) tsBtn.style.display = (synced && APP.editingId) ? '' : 'none';
-  const lines = rawLyrics ? rawLyrics.split('\n') : [''];
-  lines.forEach(line => list.appendChild(_sepCreateRow(line, synced)));
-  _sepSyncTextarea();
-}
-
-function _sepCreateRow(line, synced) {
-  const row = document.createElement('div');
-  row.className = 'sep-row';
-  let ts = '', text = line;
-  if (synced) {
-    const m = line.match(/^\[(\d+:\d+\.\d*)\](.*)/);
-    if (m) { ts = m[1]; text = m[2]; }
-  }
-  const tsClass = 'sep-row-ts' + (synced ? '' : ' ts-hidden');
-  row.innerHTML =
-    `<input class="${tsClass}" type="text" placeholder="0:00.00" value="${esc(ts)}" oninput="_sepSyncTextarea()">` +
-    `<input class="sep-row-text" type="text" placeholder="Lyric line…" value="${esc(text)}" oninput="_sepSyncTextarea()">` +
-    `<button class="sep-row-del" onclick="_sepDeleteRow(this)" title="Delete line">✕</button>`;
-  return row;
-}
-
-function _sepSyncTextarea() {
-  const list = document.getElementById('sep-rows-list');
-  const ta   = document.getElementById('e-lyrics');
-  if (!list || !ta) return;
-  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
-  const lines = Array.from(list.querySelectorAll('.sep-row')).map(row => {
-    const tsEl   = row.querySelector('.sep-row-ts');
-    const textEl = row.querySelector('.sep-row-text');
-    const text = textEl ? textEl.value : '';
-    if (synced && tsEl && tsEl.value.trim()) return `[${tsEl.value.trim()}]${text}`;
-    return text;
-  });
-  ta.value = lines.join('\n');
-}
-
-function _sepOnSyncChange() {
-  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
-  _sepSynced = synced;
-  const hint  = document.getElementById('sep-ts-hint');
-  const tsBtn = document.getElementById('sep-ts-editor-btn');
-  if (hint)  hint.style.display  = synced ? '' : 'none';
-  if (tsBtn) tsBtn.style.display = (synced && APP.editingId) ? '' : 'none';
-  document.querySelectorAll('#sep-rows-list .sep-row-ts').forEach(el => {
-    el.classList.toggle('ts-hidden', !synced);
-  });
-  _sepSyncTextarea();
-}
-
-function _sepAddRow(type) {
-  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
-  const list   = document.getElementById('sep-rows-list');
-  if (!list) return;
-  let line = '';
-  if (type === 'section') line = '[Section Name]';
-  else if (type === 'backing') line = '(backing vocal)';
-  // blank and lyric both produce an empty row
-  const row = _sepCreateRow(synced && line ? '[0:00.00]'+line : line, synced);
-  list.appendChild(row);
-  list.scrollTop = list.scrollHeight;
-  const inp = row.querySelector('.sep-row-text');
-  if (inp) { inp.focus(); inp.select(); }
-  _sepSyncTextarea();
-}
-
-function _sepDeleteRow(btn) {
-  const row = btn.closest('.sep-row');
-  if (row) { row.remove(); _sepSyncTextarea(); }
-}
-
-// Build rawLyrics string directly from the live row inputs — the definitive source of truth
-function _sepBuildRawLyrics() {
-  const list = document.getElementById('sep-rows-list');
-  if (!list) return document.getElementById('e-lyrics')?.value || '';
-  const synced = (document.getElementById('e-sync')||{value:'plain'}).value === 'synced';
-  return Array.from(list.querySelectorAll('.sep-row')).map(row => {
-    const tsEl   = row.querySelector('.sep-row-ts');
-    const textEl = row.querySelector('.sep-row-text');
-    const text   = textEl ? textEl.value : '';
-    if (synced && tsEl && tsEl.value.trim()) return `[${tsEl.value.trim()}]${text}`;
-    return text;
-  }).join('\n');
-}
 
 function _buildTabUploadCards(song) {
   return ['bass','rhythm','lead'].map(function(inst) {
@@ -6063,19 +6012,16 @@ function buildEditForm(s) {
 }
 
 function saveEdit() {
-  // Flush the row editor to the hidden textarea before reading (catches any missed oninput events)
-  _sepSyncTextarea();
   const title = document.getElementById('e-title').value.trim();
   if (!title) { toast('Enter a title'); return; }
   const artist = document.getElementById('e-artist').value.trim();
-  // Build rawLyrics directly from the live row inputs (source of truth; textarea is a mirror)
-  const rawLyrics = _sepBuildRawLyrics();
-  const dur = (()=>{ const raw=document.getElementById('e-dur').value; if(raw.trim()) return parseTime(raw); const syncT=document.getElementById('e-sync')?document.getElementById('e-sync').value:''; if(syncT==='synced'){ const lns=parseLRC(rawLyrics); const last=lns.filter(l=>l.type==='lyric').pop(); if(last&&last.t>0) return Math.ceil(last.t)+5; } return 0; })();
   const syncType = document.getElementById('e-sync').value;
+  const rawLyrics = _unifiedGetRawLyrics(syncType === 'synced');
+  const dur = (()=>{ const raw=document.getElementById('e-dur').value; if(raw.trim()) return parseTime(raw); const syncT=document.getElementById('e-sync')?document.getElementById('e-sync').value:''; if(syncT==='synced'){ const lns=parseLRC(rawLyrics); const last=lns.filter(l=>l.type==='lyric').pop(); if(last&&last.t>0) return Math.ceil(last.t)+5; } return 0; })();
   const notes = document.getElementById('e-notes').value.trim();
   const arrNotes = (document.getElementById('e-arr-notes')?.value ?? '').trim();
 
-  const annotations = _sectGetAnnotations();
+  const annotations = _unifiedGetAnnotations(syncType === 'synced');
 
   const bpm = parseInt(document.getElementById('e-bpm')?.value)||0;
 
