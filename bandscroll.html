@@ -409,8 +409,8 @@ textarea{resize:vertical;}
 .sl-total-dur{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--text-mid);letter-spacing:0.05em;white-space:nowrap;}
 .setlist-name{
   font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:800;
-  letter-spacing:0.12em;text-transform:uppercase;color:var(--lime);flex:1;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--lime);
+  width:100%;word-break:break-word;
   text-shadow:0 0 16px rgba(15,212,192,0.25);
 }
 
@@ -456,7 +456,7 @@ textarea{resize:vertical;}
 .si-meta{font-family:'JetBrains Mono',monospace;font-size:0.56rem;color:var(--text-mid);margin-top:0.08rem;opacity:0.7;letter-spacing:0.03em;}
 .si-note{
   font-size:0.68rem;color:var(--amber);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:normal;overflow:visible;word-break:break-word;
   margin-top:0.08rem;
 }
 .sync-badge{
@@ -864,7 +864,7 @@ html[data-theme="light"] {
 .ov-title{
   font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;
   letter-spacing:0.03em;line-height:1.2;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:normal;overflow:visible;word-break:break-word;
 }
 .ov-artist{font-family:'DM Sans',sans-serif;font-size:0.68rem;color:var(--text-mid);margin-top:0.15rem;}
 .ov-note{font-size:0.65rem;color:var(--amber);margin-top:0.1rem;}
