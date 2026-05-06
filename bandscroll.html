@@ -1994,13 +1994,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     </div>
   </div>
   <div style="margin-top:1.8rem;text-align:center;">
-    <button class="btn btn-ghost btn-sm" onclick="openModal('apikey-modal')" style="font-family:'JetBrains Mono';font-size:0.6rem;letter-spacing:0.1em;">
-      ⚙ ABLY API KEY
-    </button>
     <button class="ai-key-btn" onclick="showAiKeyModal()" title="Set Claude API Key for AI chord generation and tab processing">
       🤖 AI KEY
     </button>
-    <div id="apikey-status" style="font-family:'JetBrains Mono';font-size:0.58rem;color:var(--text-dim);margin-top:0.5rem;letter-spacing:0.06em;"></div>
   </div>
 </div>
 
@@ -2500,7 +2496,6 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <img id="sm-qr-img" src="" alt="QR code" style="width:156px;height:156px;display:block;">
     </div>
     <div class="share-url" id="sm-url" onclick="copyShareUrl()">Click to copy link…</div>
-    <p id="sm-key-note" class="share-note" style="display:none;color:var(--amber);font-size:0.72rem;margin-top:0.3rem;">⚠ This link contains your Ably key — only share with trusted band members.</p>
     <p class="share-note">Band members open this same HTML file on their device → tap <strong>Band Member</strong> → enter code. Works on any device over any network.</p>
     <div style="margin-top:1rem;border-top:1px solid var(--border2);padding-top:0.9rem;">
       <div style="font-family:'JetBrains Mono';font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem;">Change Room Code (takes effect next session)</div>
@@ -2755,27 +2750,6 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
   </div>
 </div>
 
-<!-- ══════════ ABLY API KEY MODAL ══════════ -->
-<div class="modal-bg" id="apikey-modal">
-  <div class="modal">
-    <h3>⚙ Ably API Key</h3>
-    <p style="font-size:0.82rem;color:var(--text-mid);margin-bottom:1rem;line-height:1.7;">
-      BandScroll uses <strong style="color:var(--text);">Ably</strong> for real-time sync across devices.<br>
-      Get a free key at <a href="https://ably.com" target="_blank" style="color:var(--lime);">ably.com</a> → Create account → Apps → API Keys → copy the root key.
-    </p>
-    <div class="field">
-      <label>Ably API Key</label>
-      <input id="ably-key-inp" type="text" placeholder="xxxxxx.xxxxxx:xxxxxxxxxxxxxxxx"
-        style="font-family:'JetBrains Mono';font-size:0.78rem;letter-spacing:0.04em;">
-      <div class="hint">Paste your full Ably API key here. It is saved in your browser only and never sent anywhere except Ably.</div>
-    </div>
-    <div id="ably-key-status" style="font-size:0.75rem;margin-bottom:0.5rem;min-height:1.2em;"></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('apikey-modal')">Cancel</button>
-      <button class="btn btn-lime" onclick="saveAblyKey()">Save Key</button>
-    </div>
-  </div>
-</div>
 
 <!-- ══════════ BAND GROUP — CREATE MODAL ══════════ -->
 <div class="modal-bg" id="bg-create-modal">
@@ -3167,15 +3141,21 @@ function hydrate() {
 // ══════════════════════════════════════════════════════════
 let _ablyClient = null;
 let _ablyChannel = null;
-let _ablyKey = '';
 let _serverTimeOffset = 0; // ms: serverTime = Date.now() + _serverTimeOffset
 let _lobbyMembers = {}; // id -> name (conductor view)
 let _myClientId = '';
 let _nextRoomCode = ''; // room code to use on next session
 let _ablyResyncIv = null; // module-level so it survives Ably client recreation
 
-// Lemon Squeezy checkout URL — replace with your actual store URL after setup
+// ── DEPLOY-TIME CONFIG — these MUST be set before going live ──
+// 1. Cloudflare Worker URL (from `npx wrangler deploy`)
+const WORKER_URL = 'https://bandscroll-worker.YOUR-SUBDOMAIN.workers.dev';
+// 2. Lemon Squeezy checkout URL (from your LS store dashboard)
 const LS_CHECKOUT_URL = 'https://bandscroll.lemonsqueezy.com/buy/YOUR-PRODUCT-ID';
+// Runtime sanity warning if placeholders weren't replaced
+if (WORKER_URL.includes('YOUR-SUBDOMAIN') || LS_CHECKOUT_URL.includes('YOUR-PRODUCT-ID')) {
+  console.warn('[BandScroll] Deploy config not set — band sync and upgrade flow will not work until WORKER_URL and LS_CHECKOUT_URL are filled in.');
+}
 
 function showUpgradeModal(context) {
   const msg = document.getElementById('upgrade-modal-msg');
@@ -3222,39 +3202,6 @@ async function getAblyToken() {
   return tokenRequest;
 }
 
-function loadAblyKey() {
-  try { _ablyKey = localStorage.getItem('bs_ably_key') || ''; } catch(e) {}
-  const inp = document.getElementById('ably-key-inp');
-  if (inp && _ablyKey) inp.value = _ablyKey;
-  _updateApiKeyStatus();
-}
-
-function saveAblyKey() {
-  const val = (document.getElementById('ably-key-inp').value || '').trim();
-  if (!val || !val.includes(':')) {
-    document.getElementById('ably-key-status').innerHTML =
-      '<span style="color:var(--red);">❌ That doesn\'t look like a valid Ably key (should contain a colon).</span>';
-    return;
-  }
-  _ablyKey = val;
-  try { localStorage.setItem('bs_ably_key', val); } catch(e) {}
-  document.getElementById('ably-key-status').innerHTML =
-    '<span style="color:var(--green);">✓ Key saved!</span>';
-  _updateApiKeyStatus();
-  setTimeout(() => closeModal('apikey-modal'), 900);
-}
-
-function _updateApiKeyStatus() {
-  const el = document.getElementById('apikey-status');
-  if (!el) return;
-  if (_ablyKey) {
-    const short = esc(_ablyKey.slice(0,8)) + '…';
-    el.innerHTML = `<span style="color:var(--lime-dim);">KEY SET: ${short}</span>`;
-  } else {
-    el.innerHTML = `<span style="color:var(--red);">⚠ No API key set — cross-device sync disabled</span>`;
-  }
-}
-
 // Sync clock with Ably server time to eliminate device clock drift
 async function _syncServerTime(client) {
   try {
@@ -3288,7 +3235,7 @@ function initAbly(code) {
       },
       clientId: _myClientId,
     });
-    _ablyChannel = _ablyClient.channels.get('bandscroll_' + code);
+    _ablyChannel = _ablyClient.channels.get('bandscroll:' + code);
 
     // Fix 7: periodically resync server clock to prevent drift on mobile network changes
     _ablyResyncIv = setInterval(() => {
@@ -3316,7 +3263,7 @@ function initAbly(code) {
         }
       }
     });
-    _ablyClient.connection.on('failed', () => { toast('❌ Ably connection failed — check your API key'); _setSyncDot('disconnected'); });
+    _ablyClient.connection.on('failed', () => { toast('❌ Sync connection failed — check your internet connection'); _setSyncDot('disconnected'); });
     _ablyClient.connection.on('disconnected', () => _setSyncDot('disconnected'));
     _ablyClient.connection.on('suspended', () => _setSyncDot('disconnected'));
     _ablyClient.connection.on('connecting', () => _setSyncDot(''));
@@ -3562,7 +3509,7 @@ function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-function startConductor() {
+async function startConductor() {
   APP.role = 'conductor';
   // Clear any lingering viewer state from a previous session
   if (_lsInterval) { clearInterval(_lsInterval); _lsInterval = null; }
@@ -3585,7 +3532,8 @@ function startConductor() {
   document.getElementById('c-room').textContent = APP.roomCode;
   document.getElementById('sm-code').textContent = APP.roomCode;
   updateShareUrl();
-  if (_fbUser && BandScrollTier.tier !== 'pro') { showUpgradeModal('band-sync'); return; }
+  // Gate band sync behind Pro tier — awaits in-flight tier fetch so we don't false-gate Pro users
+  if (_fbUser && !(await _ensureTierReady())) { showUpgradeModal('band-sync'); return; }
   initAbly(APP.roomCode);
   // Hydrate PDF data from IDB then render (async, non-blocking)
   hydrateIDBTabs().then(() => renderAll()).catch(() => renderAll());
@@ -3613,13 +3561,13 @@ function showVJoin() {
 // Fix 3: module-level interval handle so rejoins don't stack up multiple intervals
 let _lsInterval = null;
 
-function doJoin() {
+async function doJoin() {
   const code = document.getElementById('v-code').value.trim().toUpperCase();
   const name = document.getElementById('v-name').value.trim() || 'Band Member';
   if (code.length < 4 || code.length > 12 || !/^[A-Z0-9]+$/.test(code)) { toast('Enter a valid room code'); return; }
-  // Key is no longer embedded in share URLs — band members must set their own Ably key
   if (!_fbUser) { toast('Sign in to join a session'); return; }
-  if (BandScrollTier.tier !== 'pro') { showUpgradeModal('band-sync'); return; }
+  // Gate band sync behind Pro — awaits in-flight tier fetch so we don't false-gate Pro users
+  if (!(await _ensureTierReady())) { showUpgradeModal('band-sync'); return; }
   APP.role = 'viewer';
   APP.roomCode = code;
   _clearConductorWatchdog(); // reset watchdog for new session
@@ -3665,7 +3613,7 @@ function doJoin() {
 
 // ── LRCLIB + CORS PROXY ──
 const PROXY = 'https://corsproxy.io/?url=';
-const WORKER_URL = 'https://bandscroll-worker.YOUR-SUBDOMAIN.workers.dev'; // TODO: set after deploy
+// WORKER_URL declared earlier (in monetisation config block near line 3151)
 async function lrcFetch(url) {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(7000) });
@@ -6590,8 +6538,6 @@ function _buildShareUrl(){
 function updateShareUrl(){
   const url=_buildShareUrl();
   document.getElementById('sm-url').textContent=url;
-  const note = document.getElementById('sm-key-note');
-  if (note) note.style.display = _ablyKey ? '' : 'none';
   const qrImg = document.getElementById('sm-qr-img');
   if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?data='+encodeURIComponent(url)+'&size=156x156&margin=2';
 }
@@ -7565,7 +7511,8 @@ document.addEventListener('keydown', e=>{
 
 // ── INIT ──
 (function(){
-  loadAblyKey();
+  // Clear any leftover Ably key from older versions of the app (no longer needed; Worker issues tokens)
+  try { localStorage.removeItem('bs_ably_key'); } catch(e) {}
   loadAiKey();
   // ── Offline Pack auto-import (handles #pack= hash from shared setlist URLs) ──
   const hash = location.hash;
@@ -7631,22 +7578,38 @@ _fbDb.enablePersistence({ synchronizeTabs: true }).catch(e => {
 });
 let _fbUser=null,_cloudSyncEnabled=false;
 let BandScrollTier = { tier: 'free', validUntil: null };
+let _tierFetchPromise = null; // in-flight promise so gates can await freshness
 
 async function fetchSubscriptionStatus() {
   if (!_fbUser) return;
-  try {
-    const idToken = await _fbUser.getIdToken();
-    const resp = await fetch(`${WORKER_URL}/subscription-status`, {
-      headers: { Authorization: `Bearer ${idToken}` },
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      BandScrollTier = { tier: data.tier || 'free', validUntil: data.validUntil || null };
+  _tierFetchPromise = (async () => {
+    try {
+      const idToken = await _fbUser.getIdToken();
+      const resp = await fetch(`${WORKER_URL}/subscription-status`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        BandScrollTier = { tier: data.tier || 'free', validUntil: data.validUntil || null };
+      }
+    } catch (e) {
+      console.warn('Subscription status fetch failed:', e);
     }
-  } catch (e) {
-    console.warn('Subscription status fetch failed:', e);
+    _renderTierBadge();
+  })();
+  return _tierFetchPromise;
+}
+
+// Returns true if the user is Pro. Awaits any in-flight tier fetch first
+// so we never gate Pro users on a stale 'free' default.
+async function _ensureTierReady() {
+  if (!_fbUser) return false;
+  if (_tierFetchPromise) {
+    try { await _tierFetchPromise; } catch(e) {}
+  } else {
+    await fetchSubscriptionStatus();
   }
-  _renderTierBadge();
+  return BandScrollTier.tier === 'pro';
 }
 
 function _renderTierBadge() {
@@ -7671,7 +7634,7 @@ function _renderTierBadge() {
 function authSwitchTab(t){document.getElementById('auth-form-login').style.display=t==='login'?'':'none';document.getElementById('auth-form-signup').style.display=t==='signup'?'':'none';document.getElementById('auth-tab-login').classList.toggle('on',t==='login');document.getElementById('auth-tab-signup').classList.toggle('on',t==='signup');document.getElementById('auth-err-login').textContent='';document.getElementById('auth-err-signup').textContent='';}
 document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;if(!document.getElementById('s-auth').classList.contains('active'))return;document.getElementById('auth-form-login').style.display!=='none'?authLogin():authSignup();});
 async function authLogin(){const em=document.getElementById('auth-email-login').value.trim(),pw=document.getElementById('auth-pass-login').value,er=document.getElementById('auth-err-login'),bt=document.getElementById('auth-btn-login');er.textContent='';er.style.color='var(--red)';if(!em||!pw){er.textContent='Please enter email and password.';return;}bt.disabled=true;bt.textContent='Logging in…';try{await _fbAuth.signInWithEmailAndPassword(em,pw);if(_fbAuth.currentUser&&document.getElementById('s-auth').classList.contains('active')){await _loadCloudData();_renderAccountPill();show('s-conductor');startConductor();toast('Welcome back, '+(_fbAuth.currentUser.displayName||_fbAuth.currentUser.email.split('@')[0])+'!');}}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Log In';}}
-async function authSignup(){const nm=document.getElementById('auth-name-signup').value.trim(),em=document.getElementById('auth-email-signup').value.trim(),pw=document.getElementById('auth-pass-signup').value,er=document.getElementById('auth-err-signup'),bt=document.getElementById('auth-btn-signup');er.textContent='';er.style.color='var(--red)';if(!nm){er.textContent='Please enter your name.';return;}if(!em){er.textContent='Please enter your email.';return;}if(pw.length<6){er.textContent='Password must be at least 6 characters.';return;}bt.disabled=true;bt.textContent='Creating account…';try{const cr=await _fbAuth.createUserWithEmailAndPassword(em,pw);await cr.user.updateProfile({displayName:nm});await _fbDb.doc('users/'+cr.user.uid+'/profile/info').set({email:em,displayName:nm,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Create Account';}}
+async function authSignup(){const nm=document.getElementById('auth-name-signup').value.trim(),em=document.getElementById('auth-email-signup').value.trim(),pw=document.getElementById('auth-pass-signup').value,er=document.getElementById('auth-err-signup'),bt=document.getElementById('auth-btn-signup');er.textContent='';er.style.color='var(--red)';if(!nm){er.textContent='Please enter your name.';return;}if(!em){er.textContent='Please enter your email.';return;}if(pw.length<6){er.textContent='Password must be at least 6 characters.';return;}bt.disabled=true;bt.textContent='Creating account…';try{const cr=await _fbAuth.createUserWithEmailAndPassword(em,pw);await cr.user.updateProfile({displayName:nm});await _fbDb.doc('users/'+cr.user.uid+'/profile/info').set({email:em,displayName:nm,createdAt:firebase.firestore.FieldValue.serverTimestamp()});await _fbDb.doc('users/'+cr.user.uid).set({email:em,displayName:nm},{merge:true});}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Create Account';}}
 async function authForgotPassword(){const em=document.getElementById('auth-email-login').value.trim(),er=document.getElementById('auth-err-login');if(!em){er.style.color='var(--amber)';er.textContent='Enter your email above first.';return;}try{await _fbAuth.sendPasswordResetEmail(em);er.style.color='var(--green)';er.textContent='Password reset email sent!';}catch(e){er.style.color='var(--red)';er.textContent=_authErrMsg(e.code);}}
 function authGuest(){_fbUser=null;_cloudSyncEnabled=false;show('s-conductor');startConductor();toast('Guest mode — data saved locally only');}
 async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopPlay();if(APP.role==='viewer'){vStop();if(_lsInterval){clearInterval(_lsInterval);_lsInterval=null;}_clearConductorWatchdog();}if(_ablyClient){try{_ablyClient.close();}catch(e){}}_ablyClient=null;_ablyChannel=null;await _fbAuth.signOut();APP.bank=[];APP.setlists=[{id:'main',name:'Main Set',songIds:[]}];APP.activeSetlistId='main';_fbUser=null;_cloudSyncEnabled=false;_clearGroupState();show('s-land');toast('Signed out');}
@@ -7690,32 +7653,57 @@ async function deleteAccount() {
   try {
     const uid = _fbUser.uid;
 
-    // Delete Firestore subcollections in batches
-    for (const coll of ['bank', 'setlists']) {
-      const snap = await _fbDb.collection(`users/${uid}/${coll}`).get();
-      const batch = _fbDb.batch();
-      snap.forEach(d => batch.delete(d.ref));
-      if (!snap.empty) await batch.commit();
+    // 1. Delete Firestore subcollections (bank, setlists, settings, profile)
+    for (const coll of ['bank', 'setlists', 'settings', 'profile']) {
+      try {
+        const snap = await _fbDb.collection(`users/${uid}/${coll}`).get();
+        if (!snap.empty) {
+          const batch = _fbDb.batch();
+          snap.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+      } catch(e) { console.warn(`Failed to delete users/${uid}/${coll}:`, e.message); }
     }
 
-    // Delete settings subcollection docs
+    // 2. Remove from any band groups the user is a member of
+    //    (Firestore rules permit a user to remove themselves from memberUids)
     try {
-      const settingsSnap = await _fbDb.collection(`users/${uid}/settings`).get();
-      const b2 = _fbDb.batch();
-      settingsSnap.forEach(d => b2.delete(d.ref));
-      if (!settingsSnap.empty) await b2.commit();
-    } catch(e) { /* best-effort */ }
+      const groupsSnap = await _fbDb.collection('bandGroups').where('memberUids', 'array-contains', uid).get();
+      for (const g of groupsSnap.docs) {
+        try {
+          await _fbDb.doc(`bandGroups/${g.id}/memberData/${uid}`).delete();
+          await _fbDb.doc(`bandGroups/${g.id}`).update({
+            memberUids: firebase.firestore.FieldValue.arrayRemove(uid),
+            [`memberNames.${uid}`]: firebase.firestore.FieldValue.delete(),
+          });
+        } catch(e) { console.warn('Group cleanup failed for', g.id, e.message); }
+      }
+    } catch(e) { console.warn('Group membership query failed:', e.message); }
 
-    // Delete top-level user document
+    // 3. Top-level user doc
     await _fbDb.doc(`users/${uid}`).delete().catch(() => {});
 
-    // Delete Firebase Auth account
+    // 4. Wipe IndexedDB (PDF tab data)
+    try {
+      const idbReq = indexedDB.deleteDatabase('bs_tabs');
+      await new Promise(res => { idbReq.onsuccess = res; idbReq.onerror = res; idbReq.onblocked = res; });
+    } catch(e) { /* best-effort */ }
+
+    // 5. Delete Firebase Auth account
     await _fbUser.delete();
 
-    // Clear local state
-    localStorage.clear();
-    toast('Account deleted. Goodbye! 👋');
-    setTimeout(() => location.reload(), 1500);
+    // 6. Clear bs_* localStorage keys (targeted, not localStorage.clear() which would nuke unrelated data)
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('bs_') || k.startsWith('bs4_'))) keys.push(k);
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+    } catch(e) { /* best-effort */ }
+
+    toast('Account deleted. Remember to cancel your subscription on Lemon Squeezy if you have one. 👋');
+    setTimeout(() => location.reload(), 2500);
 
   } catch (err) {
     if (err.code === 'auth/requires-recent-login') {
@@ -7729,7 +7717,10 @@ async function deleteAccount() {
 }
 
 function _authErrMsg(c){return({'auth/invalid-email':'Invalid email address.','auth/user-not-found':'No account found with that email.','auth/wrong-password':'Incorrect password.','auth/invalid-credential':'Incorrect email or password.','auth/email-already-in-use':'An account with this email already exists.','auth/weak-password':'Password must be at least 6 characters.','auth/too-many-requests':'Too many attempts. Try again later.','auth/network-request-failed':'Network error. Check your connection.'})[c]||('Error: '+c);}
-_fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;try{await _loadCloudData();}catch(e){console.error('Cloud load failed:',e);toast('⚠ Could not load cloud data — using local copy');}  _renderAccountPill();
+_fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled=true;
+      // Backfill email/displayName on top-level users/{uid} doc — needed for LS webhook lookup
+      try{await _fbDb.doc('users/'+user.uid).set({email:user.email||'',displayName:user.displayName||''},{merge:true});}catch(e){console.warn('Email backfill failed:',e);}
+      try{await _loadCloudData();}catch(e){console.error('Cloud load failed:',e);toast('⚠ Could not load cloud data — using local copy');}  _renderAccountPill();
       await fetchSubscriptionStatus();
 if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}}});
 const _SAMPLE_SONGS = [
