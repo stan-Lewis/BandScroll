@@ -119,10 +119,7 @@ body{
 ═══════════════════════════════════════ */
 #s-land{
   align-items:center;justify-content:center;
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(15,212,192,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(15,212,192,0.04) 0%, transparent 55%),
-    var(--bg);
+  background:radial-gradient(ellipse 60% 50% at 50% 0%, rgba(15,212,192,0.08) 0%, transparent 65%), var(--bg);
   padding:2rem;text-align:center;gap:0;
 }
 .brand{
@@ -133,36 +130,43 @@ body{
   text-shadow:0 0 60px rgba(15,212,192,0.3), 0 0 120px rgba(15,212,192,0.12);
 }
 .brand span{color:var(--text);}
+/* Compact wordmark used on auth and land screens */
+.auth-wordmark{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;letter-spacing:0.14em;line-height:1;
+  color:var(--lime);margin-bottom:0.25rem;
+}
+.auth-wordmark span{color:var(--text);}
+.auth-tagline{
+  font-family:'JetBrains Mono',monospace;font-size:0.65rem;
+  letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--text-dim);margin-bottom:2rem;
+}
 .brand-sub{
   font-family:'JetBrains Mono',monospace;font-weight:300;
   font-size:var(--t-2xs);letter-spacing:0.28em;text-transform:uppercase;
   color:var(--text-mid);margin:0.9rem 0 3rem;
   border-bottom:1px solid var(--border2);padding-bottom:2rem;
 }
-.role-row{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;max-width:500px;}
+.role-row{display:flex;gap:1.25rem;flex-wrap:wrap;justify-content:center;max-width:560px;width:100%;}
 .r-card{
-  flex:1;min-width:200px;
+  flex:1;min-width:220px;max-width:260px;
   border:1px solid var(--border2);
-  border-left:3px solid var(--lime-dim);
-  background:linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
-  padding:1.8rem 1.4rem;cursor:pointer;position:relative;overflow:hidden;
-  transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1),border-color 0.2s,box-shadow 0.2s;
-  border-radius:2px 8px 8px 2px;
-  -webkit-tap-highlight-color:rgba(15,212,192,0.1);
-  user-select:none;
+  background:var(--bg2);
+  padding:2rem 1.75rem 1.75rem;cursor:pointer;position:relative;overflow:hidden;
+  transition:transform 0.2s ease,border-color 0.2s,box-shadow 0.2s;
+  border-radius:12px;
+  -webkit-tap-highlight-color:rgba(15,212,192,0.08);
+  user-select:none;text-align:left;
 }
-.r-card::before{
-  content:'';position:absolute;inset:0;
-  background:var(--lime-glow);opacity:0;transition:opacity 0.25s;
-}
-.r-card:hover{transform:translateY(-3px);border-left-color:var(--lime);box-shadow:0 8px 32px rgba(15,212,192,0.12), -2px 0 16px rgba(15,212,192,0.08);}
-.r-card:hover::before{opacity:1;}
-.r-icon{font-size:2rem;margin-bottom:0.7rem;}
-.r-title{
-  font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
-  letter-spacing:0.06em;text-transform:uppercase;color:var(--lime);margin-bottom:0.25rem;
-}
-.r-desc{font-size:0.8rem;color:var(--text-mid);line-height:1.6;}
+.r-card.r-conductor{border-top:2px solid var(--lime-dim);}
+.r-card.r-member{border-top:2px solid rgba(99,102,241,0.5);}
+.r-card:hover{transform:translateY(-4px);}
+.r-card.r-conductor:hover{border-top-color:var(--lime);box-shadow:0 12px 40px rgba(15,212,192,0.12);}
+.r-card.r-member:hover{border-top-color:rgba(129,140,248,0.7);box-shadow:0 12px 40px rgba(99,102,241,0.1);}
+.r-icon{font-size:2rem;margin-bottom:.75rem;line-height:1;}
+.r-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.1em;color:var(--lime);margin-bottom:.5rem}
+.r-desc{font-size:.82rem;color:var(--text-mid);line-height:1.55;}
 .land-room-row{display:flex;flex-direction:column;align-items:stretch;gap:0.3rem;padding:0 0.25rem;margin:0.75rem 0 0 0;}
 .land-room-label{color:var(--text-mid);font-size:0.7rem;letter-spacing:0.05em;}
 .land-room-inp{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.9rem;font-family:monospace;letter-spacing:0.15em;padding:0.3rem 0.6rem;width:100%;box-sizing:border-box;text-transform:uppercase;text-align:center;outline:none;}
@@ -1749,26 +1753,25 @@ html[data-theme="light"] {
 .cm-transport button:hover{background:rgba(15,212,192,0.25);}
 
 /* AUTH v13 */
-#s-auth{flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:2rem 1.5rem;gap:1.5rem;
-  background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(15,212,192,0.05) 0%, transparent 70%), var(--bg);}
+#s-auth{flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:2rem 1.5rem;gap:0;
+  background:radial-gradient(ellipse 70% 50% at 50% 0%, rgba(15,212,192,0.07) 0%, transparent 65%), var(--bg);}
 .auth-card{
-  background:linear-gradient(160deg,var(--bg2) 0%,var(--bg3) 100%);
-  border-left:3px solid rgba(15,212,192,0.4);
-  border-top:1px solid rgba(15,212,192,0.12);
-  border-right:1px solid var(--border2);
-  border-bottom:1px solid var(--border2);
-  border-radius:2px 14px 14px 2px;
-  padding:2rem;width:100%;max-width:400px;display:flex;flex-direction:column;gap:1.1rem;
-  box-shadow:0 0 60px rgba(15,212,192,0.06), 0 16px 48px rgba(0,0,0,0.4);}
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-top:2px solid rgba(15,212,192,0.3);
+  border-radius:12px;
+  padding:2rem;width:100%;max-width:400px;display:flex;flex-direction:column;gap:1rem;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);}
 .auth-card-logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.18em;color:var(--lime);text-align:center;text-shadow:0 0 30px rgba(15,212,192,0.4);margin-bottom:-.3rem;}
 .auth-tabs{display:flex;border-bottom:1px solid var(--border2);margin-bottom:.2rem}
 .auth-tab{flex:1;padding:.6rem;font-size:.78rem;font-weight:700;cursor:pointer;background:none;border:none;color:var(--text-mid);border-bottom:2px solid transparent;transition:all .2s;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;}
 .auth-tab.on{color:var(--lime);border-bottom-color:var(--lime)}
 .auth-field{display:flex;flex-direction:column;gap:.35rem}
 .auth-field label{font-size:.72rem;color:var(--text-mid);font-weight:500;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;text-transform:uppercase;}
-.auth-field input{background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:.6rem .8rem;color:var(--text);font-size:.93rem;font-family:inherit;outline:none;transition:border-color .2s;width:100%}
-.auth-field input:focus{border-color:var(--lime)}
-.auth-btn{width:100%;padding:.72rem;background:var(--lime);color:#041412;font-weight:700;font-size:.93rem;border:none;border-radius:10px;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.04em;transition:opacity .2s;margin-top:.2rem}
+.auth-field input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.65rem .85rem;color:var(--text);font-size:.95rem;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+.auth-field input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(15,212,192,0.1)}
+.auth-btn{width:100%;padding:.8rem;background:var(--lime);color:#041412;font-weight:700;font-size:.95rem;border:none;border-radius:10px;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.03em;transition:opacity .2s,transform .15s;margin-top:.3rem}
+.auth-btn:active{transform:scale(0.985)}
 .auth-btn:hover{opacity:.85}
 .auth-btn:disabled{opacity:.5;cursor:not-allowed}
 .auth-err{font-size:.8rem;color:var(--red);min-height:1rem;text-align:center}
@@ -1776,8 +1779,8 @@ html[data-theme="light"] {
 .auth-divider{display:flex;align-items:center;gap:.7rem}
 .auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--border2)}
 .auth-divider span{font-size:.73rem;color:#6b7280}
-.auth-guest{width:100%;padding:.62rem;background:transparent;color:#9ca3af;border:1px solid var(--border2);border-radius:10px;cursor:pointer;font-size:.86rem;font-family:inherit;transition:all .2s}
-.auth-guest:hover{border-color:#4a5568;color:var(--text)}
+.auth-guest{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.8rem;font-family:inherit;transition:color .2s;padding:.25rem 0;}
+.auth-guest:hover{color:var(--text-mid);}
 .auth-switch{text-align:center;font-size:0.75rem;color:var(--text-mid);margin-top:0.75rem;}
 .auth-switch-btn{background:none;border:none;color:var(--lime-dim);cursor:pointer;font-size:inherit;font-family:inherit;text-decoration:underline;padding:0;}
 .auth-switch-btn:hover{color:var(--lime);}
@@ -2003,9 +2006,9 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 <body>
 
 <!-- ══════════ LANDING ══════════ -->
-<div id="s-auth" class="screen">
-  <div class="brand"><span>Band</span><span>Scroll</span></div>
-  <div class="brand-sub">v13 · Sign in to your BandScroll account</div>
+<div id="s-auth" class="screen active">
+  <div class="auth-wordmark"><span>Band</span>Scroll</div>
+  <div class="auth-tagline">Live lyrics for the whole band</div>
   <div class="auth-card">
     <div class="auth-tabs">
       <button class="auth-tab on" id="auth-tab-login" onclick="authSwitchTab('login')">Log In</button>
@@ -2020,43 +2023,42 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <div class="auth-switch">New to BandScroll? <button class="auth-switch-btn" onclick="authSwitchTab('signup')">Create an account →</button></div>
     </div>
     <div id="auth-form-signup" style="display:none">
-      <div class="auth-field"><label>Display Name</label><input type="text" id="auth-name-signup" placeholder="Your name" autocomplete="name"></div>
+      <div class="auth-field"><label>Your Name</label><input type="text" id="auth-name-signup" placeholder="Your name" autocomplete="name"></div>
       <div class="auth-field"><label>Email</label><input type="email" id="auth-email-signup" placeholder="you@example.com" autocomplete="email"></div>
       <div class="auth-field"><label>Password</label><input type="password" id="auth-pass-signup" placeholder="Min 6 characters" autocomplete="new-password"></div>
       <div class="auth-err" id="auth-err-signup"></div>
       <button class="auth-btn" id="auth-btn-signup" onclick="authSignup()">Create Account</button>
       <div class="auth-switch">Already have an account? <button class="auth-switch-btn" onclick="authSwitchTab('login')">Log in →</button></div>
     </div>
-    <div class="auth-divider"><span>or</span></div>
-    <button class="auth-guest" onclick="authGuest()">Continue as Guest (local only)</button>
   </div>
-  <div style="font-size:.73rem;color:#4a5568;text-align:center;max-width:360px;line-height:1.5">Songs &amp; setlists sync to the cloud and are available on any device.</div>
+  <button class="auth-guest" onclick="authGuest()" style="margin-top:1.25rem;">Use without account →</button>
 </div>
 
-<div id="s-land" class="screen active">
-  <div class="brand">Band<span>Scroll</span></div>
-  <div class="brand-sub">v13 · Live Lyrics · Tabs · BPM Sync · AI · Accounts Tabs · Real-Time Sync · Full Band</div>
+<div id="s-land" class="screen">
+  <div class="auth-wordmark"><span>Band</span>Scroll</div>
+  <div id="land-welcome" class="auth-tagline">Choose your role for tonight</div>
   <div class="role-row">
-    <div class="r-card" onclick="show('s-auth')">
-      <div class="r-icon">🎤</div>
+    <div class="r-card r-conductor" onclick="startConductorFromLand()">
+      <div style="font-size:1.5rem;margin-bottom:1rem;line-height:1;">⬛</div>
       <div class="r-title">Conductor</div>
-      <div class="r-desc">Search songs, manage setlists, control playback for the whole band.</div>
-    
-    <div class="land-room-row" onclick="event.stopPropagation()">
-      <label class="land-room-label" onclick="event.stopPropagation()">Room code (optional)</label>
-      <input id="land-room-code" class="land-room-inp" type="text" maxlength="6" placeholder="auto" autocomplete="off" spellcheck="false" onclick="event.stopPropagation()" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      <div class="r-desc" style="margin-bottom:1.25rem;">Manage the set, control playback, sync the whole band.</div>
+      <div class="land-room-row" onclick="event.stopPropagation()">
+        <label class="land-room-label" onclick="event.stopPropagation()">Room code (optional)</label>
+        <input id="land-room-code" class="land-room-inp" type="text" maxlength="6" placeholder="AUTO" autocomplete="off" spellcheck="false" onclick="event.stopPropagation()" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      </div>
+      <div style="margin-top:1rem;font-size:.78rem;font-family:'JetBrains Mono',monospace;color:var(--lime);letter-spacing:0.08em;">START SESSION →</div>
+    </div>
+    <div class="r-card r-member" onclick="showVJoin()">
+      <div style="font-size:1.5rem;margin-bottom:1rem;line-height:1;">🎸</div>
+      <div class="r-title" style="color:rgba(129,140,248,0.9);">Band Member</div>
+      <div class="r-desc" style="margin-bottom:1.25rem;">Enter a room code and follow along — lyrics light up in real time.</div>
+      <div style="margin-top:auto;font-size:.78rem;font-family:'JetBrains Mono',monospace;color:rgba(129,140,248,0.7);letter-spacing:0.08em;">JOIN SESSION →</div>
     </div>
   </div>
-    <div class="r-card" onclick="showVJoin()">
-      <div class="r-icon">🎸</div>
-      <div class="r-title">Band Member</div>
-      <div class="r-desc">Enter room code. Lyrics light up at the exact right moment.</div>
-    </div>
-  </div>
-  <div style="margin-top:1.8rem;text-align:center;">
-    <button class="ai-key-btn" onclick="showAiKeyModal()" title="Set Claude API Key for AI chord generation and tab processing">
-      🤖 AI KEY
-    </button>
+  <div style="margin-top:1.5rem;display:flex;gap:1.5rem;align-items:center;justify-content:center;">
+    <button class="auth-guest" onclick="showAiKeyModal()">🤖 AI key</button>
+    <span style="color:var(--border2);">·</span>
+    <button class="auth-guest" id="land-signout-btn" onclick="authSignOut()" style="display:none;">Sign out</button>
   </div>
 </div>
 
@@ -7711,10 +7713,18 @@ function _renderTierBadge() {
 function authSwitchTab(t){document.getElementById('auth-form-login').style.display=t==='login'?'':'none';document.getElementById('auth-form-signup').style.display=t==='signup'?'':'none';document.getElementById('auth-tab-login').classList.toggle('on',t==='login');document.getElementById('auth-tab-signup').classList.toggle('on',t==='signup');document.getElementById('auth-err-login').textContent='';document.getElementById('auth-err-signup').textContent='';}
 document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;if(!document.getElementById('s-auth').classList.contains('active'))return;document.getElementById('auth-form-login').style.display!=='none'?authLogin():authSignup();});
 async function authLogin(){const em=document.getElementById('auth-email-login').value.trim(),pw=document.getElementById('auth-pass-login').value,er=document.getElementById('auth-err-login'),bt=document.getElementById('auth-btn-login');er.textContent='';er.style.color='var(--red)';if(!em||!pw){er.textContent='Please enter email and password.';return;}bt.disabled=true;bt.textContent='Logging in…';try{await _fbAuth.signInWithEmailAndPassword(em,pw);if(_fbAuth.currentUser&&document.getElementById('s-auth').classList.contains('active')){_fbUser=_fbAuth.currentUser;// ensure _fbUser set before _loadCloudData so it doesn't early-return
-await _loadCloudData();_renderAccountPill();show('s-conductor');startConductor();toast('Welcome back, '+(_fbUser.displayName||_fbUser.email.split('@')[0])+'!');}}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Log In';}}
+await _loadCloudData();_renderAccountPill();_updateLandWelcome();show('s-land');toast('Welcome back, '+(_fbUser.displayName||_fbUser.email.split('@')[0])+'!');}}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Log In';}}
 async function authSignup(){const nm=document.getElementById('auth-name-signup').value.trim(),em=document.getElementById('auth-email-signup').value.trim(),pw=document.getElementById('auth-pass-signup').value,er=document.getElementById('auth-err-signup'),bt=document.getElementById('auth-btn-signup');er.textContent='';er.style.color='var(--red)';if(!nm){er.textContent='Please enter your name.';return;}if(!em){er.textContent='Please enter your email.';return;}if(pw.length<6){er.textContent='Password must be at least 6 characters.';return;}bt.disabled=true;bt.textContent='Creating account…';try{const cr=await _fbAuth.createUserWithEmailAndPassword(em,pw);await cr.user.updateProfile({displayName:nm});await _fbDb.doc('users/'+cr.user.uid+'/profile/info').set({email:em,displayName:nm,createdAt:firebase.firestore.FieldValue.serverTimestamp()});await _fbDb.doc('users/'+cr.user.uid).set({email:em,displayName:nm},{merge:true});}catch(e){er.textContent=_authErrMsg(e.code);bt.disabled=false;bt.textContent='Create Account';}}
 async function authForgotPassword(){const em=document.getElementById('auth-email-login').value.trim(),er=document.getElementById('auth-err-login');if(!em){er.style.color='var(--amber)';er.textContent='Enter your email above first.';return;}try{await _fbAuth.sendPasswordResetEmail(em);er.style.color='var(--green)';er.textContent='Password reset email sent!';}catch(e){er.style.color='var(--red)';er.textContent=_authErrMsg(e.code);}}
-function authGuest(){_fbUser=null;_cloudSyncEnabled=false;show('s-conductor');startConductor();toast('Guest mode — data saved locally only');}
+function authGuest(){_fbUser=null;_cloudSyncEnabled=false;hydrate();show('s-land');toast('Guest mode — data saved locally only');}
+function startConductorFromLand(){startConductor();}
+function _updateLandWelcome(){
+  const el=document.getElementById('land-welcome');
+  const sb=document.getElementById('land-signout-btn');
+  if(el&&_fbUser){el.textContent='Welcome back, '+(_fbUser.displayName||_fbUser.email.split('@')[0])+' — choose your role';}
+  else if(el){el.textContent='Choose your role for tonight';}
+  if(sb){sb.style.display=_fbUser?'':'none';}
+}
 async function authSignOut(){if(!confirm('Sign out of BandScroll?'))return;stopPlay();if(APP.role==='viewer'){vStop();if(_lsInterval){clearInterval(_lsInterval);_lsInterval=null;}_clearConductorWatchdog();}if(_ablyClient){try{_ablyClient.close();}catch(e){}}_ablyClient=null;_ablyChannel=null;await _fbAuth.signOut();APP.bank=[];APP.setlists=[{id:'main',name:'Main Set',songIds:[]}];APP.activeSetlistId='main';_fbUser=null;_cloudSyncEnabled=false;_clearGroupState();show('s-land');toast('Signed out');}
 
 async function deleteAccount() {
@@ -7800,9 +7810,12 @@ _fbAuth.onAuthStateChanged(async(user)=>{if(user){_fbUser=user;_cloudSyncEnabled
       try{await _fbDb.doc('users/'+user.uid).set({email:user.email||'',displayName:user.displayName||''},{merge:true});}catch(e){console.warn('Email backfill failed:',e);}
       try{await _loadCloudData();}catch(e){console.error('Cloud load failed:',e);toast('⚠ Could not load cloud data — using local copy');}  _renderAccountPill();
       await fetchSubscriptionStatus();
-if(!document.getElementById('s-conductor').classList.contains('active')){show('s-conductor');startConductor();toast('Welcome back, '+(user.displayName||user.email.split('@')[0])+'!');}
-else{// Conductor already active (authLogin got here first) — cloud data now loaded, refresh the panels
-try{renderBank();}catch(e){}try{renderSetlist();}catch(e){}}}});
+const authWasActive=document.getElementById('s-auth').classList.contains('active');
+const conductorActive=document.getElementById('s-conductor').classList.contains('active');
+_updateLandWelcome();
+if(authWasActive){show('s-land');}
+else if(!conductorActive&&!document.getElementById('s-land').classList.contains('active')){show('s-land');}
+else if(conductorActive){try{renderBank();}catch(e){}try{renderSetlist();}catch(e){}}}});
 const _SAMPLE_SONGS = [
   {
     id: 'sample_01', title: 'House of the Rising Sun', artist: 'Traditional / The Animals',
