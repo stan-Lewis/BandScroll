@@ -1778,6 +1778,9 @@ html[data-theme="light"] {
 .auth-divider span{font-size:.73rem;color:#6b7280}
 .auth-guest{width:100%;padding:.62rem;background:transparent;color:#9ca3af;border:1px solid var(--border2);border-radius:10px;cursor:pointer;font-size:.86rem;font-family:inherit;transition:all .2s}
 .auth-guest:hover{border-color:#4a5568;color:var(--text)}
+.auth-switch{text-align:center;font-size:0.75rem;color:var(--text-mid);margin-top:0.75rem;}
+.auth-switch-btn{background:none;border:none;color:var(--lime-dim);cursor:pointer;font-size:inherit;font-family:inherit;text-decoration:underline;padding:0;}
+.auth-switch-btn:hover{color:var(--lime);}
 .acct-pill{display:flex;align-items:center;gap:.45rem;padding:.25rem .65rem;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:.71rem;color:#9ca3af;max-width:210px;flex-shrink:0}
 .acct-pill-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acct-signout{background:none;border:none;color:var(--red);cursor:pointer;font-size:.71rem;font-family:inherit;padding:0;white-space:nowrap;flex-shrink:0}
@@ -2014,6 +2017,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <button class="auth-forgot" onclick="authForgotPassword()">Forgot password?</button>
       <div class="auth-err" id="auth-err-login"></div>
       <button class="auth-btn" id="auth-btn-login" onclick="authLogin()">Log In</button>
+      <div class="auth-switch">New to BandScroll? <button class="auth-switch-btn" onclick="authSwitchTab('signup')">Create an account →</button></div>
     </div>
     <div id="auth-form-signup" style="display:none">
       <div class="auth-field"><label>Display Name</label><input type="text" id="auth-name-signup" placeholder="Your name" autocomplete="name"></div>
@@ -2021,6 +2025,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
       <div class="auth-field"><label>Password</label><input type="password" id="auth-pass-signup" placeholder="Min 6 characters" autocomplete="new-password"></div>
       <div class="auth-err" id="auth-err-signup"></div>
       <button class="auth-btn" id="auth-btn-signup" onclick="authSignup()">Create Account</button>
+      <div class="auth-switch">Already have an account? <button class="auth-switch-btn" onclick="authSwitchTab('login')">Log in →</button></div>
     </div>
     <div class="auth-divider"><span>or</span></div>
     <button class="auth-guest" onclick="authGuest()">Continue as Guest (local only)</button>
@@ -7870,7 +7875,13 @@ async function _maybeImportSampleSongs() {
   setTimeout(() => { const b = document.getElementById('welcome-banner'); if (b) b.remove(); }, 8000);
 }
 
-async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>{const s=Object.assign({id:d.id},d.data());if(typeof s.id==='string'&&typeof s.title==='string'&&Array.isArray(s.lines)&&s.id.length<=256&&s.title.length<=512&&s.lines.length<=5000)cb.push(s);});APP.bank=cb;}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;
+async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{const bs=await _fbDb.collection('users/'+uid+'/bank').get();if(!bs.empty){const cb=[];bs.forEach(d=>{const s=Object.assign({id:d.id},d.data());if(typeof s.id==='string'&&typeof s.title==='string'&&Array.isArray(s.lines)&&s.id.length<=256&&s.title.length<=512&&s.lines.length<=5000)cb.push(s);});APP.bank=cb;}else if(APP.bank&&APP.bank.length>0){// Cloud bank empty but local songs exist — first-login migration: upload local → cloud
+  try{const mb=_fbDb.batch();APP.bank.forEach(s=>{const d=Object.assign({},s);delete d.tabs;mb.set(_fbDb.doc('users/'+uid+'/bank/'+s.id),d);});await mb.commit();toast('☁ '+APP.bank.length+' song'+(APP.bank.length===1?'':'s')+' saved to your account');}catch(ue){console.warn('Local→cloud song migration failed:',ue);}
+  // APP.bank left as-is — keep the local songs
+}else{APP.bank=[];}const ss=await _fbDb.collection('users/'+uid+'/setlists').get();if(!ss.empty){const csl=[];ss.forEach(d=>csl.push(Object.assign({id:d.id},d.data())));csl.sort((a,b)=>(a.order||0)-(b.order||0));APP.setlists=csl;}else if(APP.setlists&&APP.setlists.length>0){// Cloud setlists empty — upload local setlists
+  try{const msb=_fbDb.batch();APP.setlists.forEach((sl,i)=>{msb.set(_fbDb.doc('users/'+uid+'/setlists/'+sl.id),{id:sl.id,name:sl.name,songIds:sl.songIds||[],order:i});});await msb.commit();}catch(ue){console.warn('Local→cloud setlist migration failed:',ue);}
+  // APP.setlists left as-is
+}else{APP.setlists=[];}const ps=await _fbDb.doc('users/'+uid+'/settings/prefs').get();if(ps.exists){const p=ps.data();if(p.activeSetlistId)APP.activeSetlistId=p.activeSetlistId;
   // ── Restore band group membership ──
   if(p.groupId){
     try{
