@@ -1781,6 +1781,31 @@ html[data-theme="light"] {
 .auth-divider span{font-size:.73rem;color:#6b7280}
 .auth-guest{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.8rem;font-family:inherit;transition:color .2s;padding:.25rem 0;}
 .auth-guest:hover{color:var(--text-mid);}
+
+/* ── Custom tooltip ── */
+#bs-tip{
+  position:fixed;top:0;left:0;z-index:99999;pointer-events:none;
+  display:flex;flex-direction:column;gap:2px;
+  max-width:240px;padding:7px 11px 8px;
+  background:rgba(8,14,20,0.97);
+  border:1px solid rgba(15,212,192,0.25);
+  border-radius:7px;
+  box-shadow:0 6px 24px rgba(0,0,0,0.6);
+  font-family:'Syne',sans-serif;font-size:0.74rem;line-height:1.4;
+  opacity:0;transform:translate(0,0);
+  transition:opacity 0.12s ease;
+  will-change:transform;
+}
+#bs-tip.bs-tip-visible{opacity:1;}
+#bs-tip strong{
+  display:block;font-weight:700;font-size:0.76rem;
+  color:var(--lime);letter-spacing:0.02em;
+  margin-bottom:1px;
+}
+#bs-tip span{
+  display:block;color:rgba(200,210,220,0.82);font-size:0.71rem;
+  font-weight:400;
+}
 .auth-switch{text-align:center;font-size:0.75rem;color:var(--text-mid);margin-top:0.75rem;}
 .auth-switch-btn{background:none;border:none;color:var(--lime-dim);cursor:pointer;font-size:inherit;font-family:inherit;text-decoration:underline;padding:0;}
 .auth-switch-btn:hover{color:var(--lime);}
@@ -2109,10 +2134,10 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
     <div class="appbar-brand">Band<span>Scroll</span></div>
     <span class="pill pill-c">Conductor</span>
     <div class="ab-right">
-      <div class="room-chip" id="c-room" onclick="updateShareUrl();openModal('share-modal')" title="Click to share / show QR code">------</div>
-      <button class="btn btn-ghost btn-sm" onclick="openModal('overview-modal')" title="Setlist Overview">☰</button>
+      <div class="room-chip" id="c-room" onclick="updateShareUrl();openModal('share-modal')" data-tip="Room Code|Share this code with your band. Tap to open the share sheet and QR code.">------</div>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('overview-modal')" data-tip="Setlist Overview|See all songs in your set with running time and your current position.">☰</button>
       <div class="settings-popover-wrap" id="settings-wrap">
-        <button class="btn btn-ghost btn-sm" id="settings-btn" onclick="toggleSettings()" title="Settings">⚙</button>
+        <button class="btn btn-ghost btn-sm" id="settings-btn" onclick="toggleSettings()" data-tip="Settings|Font size, fullscreen, theme, backup, and export options.">⚙</button>
         <div class="settings-popover" id="settings-popover">
           <div class="sp-section">Song</div>
           <div class="sp-row"><button onclick="openModal('share-modal');toggleSettings()">🔗 Share room</button></div>
@@ -2142,26 +2167,26 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           </details>
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" title="Confidence Monitor — big text stage view (M)">⊞</button>
-      <button class="btn btn-ghost btn-sm" id="midi-btn" onclick="toggleMidi()" title="MIDI off — click to enable">🎹</button>
+      <button class="btn btn-ghost btn-sm" id="cm-btn" onclick="toggleConfidenceMonitor()" data-tip="Confidence Monitor|Full-screen big-text mode — read lyrics from a monitor on stage. Shortcut: M">⊞</button>
+      <button class="btn btn-ghost btn-sm" id="midi-btn" onclick="toggleMidi()" data-tip="MIDI Controller|Enable MIDI device input — connect a foot pedal or controller to trigger playback.">🎹</button>
         
       <!-- KEY PILL -->
       <div class="tidy-pill tidy-key-pill" id="tidy-key-pill">
-        <button class="tidy-pill-btn" id="tidy-key-btn" onclick="tidyToggle('key')">KEY <span id="tidy-key-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">0</span> <i class="tidy-chevron">&#9662;</i></button>
+        <button class="tidy-pill-btn" id="tidy-key-btn" onclick="tidyToggle('key')" data-tip="Key / Capo|Transpose chords and set the capo position for this song.">KEY <span id="tidy-key-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">0</span> <i class="tidy-chevron">&#9662;</i></button>
         <div class="tidy-panel" id="tidy-key-panel"><div class="tidy-panel-row" id="tidy-key-row"></div></div>
       </div>
-      <div class="transpose-group" title="Transpose chords">
+      <div class="transpose-group" data-tip="Transpose|Shift all chords up or down by semitones. Great for capo changes.">
         <span class="transpose-label">KEY</span>
-        <button class="transpose-btn" onclick="transposeAll(-1)" title="Down">♭</button>
+        <button class="transpose-btn" onclick="transposeAll(-1)" data-tip="Transpose Down|Shift all chords down one semitone.">♭</button>
         <span class="transpose-display" id="transpose-display">0</span>
-        <button class="transpose-btn" onclick="transposeAll(1)" title="Up">♯</button>
+        <button class="transpose-btn" onclick="transposeAll(1)" data-tip="Transpose Up|Shift all chords up one semitone.">♯</button>
       </div>
-      <div class="set-timer-wrap" id="set-timer-wrap" onclick="toggleSetTimer()" title="Set timer — click to start/stop, right-click to reset">
+      <div class="set-timer-wrap" id="set-timer-wrap" onclick="toggleSetTimer()" data-tip="Set Timer|Track how long you've been playing. Click to start/stop, right-click to reset.">
         <div class="set-timer-dot" id="set-timer-dot"></div>
         <span class="set-timer-val" id="set-timer-val">SET</span>
       </div>
-      <button class="rejoin-btn" id="rejoin-btn" onclick="rejoinAutoScroll()" title="Rejoin auto-scroll">↩ Rejoin</button>
-      <button class="btn btn-ghost btn-sm" onclick="showAiKeyModal()" title="Set Claude API Key">🤖 AI KEY</button>
+      <button class="rejoin-btn" id="rejoin-btn" onclick="rejoinAutoScroll()" data-tip="Rejoin Auto-scroll|Snap back to the current playback position if you've scrolled away manually.">↩ Rejoin</button>
+      <button class="btn btn-ghost btn-sm" onclick="showAiKeyModal()" data-tip="AI Key|Set your Claude API key to enable AI chord detection and automatic tab generation.">🤖 AI KEY</button>
     </div>
   </div>
 
@@ -2187,8 +2212,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <div id="search-results"></div>
         </div>
         <div style="display:flex;gap:0.4rem;margin-top:0.2rem;">
-          <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="openManualAdd()">✎ Add Manually</button>
-          <label class="btn btn-ghost btn-sm" style="flex:1;cursor:pointer;" title="Import a .chordpro or .cho file — chords stripped automatically">
+          <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="openManualAdd()" data-tip="Add Manually|Create a new song — enter title, artist, and paste or type the lyrics.">✎ Add Manually</button>
+          <label class="btn btn-ghost btn-sm" style="flex:1;cursor:pointer;" data-tip="Import ChordPro|Import a .chordpro or .cho file — chords appear inline above the lyrics.">
             ♭ ChordPro <input type="file" accept=".chordpro,.cho,.chopro,.txt" style="display:none" onchange="importChordPro(this)">
           </label>
         </div>
@@ -2204,7 +2229,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <div class="setlist-name" id="sl-name-display">No Setlist</div>
           <span class="sl-total-dur" id="sl-total-dur"></span>
           <button class="btn btn-ghost btn-xs" onclick="openModal('sets-modal')">⚙</button>
-          <button class="show-mode-btn" onclick="openShowMode()" title="Setlist Show Mode">▶ SHOW</button>
+          <button class="show-mode-btn" onclick="openShowMode()" data-tip="Show Mode|Full-screen setlist view with live timers — open this on a phone or tablet on stage.">▶ SHOW</button>
         </div>
         <div class="pane-scroll" id="setlist-list">
           <div class="empty-msg">No songs in setlist.</div>
@@ -2251,12 +2276,12 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         <div class="t-info">
           <div class="t-title" id="t-title">No song loaded</div><span class="c-section-label" id="c-section-label"></span><span id="t-key-badge" class="stage-badge key-badge" style="display:none;"></span><span id="t-capo-badge" class="stage-badge capo-badge" style="display:none;"></span>
           <div class="t-next" id="t-next"></div>
-          <button id="auto-play-btn" class="btn btn-ghost btn-sm" onclick="toggleAutoPlay()" title="Auto-play next song" style="font-size:0.6rem;padding:0.15rem 0.4rem;opacity:0.5;margin-top:0.1rem;">▶▶ AUTO</button>
+          <button id="auto-play-btn" class="btn btn-ghost btn-sm" onclick="toggleAutoPlay()" data-tip="Auto-play|Automatically start the next song when the current one ends." style="font-size:0.6rem;padding:0.15rem 0.4rem;opacity:0.5;margin-top:0.1rem;">▶▶ AUTO</button>
         </div>
         <div class="t-ctrl">
-          <button class="btn btn-ghost btn-sm" onclick="prevSong()">⏮</button>
+          <button class="btn btn-ghost btn-sm" onclick="prevSong()" data-tip="Previous Song|Jump to the previous song in the setlist.">⏮</button>
           <button class="btn btn-lime" id="play-btn" onclick="togglePlay()">▶ Play</button>
-          <button class="btn btn-ghost btn-sm" onclick="nextSong()">⏭</button>
+          <button class="btn btn-ghost btn-sm" onclick="nextSong()" data-tip="Next Song|Jump to the next song in the setlist.">⏭</button>
         </div>
         <!-- SPEED MULTIPLIER -->
         <span class="t-sep"></span>
@@ -2266,7 +2291,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
             oninput="setSpeed(parseFloat(this.value),'c')"
             style="width:60px;accent-color:var(--lime);padding:0;border:none;background:transparent;">
           <span class="ctrl-val" id="c-speed-val">1.0×</span>
-          <button class="nudge-btn nudge-reset" onclick="setSpeed(1,'c');document.getElementById('c-speed-slider').value=1" title="Reset speed">↺</button>
+          <button class="nudge-btn nudge-reset" onclick="setSpeed(1,'c');document.getElementById('c-speed-slider').value=1" data-tip="Reset Speed|Return scroll speed to 1.00×.">↺</button>
         </div>
         <!-- BPM TAP TEMPO -->
         <span class="t-sep"></span>
@@ -2274,11 +2299,11 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
           <span class="ctrl-label">BPM</span>
           <span class="bpm-display" id="bpm-display">--- </span>
           <div class="metro-ball-wrap"><div class="metro-ball" id="metro-ball"></div></div>
-          <button class="bpm-btn" id="tap-btn" onclick="tapTempo()" title="Tap T">TAP</button>
-          <button class="bpm-btn" id="lock-btn" onclick="toggleBpmLock()" title="Lock scroll speed to BPM">LOCK</button>
-          <button class="bpm-btn" onclick="resetBpm()" title="Reset BPM">✕</button>
-          <button class="bpm-btn" id="click-toggle-btn" onclick="toggleCountInClick()" title="Audible click during count-in">🔊 Click</button>
-          <button class="bpm-btn" id="song-metro-btn" onclick="toggleSongMetro()" title="Metronome throughout the whole song (for the drummer)">🥁 Metro</button>
+          <button class="bpm-btn" id="tap-btn" onclick="tapTempo()" data-tip="Tap Tempo|Tap in time with the beat to set the BPM. Shortcut: T">TAP</button>
+          <button class="bpm-btn" id="lock-btn" onclick="toggleBpmLock()" data-tip="Lock to BPM|Link scroll speed to the BPM so they stay perfectly in time.">LOCK</button>
+          <button class="bpm-btn" onclick="resetBpm()" data-tip="Clear BPM|Remove the current tempo.">✕</button>
+          <button class="bpm-btn" id="click-toggle-btn" onclick="toggleCountInClick()" data-tip="Count-in Click|Play an audible click during the countdown before playback begins.">🔊 Click</button>
+          <button class="bpm-btn" id="song-metro-btn" onclick="toggleSongMetro()" data-tip="Metronome|Keep a steady click throughout the whole song — ideal for the drummer.">🥁 Metro</button>
         </div>
         <!-- VIEW TOGGLE (conductor) -->
         <span class="t-sep"></span>
@@ -2292,10 +2317,10 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         <span class="t-sep"></span>
         <div class="nudge-group">
           <span class="ctrl-label">Timing</span>
-          <button class="nudge-btn" onclick="nudgeOffset(-0.5)" title="Lyrics showing too late — nudge earlier">−</button>
+          <button class="nudge-btn" onclick="nudgeOffset(-0.5)" data-tip="Nudge Earlier|Lyrics appearing too late? Shift them 0.5s earlier.">−</button>
           <span class="nudge-val" id="offset-display">0.0s</span>
-          <button class="nudge-btn" onclick="nudgeOffset(+0.5)" title="Lyrics showing too early — nudge later">+</button>
-          <button class="nudge-btn nudge-reset" onclick="resetOffset()" title="Reset timing to zero">↺</button>
+          <button class="nudge-btn" onclick="nudgeOffset(+0.5)" data-tip="Nudge Later|Lyrics appearing too soon? Shift them 0.5s later.">+</button>
+          <button class="nudge-btn nudge-reset" onclick="resetOffset()" data-tip="Reset Timing|Clear the timing offset and restore original sync.">↺</button>
         </div>
       </div>
       <!-- TIDY BAR: all three pill-buttons in one consistent row -->
@@ -2304,13 +2329,13 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
         <!-- Buttons row — fixed height, never grows -->
         <div class="tidy-pills-row">
           <div class="tidy-pill" id="tidy-speed-pill">
-            <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
+            <button class="tidy-pill-btn" id="tidy-speed-btn" onclick="tidyToggle('speed')" data-tip="Scroll Speed|Adjust how fast the lyrics scroll. 1.00× is normal song pace.">SPEED <span id="tidy-speed-label" class="ctrl-val" style="color:var(--lime);margin-left:2px">1.00&times;</span> <i class="tidy-chevron">&#9662;</i></button>
           </div>
           <div class="tidy-pill" id="tidy-bpm-pill">
-            <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
+            <button class="tidy-pill-btn" id="tidy-bpm-btn" onclick="tidyToggle('bpm')" data-tip="BPM|Set the song tempo. Used for metronome and beat-locked scrolling.">BPM <span id="tidy-bpm-label" style="color:var(--lime);margin-left:2px;font-family:'JetBrains Mono',monospace;font-size:0.62rem">---</span> <i class="tidy-chevron">&#9662;</i></button>
           </div>
           <div class="tidy-pill" id="tidy-view-pill">
-            <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')">PLAY SETTINGS <i class="tidy-chevron">&#9662;</i></button>
+            <button class="tidy-pill-btn" id="tidy-view-btn" onclick="tidyToggle('view')" data-tip="Play Settings|Countdown length, A/B loop, view (Lyrics/Bass/Rhythm/Lead), and timing nudge.">PLAY SETTINGS <i class="tidy-chevron">&#9662;</i></button>
           </div>
         </div>
         <!-- Panels float below the bar row, overlay the lyrics, equal height -->
@@ -2330,17 +2355,17 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 
       <!-- A-B LOOP -->
         <span class="t-sep"></span>
-        <div class="ab-loop-group" id="ab-loop-group" title="A-B Loop: set start and end">
-          <button class="ab-loop-btn" id="ab-a-btn" onclick="setLoopA()" title="Set loop start (A)">A</button>
-          <button class="ab-loop-btn" id="ab-b-btn" onclick="setLoopB()" title="Set loop end (B)">B</button>
-          <button class="ab-loop-btn" id="ab-clear-btn" onclick="clearLoop()" title="Clear loop">×</button>
+        <div class="ab-loop-group" id="ab-loop-group" data-tip="A/B Loop|Repeat a section between two marked points.">
+          <button class="ab-loop-btn" id="ab-a-btn" onclick="setLoopA()" data-tip="Set Loop Start|Mark the current position as the start (A) of the loop.">A</button>
+          <button class="ab-loop-btn" id="ab-b-btn" onclick="setLoopB()" data-tip="Set Loop End|Mark the current position as the end (B) of the loop.">B</button>
+          <button class="ab-loop-btn" id="ab-clear-btn" onclick="clearLoop()" data-tip="Clear Loop|Remove both markers and stop looping.">×</button>
         </div>
         <!-- CHORD/TAB DISPLAY TOGGLES (conductor) -->
       <div class="chord-tab-group" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span class="ctrl-label">Display</span>
         <button class="chord-tab-tog" id="c-tog-chords" onclick="toggleChordView('chords')">CHORDS</button>
         <button class="chord-tab-tog" id="c-tog-tabs" onclick="toggleChordView('tabs')">TABS</button>
-        <button class="chord-tab-tog" onclick="openChordTabEditor(APP.currentId)" title="Edit chords &amp; tabs for this song" style="margin-left:4px;">✎ C/T</button>
+        <button class="chord-tab-tog" onclick="openChordTabEditor(APP.currentId)" data-tip="Chord/Tab Editor|Add or edit chord names and instrument tabs for this song." style="margin-left:4px;">✎ C/T</button>
       </div>
 
       <!-- SCRUB BAR -->
@@ -9129,6 +9154,64 @@ if('serviceWorker' in navigator){
       .catch(()=>{}); // Silently fail if not on HTTPS/same origin
   });
 }
+
+// ── Custom tooltip system ──
+/* tooltip div is at end of body */
+// Usage: data-tip="Bold Name|Description text"
+// If only one part: treated as description only (no bold header)
+;(function(){
+  const TIP = document.getElementById('bs-tip');
+  if (!TIP) return;
+
+  let _raf = null;
+  let _tx = 0, _ty = 0;
+
+  function show(el, mx, my) {
+    const raw = el.getAttribute('data-tip') || '';
+    if (!raw) return;
+    const pipe = raw.indexOf('|');
+    let inner;
+    if (pipe !== -1) {
+      const name = raw.slice(0, pipe);
+      const desc = raw.slice(pipe + 1);
+      inner = `<strong>${name}</strong><span>${desc}</span>`;
+    } else {
+      inner = `<span>${raw}</span>`;
+    }
+    TIP.innerHTML = inner;
+    _tx = mx; _ty = my;
+    position(mx, my);
+    TIP.classList.add('bs-tip-visible');
+  }
+
+  function position(mx, my) {
+    const pad = 14;
+    const tw = TIP.offsetWidth, th = TIP.offsetHeight;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = mx + pad, y = my - th - pad;
+    if (x + tw > vw - 8) x = mx - tw - pad;
+    if (y < 8) y = my + pad;
+    TIP.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
+  }
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (!el) { TIP.classList.remove('bs-tip-visible'); return; }
+    show(el, e.clientX, e.clientY);
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!TIP.classList.contains('bs-tip-visible')) return;
+    cancelAnimationFrame(_raf);
+    _raf = requestAnimationFrame(() => position(e.clientX, e.clientY));
+  });
+
+  document.addEventListener('mouseout', e => {
+    if (!e.target.closest('[data-tip]')) return;
+    TIP.classList.remove('bs-tip-visible');
+  });
+})();
 </script>
+<div id="bs-tip" role="tooltip" aria-hidden="true"></div>
 </body>
 </html>
