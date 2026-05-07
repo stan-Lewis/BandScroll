@@ -7648,8 +7648,17 @@ let _fbUser=null,_cloudSyncEnabled=false;
 let BandScrollTier = { tier: 'free', validUntil: null };
 let _tierFetchPromise = null; // in-flight promise so gates can await freshness
 
+// Executive accounts — full Pro access, no payment required
+const _EXECUTIVE_UIDS = ['R1z0QmlywHfG9Sqv0pHYJZPpIWI3'];
+
 async function fetchSubscriptionStatus() {
   if (!_fbUser) return;
+  // Executive/owner accounts get Pro for free — no Worker needed
+  if (_EXECUTIVE_UIDS.includes(_fbUser.uid)) {
+    BandScrollTier = { tier: 'pro', validUntil: '2099-12-31T00:00:00Z' };
+    _renderTierBadge();
+    return;
+  }
   _tierFetchPromise = (async () => {
     try {
       const idToken = await _fbUser.getIdToken();
