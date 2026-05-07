@@ -3218,6 +3218,8 @@ if (WORKER_URL.includes('YOUR-SUBDOMAIN') || LS_CHECKOUT_URL.includes('YOUR-PROD
 }
 
 function showUpgradeModal(context) {
+  // Don't show until the Worker is actually deployed
+  if (WORKER_URL.includes('YOUR-SUBDOMAIN')) return;
   const msg = document.getElementById('upgrade-modal-msg');
   if (msg) {
     if (context === 'band-sync') {
@@ -7906,6 +7908,8 @@ async function _loadCloudData(){if(!_fbUser)return;const uid=_fbUser.uid;try{con
   }
 }}catch(e){console.error('Cloud load:',e);toast('Could not load cloud data');}
   await _maybeImportSampleSongs();
+  // Always refresh the UI after cloud data loads — covers all auth entry paths
+  try { if (typeof renderAll === 'function') renderAll(); } catch(e) {}
 }
 async function _saveCloudData(){if(!_fbUser||!_cloudSyncEnabled)return;const uid=_fbUser.uid;try{const b=_fbDb.batch();APP.bank.forEach(s=>{const d=Object.assign({},s);delete d.tabs;b.set(_fbDb.doc('users/'+uid+'/bank/'+s.id),d);});APP.setlists.forEach((sl,i)=>{b.set(_fbDb.doc('users/'+uid+'/setlists/'+sl.id),{id:sl.id,name:sl.name,songIds:sl.songIds||[],order:i});});b.set(_fbDb.doc('users/'+uid+'/settings/prefs'),{activeSetlistId:APP.activeSetlistId});await b.commit();}catch(e){console.error('Cloud save:',e);}}
 function _renderAccountPill(){const ab=document.querySelector('#s-conductor .ab-right');if(!ab)return;const ex=ab.querySelector('.acct-pill');if(ex)ex.remove();if(!_fbUser)return;const nm=_fbUser.displayName||_fbUser.email.split('@')[0];const p=document.createElement('div');p.className='acct-pill';p.innerHTML='<span class="acct-pill-name" title="'+esc(_fbUser.email)+'">&#128100; '+esc(nm)+'</span><button class="acct-signout" onclick="authSignOut()">Sign out</button>';ab.insertBefore(p,ab.firstChild);}
