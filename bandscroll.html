@@ -9201,24 +9201,24 @@ if('serviceWorker' in navigator){
     TIP.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
   }
 
+  // Use capture:true so stopPropagation() in child handlers cannot block the tooltip
   document.addEventListener('mouseover', e => {
     const el = e.target.closest('[data-tip]');
     if (!el) { TIP.classList.remove('bs-tip-visible'); return; }
     show(el, e.clientX, e.clientY);
-  });
+  }, true);
 
   document.addEventListener('mousemove', e => {
     if (!TIP.classList.contains('bs-tip-visible')) return;
     cancelAnimationFrame(_raf);
     _raf = requestAnimationFrame(() => position(e.clientX, e.clientY));
-  });
+  }, true);
 
   document.addEventListener('mouseout', e => {
     if (!e.target.closest('[data-tip]')) return;
     TIP.classList.remove('bs-tip-visible');
-  });
+  }, true);
 })();
 </script>
-<div id="bs-tip" role="tooltip" aria-hidden="true"></div>
 </body>
 </html>
