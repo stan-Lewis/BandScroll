@@ -9160,8 +9160,15 @@ if('serviceWorker' in navigator){
 // Usage: data-tip="Bold Name|Description text"
 // If only one part: treated as description only (no bold header)
 ;(function(){
-  const TIP = document.getElementById('bs-tip');
-  if (!TIP) return;
+  // Create the tooltip element in JS so ordering relative to </script> doesn't matter
+  let TIP = document.getElementById('bs-tip');
+  if (!TIP) {
+    TIP = document.createElement('div');
+    TIP.id = 'bs-tip';
+    TIP.setAttribute('role','tooltip');
+    TIP.setAttribute('aria-hidden','true');
+    document.body.appendChild(TIP);
+  }
 
   let _raf = null;
   let _tx = 0, _ty = 0;
