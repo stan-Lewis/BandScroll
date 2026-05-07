@@ -9156,11 +9156,9 @@ if('serviceWorker' in navigator){
 }
 
 // ── Custom tooltip system ──
-/* tooltip div is at end of body */
+// Uses pointermove + elementFromPoint — immune to stopPropagation and overlay issues
 // Usage: data-tip="Bold Name|Description text"
-// If only one part: treated as description only (no bold header)
 ;(function(){
-  // Create the tooltip element in JS so ordering relative to </script> doesn't matter
   let TIP = document.getElementById('bs-tip');
   if (!TIP) {
     TIP = document.createElement('div');
@@ -9171,29 +9169,21 @@ if('serviceWorker' in navigator){
   }
 
   let _raf = null;
-  let _tx = 0, _ty = 0;
+  let _cur = null; // currently-tipped element
 
-  function show(el, mx, my) {
+  function _render(el, mx, my) {
     const raw = el.getAttribute('data-tip') || '';
     if (!raw) return;
     const pipe = raw.indexOf('|');
-    let inner;
-    if (pipe !== -1) {
-      const name = raw.slice(0, pipe);
-      const desc = raw.slice(pipe + 1);
-      inner = `<strong>${name}</strong><span>${desc}</span>`;
-    } else {
-      inner = `<span>${raw}</span>`;
-    }
-    TIP.innerHTML = inner;
-    _tx = mx; _ty = my;
-    position(mx, my);
+    TIP.innerHTML = pipe !== -1
+      ? `<strong>${raw.slice(0, pipe)}</strong><span>${raw.slice(pipe + 1)}</span>`
+      : `<span>${raw}</span>`;
+    _pos(mx, my);
     TIP.classList.add('bs-tip-visible');
   }
 
-  function position(mx, my) {
-    const pad = 14;
-    const tw = TIP.offsetWidth, th = TIP.offsetHeight;
+  function _pos(mx, my) {
+    const pad = 14, tw = TIP.offsetWidth, th = TIP.offsetHeight;
     const vw = window.innerWidth, vh = window.innerHeight;
     let x = mx + pad, y = my - th - pad;
     if (x + tw > vw - 8) x = mx - tw - pad;
@@ -9201,23 +9191,32 @@ if('serviceWorker' in navigator){
     TIP.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
   }
 
-  // Use capture:true so stopPropagation() in child handlers cannot block the tooltip
-  document.addEventListener('mouseover', e => {
-    const el = e.target.closest('[data-tip]');
-    if (!el) { TIP.classList.remove('bs-tip-visible'); return; }
-    show(el, e.clientX, e.clientY);
-  }, true);
-
-  document.addEventListener('mousemove', e => {
-    if (!TIP.classList.contains('bs-tip-visible')) return;
-    cancelAnimationFrame(_raf);
-    _raf = requestAnimationFrame(() => position(e.clientX, e.clientY));
-  }, true);
-
-  document.addEventListener('mouseout', e => {
-    if (!e.target.closest('[data-tip]')) return;
+  function _hide() {
     TIP.classList.remove('bs-tip-visible');
-  }, true);
+    _cur = null;
+  }
+
+  // pointermove fires reliably regardless of child stopPropagation calls.
+  // elementFromPoint bypasses all event-target ambiguity.
+  document.addEventListener('pointermove', e => {
+    cancelAnimationFrame(_raf);
+    _raf = requestAnimationFrame(() => {
+      // Hide tip while pointer is captured by a drag/resize op
+      if (e.buttons > 0) { _hide(); return; }
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      const el = target && target.closest('[data-tip]');
+      if (el) {
+        if (el !== _cur) { _cur = el; _render(el, e.clientX, e.clientY); }
+        else { _pos(e.clientX, e.clientY); }
+      } else {
+        if (_cur) _hide();
+      }
+    });
+  }, { capture: true, passive: true });
+
+  document.addEventListener('pointerleave', _hide, true);
+  document.addEventListener('pointerdown', _hide, true);
+  document.addEventListener('scroll',       _hide, { capture: true, passive: true });
 })();
 </script>
 </body>
