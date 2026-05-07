@@ -3592,12 +3592,18 @@ async function startConductor() {
   document.getElementById('c-room').textContent = APP.roomCode;
   document.getElementById('sm-code').textContent = APP.roomCode;
   updateShareUrl();
-  // Gate band sync behind Pro tier — awaits in-flight tier fetch so we don't false-gate Pro users
-  if (_fbUser && !(await _ensureTierReady())) { showUpgradeModal('band-sync'); return; }
-  initAbly(APP.roomCode);
-  // Hydrate PDF data from IDB then render (async, non-blocking)
+  // Always render songs/setlists — Pro gate must NOT block conductor display
   hydrateIDBTabs().then(() => renderAll()).catch(() => renderAll());
   show('s-conductor');
+  // Gate Ably (band sync only) behind Pro tier — async so it never delays the conductor
+  if (_fbUser) {
+    _ensureTierReady().then(isPro => {
+      if (isPro) { initAbly(APP.roomCode); }
+      else { showUpgradeModal('band-sync'); }
+    }).catch(() => { /* tier check failed — skip Ably, conductor still works */ });
+  } else {
+    initAbly(APP.roomCode); // guest: no Pro gate
+  }
 }
 function showVJoin() {
   const p = new URLSearchParams(location.search);
